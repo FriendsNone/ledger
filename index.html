@@ -1,4 +1,4 @@
-<!-- Ledger — warm, utilitarian money tracker · v5 -->
+<!-- Ledger — warm, utilitarian money tracker · v6 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ledger</title>
@@ -37,7 +37,7 @@
     color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.45;
     padding: 26px 18px 70px; transition: background-color .25s, color .25s;
   }
-  .wrap { max-width: 920px; margin: 0 auto; }
+  .wrap { max-width: 940px; margin: 0 auto; }
   .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
   .pos { color: var(--income); } .neg { color: var(--expense); } .neu { color: var(--ink-soft); }
 
@@ -47,8 +47,8 @@
   .brand h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 26px; letter-spacing: -.01em; }
   .brand p { color: var(--ink-soft); font-size: 12.5px; margin-top: -2px; }
   .tools { display: flex; align-items: center; gap: 8px; }
-  .icon-btn, .tools select { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--ink); border: 1px solid var(--line-strong); background: var(--card); border-radius: 9px; padding: 7px 10px; cursor: pointer; transition: .15s; display: inline-flex; align-items: center; gap: 6px; }
-  .icon-btn:hover, .tools select:hover { border-color: var(--ink-soft); }
+  .icon-btn { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--ink); border: 1px solid var(--line-strong); background: var(--card); border-radius: 9px; padding: 7px 11px; cursor: pointer; transition: .15s; }
+  .icon-btn:hover { border-color: var(--ink-soft); }
   .icon-btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
   nav.tabs { display: flex; gap: 4px; background: var(--paper-2); padding: 4px; border-radius: 11px; margin-bottom: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -59,13 +59,12 @@
   .hero .label { font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--ink-faint); margin-bottom: 6px; }
   .hero .balance { font-size: 42px; font-weight: 600; line-height: 1; }
   .hero .csub { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
-  .hero select { font-family: inherit; font-size: 13px; border: 1px solid var(--line-strong); background: var(--card); border-radius: 8px; padding: 4px 8px; color: var(--ink-soft); cursor: pointer; margin-top: 8px; }
   .pills { display: flex; gap: 22px; }
   .pill .label { font-size: 11px; } .pill .v { font-size: 20px; font-weight: 600; }
 
-  .cols { display: grid; grid-template-columns: 332px 1fr; gap: 16px; align-items: start; }
+  .cols { display: grid; grid-template-columns: 360px 1fr; gap: 16px; align-items: start; }
   .stack { display: flex; flex-direction: column; gap: 16px; }
-  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
+  @media (max-width: 780px) { .cols { grid-template-columns: 1fr; } }
 
   .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
   .card-h { padding: 15px 18px 0; }
@@ -78,12 +77,11 @@
   .seg button { border: 0; background: transparent; padding: 9px 4px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); transition: .15s; }
   .seg button.on[data-t="expense"], .seg button.on[data-rt="expense"], .seg button.on[data-lk="lent-out"] { background: var(--expense); color: #fff; }
   .seg button.on[data-t="income"], .seg button.on[data-rt="income"], .seg button.on[data-lk="borrowed"] { background: var(--income); color: #fff; }
-  .seg button.on[data-t="transfer"], .seg button.on[data-rt="transfer"] { background: var(--accent); color: var(--accent-ink); }
-  .seg button.on[data-theme-set] { background: var(--accent); color: var(--accent-ink); }
+  .seg button.on[data-t="transfer"], .seg button.on[data-rt="transfer"], .seg button.on[data-theme-set] { background: var(--accent); color: var(--accent-ink); }
 
   label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin: 0 0 5px 2px; }
-  .field { margin-bottom: 12px; }
-  input, select.inp { width: 100%; font-family: inherit; font-size: 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 9px; padding: 10px 12px; transition: border-color .15s, box-shadow .15s; }
+  .field { margin-bottom: 12px; min-width: 0; }
+  input, select.inp { width: 100%; min-width: 0; font-family: inherit; font-size: 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 9px; padding: 10px 12px; transition: border-color .15s, box-shadow .15s; }
   input:focus, select.inp:focus { outline: 0; border-color: var(--ink-soft); box-shadow: 0 0 0 3px rgba(120,110,90,.14); }
   .amount-wrap { position: relative; }
   .amount-wrap .sym { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; font-size: 15px; }
@@ -95,12 +93,18 @@
   .btn.sec { background: var(--paper-2); color: var(--ink); }
   .btn-sm { width: auto; padding: 7px 12px; font-size: 13px; border-radius: 8px; }
   .data-btns { display: flex; flex-direction: column; gap: 8px; }
+  .row-gap { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 7px 13px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; gap: 7px; align-items: center; transition: .15s; }
+  .chip:hover { border-color: var(--ink-soft); }
+  .chip .amt { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
 
   .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .filters select, .filters input { font-family: inherit; font-size: 13px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 9px; cursor: pointer; }
-  .filters input { cursor: text; width: 130px; }
+  .filters input { cursor: text; width: 120px; }
 
-  .bd-row { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .bd-row { display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 10px; margin-bottom: 9px; }
   .bd-row .cat { font-size: 13px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bar { height: 9px; border-radius: 5px; background: var(--paper-2); overflow: hidden; }
   .bar > span { display: block; height: 100%; border-radius: 5px; background: var(--expense); transition: width .4s ease; }
@@ -119,6 +123,7 @@
   .del { font-size: 17px; } .mini { font-size: 13px; }
   .del:hover { background: var(--expense-soft); color: var(--expense); }
   .mini:hover { background: var(--paper-2); color: var(--ink); }
+  .more { text-align: center; margin-top: 6px; }
 
   .acct-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
   .acct-row:last-child { border-bottom: 0; }
@@ -139,7 +144,7 @@
   .badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
   .badge.lent { background: var(--expense-soft); color: var(--expense); }
   .badge.borrowed { background: var(--income-soft); color: var(--income); }
-  .badge.settled { background: var(--paper-2); color: var(--ink-faint); }
+  .badge.settled, .badge.shortcut { background: var(--paper-2); color: var(--ink-faint); }
   .badge.overdue { background: var(--expense-soft); color: var(--expense); }
   .badge.due { background: var(--amber-soft); color: var(--amber); }
   .badge.next { background: var(--paper-2); color: var(--ink-soft); }
@@ -177,8 +182,8 @@
     .card-b { padding: 13px 14px 15px; } .card-h { padding: 13px 14px 0; }
     nav.tabs button { padding: 8px 11px; font-size: 13px; }
     .tx li, .rec-row, .loan-row, .up-row { padding: 9px 2px; gap: 9px; }
-    .tools select, .icon-btn { padding: 6px 8px; font-size: 12px; }
-    .filters input { width: 110px; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .filters input { width: 100px; }
   }
 </style>
 
@@ -200,7 +205,7 @@
     <button data-tab="accounts">Accounts</button>
     <button data-tab="lending">Lending</button>
     <button data-tab="trends">Trends</button>
-    <button data-tab="recurring">Recurring</button>
+    <button data-tab="recurring">Templates</button>
   </nav>
 
   <div id="app"><div class="loading">Opening your ledger…</div></div>
@@ -217,12 +222,13 @@
 
   var K = { tx: "ledger:transactions", acct: "ledger:accounts", loan: "ledger:loans", rec: "ledger:recurring", set: "ledger:settings" };
   var PALETTE = ["#c4694a", "#3f7d5a", "#4a6fa5", "#9a6cb0", "#b08a2e", "#5a8c8c", "#a0556b", "#6b8c3a"];
+  var CURRENCIES = [["$", "USD"], ["€", "EUR"], ["£", "GBP"], ["¥", "JPY"], ["¥", "CNY"], ["₹", "INR"], ["₱", "PHP"], ["₩", "KRW"], ["C$", "CAD"], ["A$", "AUD"], ["NZ$", "NZD"], ["S$", "SGD"], ["HK$", "HKD"], ["CHF", "CHF"], ["kr", "SEK"], ["kr", "NOK"], ["kr", "DKK"], ["zł", "PLN"], ["฿", "THB"], ["Rp", "IDR"], ["RM", "MYR"], ["₫", "VND"], ["R$", "BRL"], ["Mex$", "MXN"], ["R", "ZAR"], ["AED", "AED"], ["₺", "TRY"], ["₽", "RUB"]];
 
   var state = {
     accounts: [], tx: [], loans: [], recurring: [],
     cur: "$", theme: "light",
     tab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
-    fType: "all", fQ: "", fScope: "month"
+    fType: "all", fQ: "", trackShow: 30, lendQ: "", trendGroup: "monthly", placesAll: false
   };
   var amap = {};
   var app = document.getElementById("app"), toastEl = document.getElementById("toast"), toastT;
@@ -262,6 +268,7 @@
   function fmtTime(t) { if (!t) return ""; var pr = t.split(":"), h = +pr[0], ap = h >= 12 ? "PM" : "AM", hh = h % 12 || 12; return hh + ":" + pr[1] + " " + ap; }
   function dtLabel(d, t) { return fmtDate(d) + (t ? ", " + fmtTime(t) : ""); }
   function sel(a, b) { return a === b ? " selected" : ""; }
+  function iso(dt) { return dt.getFullYear() + "-" + p2(dt.getMonth() + 1) + "-" + p2(dt.getDate()); }
 
   function acctBal(id) {
     var b = amap[id] ? (amap[id].opening || 0) : 0;
@@ -280,7 +287,6 @@
   function totals(list) { var inc = 0, exp = 0; list.forEach(function (t) { if (t.type === "income") inc += t.amount; else if (t.type === "expense") exp += t.amount; }); return { inc: inc, exp: exp }; }
   function periodTotals(month) { return totals(month ? state.tx.filter(function (t) { return t.date.slice(0, 7) === thisMonth(); }) : state.tx); }
   function lendTotals() { var owed = 0, owe = 0, over = 0; state.loans.forEach(function (l) { if (l.settled) return; if (l.kind === "lent") owed += l.amount; else owe += l.amount; if (isOverdue(l)) over++; }); return { owed: owed, owe: owe, over: over }; }
-  function monthly() { var m = {}; state.tx.forEach(function (t) { if (t.type !== "income" && t.type !== "expense") return; var k = t.date.slice(0, 7); if (!m[k]) m[k] = { inc: 0, exp: 0 }; if (t.type === "income") m[k].inc += t.amount; else m[k].exp += t.amount; }); return Object.keys(m).sort().slice(-12).map(function (k) { return { key: k, inc: m[k].inc, exp: m[k].exp, net: m[k].inc - m[k].exp }; }); }
 
   function entries() {
     var out = [];
@@ -293,21 +299,21 @@
   }
 
   // ---------- layout primitives ----------
-  function heroBlock(label, val, valCls, sub, pills) {
-    return '<div class="hero"><div><div class="label">' + label + '</div><div class="balance num ' + valCls + '">' + val + '</div>' + (sub || "") + '</div>' + (pills || "") + '</div>';
-  }
-  function monthPills() {
-    var t = periodTotals(true);
-    return '<div class="pills"><div class="pill"><div class="label">Income · this month</div><div class="v num pos">' + fmt(t.inc) + '</div></div>' +
-      '<div class="pill"><div class="label">Expenses · this month</div><div class="v num neg">' + fmt(t.exp) + '</div></div></div>';
-  }
+  function heroBlock(label, val, valCls, sub, pills) { return '<div class="hero"><div><div class="label">' + label + '</div><div class="balance num ' + valCls + '">' + val + '</div>' + (sub || "") + '</div>' + (pills || "") + '</div>'; }
+  function monthPills() { var t = periodTotals(true); return '<div class="pills"><div class="pill"><div class="label">Income · this month</div><div class="v num pos">' + fmt(t.inc) + '</div></div><div class="pill"><div class="label">Expenses · this month</div><div class="v num neg">' + fmt(t.exp) + '</div></div></div>'; }
   function layout(hero, sidebar, main) { return hero + '<div class="cols"><div>' + sidebar + '</div><div class="stack">' + main + '</div></div>'; }
-  function card(title, sub, body, headExtra) {
-    var h = '<div class="card-h"' + (headExtra ? ' style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px"' : '') + '><div><h2>' + title + '</h2>' + (sub ? '<div class="sub">' + sub + '</div>' : "") + '</div>' + (headExtra || "") + '</div>';
-    return '<div class="card">' + h + '<div class="card-b">' + body + '</div></div>';
-  }
-  function needAccountCard() { return card("Get started", "", '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>'); }
+  function card(title, sub, body, headExtra) { var h = '<div class="card-h"' + (headExtra ? ' style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px"' : '') + '><div><h2>' + title + '</h2>' + (sub ? '<div class="sub">' + sub + '</div>' : "") + '</div>' + (headExtra || "") + '</div>'; return '<div class="card">' + h + '<div class="card-b">' + body + '</div></div>'; }
+  function accountNudge() { return '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>'; }
   function wireNudge() { var g = document.getElementById("goAcct"); if (g) g.onclick = function () { state.tab = "accounts"; render(); }; }
+
+  function shortcutChips() {
+    if (!state.recurring.length) return "";
+    return '<div class="chips">' + state.recurring.map(function (r) {
+      var amtCls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ";
+      var name = r.desc || r.where || (r.type === "transfer" ? "Transfer" : r.type);
+      return '<button class="chip" data-log="' + r.id + '">' + esc(name) + ' <span class="amt ' + amtCls + '">' + sign + raw(r.amount) + '</span></button>';
+    }).join("") + '</div>';
+  }
 
   // ---------- render dispatch ----------
   function render() {
@@ -319,60 +325,43 @@
   }
 
   // ---------- OVERVIEW ----------
-  function nextDue(day) { var now = new Date(), y = now.getFullYear(), m = now.getMonth(); var t = new Date(y, m, Math.min(day, dim(y, m))); if (t < new Date(y, m, now.getDate())) { m++; if (m > 11) { m = 0; y++; } t = new Date(y, m, Math.min(day, dim(y, m))); } return t; }
   function dim(y, m) { return new Date(y, m + 1, 0).getDate(); }
-  function isoOf(d) { return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate()); }
-  function relLabel(iso) {
-    var diff = Math.round((new Date(iso + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000);
-    if (diff < 0) return { t: Math.abs(diff) + "d overdue", c: "overdue" };
-    if (diff === 0) return { t: "today", c: "due" };
-    if (diff === 1) return { t: "tomorrow", c: "due" };
-    if (diff <= 5) return { t: "in " + diff + "d", c: "due" };
-    return { t: fmtDate(iso), c: "next" };
-  }
+  function nextDue(day) { var now = new Date(), y = now.getFullYear(), m = now.getMonth(); var t = new Date(y, m, Math.min(day, dim(y, m))); if (t < new Date(y, m, now.getDate())) { m++; if (m > 11) { m = 0; y++; } t = new Date(y, m, Math.min(day, dim(y, m))); } return t; }
+  function relLabel(isoStr) { var diff = Math.round((new Date(isoStr + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000); if (diff < 0) return { t: Math.abs(diff) + "d overdue", c: "overdue" }; if (diff === 0) return { t: "today", c: "due" }; if (diff === 1) return { t: "tomorrow", c: "due" }; if (diff <= 5) return { t: "in " + diff + "d", c: "due" }; return { t: fmtDate(isoStr), c: "next" }; }
   function renderOverview() {
     var nw = netWorth();
-    // sidebar: accounts snapshot
     var snap = !state.accounts.length ? '<div class="empty"><div class="big">No accounts</div>Add one to begin.</div>'
       : state.accounts.map(function (a) { var b = acctBal(a.id); return '<div class="snap-row"><span class="dot" style="background:' + a.color + '"></span><span class="nm">' + esc(a.name) + '</span><span class="bl num ' + (b >= 0 ? "pos" : "neg") + '">' + fmt(b) + '</span></div>'; }).join("");
     var sidebar = card("Accounts", state.accounts.length + " total", snap);
 
-    // upcoming: recurring (with dueDay) + unsettled loans (with due)
+    var cta = state.accounts.length
+      ? '<button class="btn" id="goTrack" style="font-size:16px;padding:14px">＋ Record a new entry</button>'
+      : '<div class="row-gap"><button class="btn" id="goAcct2" style="flex:1;font-size:16px;padding:14px">＋ Add your first account</button><button class="btn sec" id="impBackup" style="flex:1;font-size:16px;padding:14px">Import a backup</button></div>';
+
     var up = [];
-    state.recurring.forEach(function (r) { if (r.dueDay) up.push({ kind: "recurring", iso: isoOf(nextDue(r.dueDay)), r: r }); });
+    state.recurring.forEach(function (r) { if (r.dueDay) up.push({ kind: "recurring", iso: iso(nextDue(r.dueDay)), r: r }); });
     state.loans.forEach(function (l) { if (!l.settled && l.due) up.push({ kind: "loan", iso: l.due, l: l }); });
     up.sort(function (a, b) { return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0; });
-    var upBody = !up.length ? '<div class="empty">Nothing scheduled. Add an expected day to a recurring item, or a due date to a loan, and it\'ll show here.</div>'
+    var upBody = !up.length ? '<div class="empty">Nothing scheduled. Add an expected day to a template, or a due date to a loan, and it\'ll show here.</div>'
       : up.slice(0, 8).map(function (u) {
         var rl = relLabel(u.iso), badge = '<span class="badge ' + rl.c + '">' + rl.t + '</span>';
-        if (u.kind === "recurring") {
-          var r = u.r, isT = r.type === "transfer", cls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ";
-          var name = r.desc || r.where || (isT ? "Transfer" : r.type);
-          return '<div class="up-row">' + badge + '<div class="meta"><div class="desc">' + esc(name) + '</div><div class="tag">recurring · ' + esc(acctName(r.account)) + '</div></div>' +
-            '<div class="val num ' + cls + '" style="font-size:15px;font-weight:600">' + sign + raw(r.amount) + '</div><button class="btn btn-sm" data-log="' + r.id + '">Log</button></div>';
-        }
-        var l = u.l, lcls = l.kind === "lent" ? "pos" : "neg", lsign = l.kind === "lent" ? "+" : "−";
-        return '<div class="up-row">' + badge + '<div class="meta"><div class="desc">' + (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person) + '</div><div class="tag">loan · ' + esc(acctName(l.account)) + '</div></div>' +
-          '<div class="val num ' + lcls + '" style="font-size:15px;font-weight:600">' + lsign + raw(l.amount) + '</div><button class="btn btn-sm" data-settle="' + l.id + '">Settle</button></div>';
+        if (u.kind === "recurring") { var r = u.r, isT = r.type === "transfer", cls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ", name = r.desc || r.where || (isT ? "Transfer" : r.type); return '<div class="up-row">' + badge + '<div class="meta"><div class="desc">' + esc(name) + '</div><div class="tag">recurring · ' + esc(acctName(r.account)) + '</div></div><div class="val num ' + cls + '" style="font-size:15px;font-weight:600">' + sign + raw(r.amount) + '</div><button class="btn btn-sm" data-log="' + r.id + '">Log</button></div>'; }
+        var l = u.l, lcls = l.kind === "lent" ? "pos" : "neg", lsign = l.kind === "lent" ? "+" : "−"; return '<div class="up-row">' + badge + '<div class="meta"><div class="desc">' + (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person) + '</div><div class="tag">loan · ' + esc(acctName(l.account)) + '</div></div><div class="val num ' + lcls + '" style="font-size:15px;font-weight:600">' + lsign + raw(l.amount) + '</div><button class="btn btn-sm" data-settle="' + l.id + '">Settle</button></div>';
       }).join("");
     var upcoming = card("Upcoming", "Bills, subscriptions &amp; loan due dates", upBody);
 
-    // recent
+    var quick = state.recurring.length ? card("Quick log", "One tap to record a saved entry", shortcutChips()) : "";
+
     var ents = entries().slice(0, 6);
-    var recentBody = !ents.length ? '<div class="empty">No activity yet.</div>' : '<ul class="tx">' + ents.map(recentRow).join("") + '</ul>';
-    var recent = card("Recent activity", "", recentBody);
+    var recent = card("Recent activity", "", !ents.length ? '<div class="empty">No activity yet.</div>' : '<ul class="tx">' + ents.map(recentRow).join("") + '</ul>');
 
-    // primary call-to-action
-    var cta = state.accounts.length
-      ? '<button class="btn" id="goTrack" style="font-size:16px;padding:14px">＋ Record a new entry</button>'
-      : '<button class="btn" id="goAcct2" style="font-size:16px;padding:14px">＋ Add your first account</button>';
-
-    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, cta + upcoming + recent);
+    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, cta + upcoming + quick + recent);
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
     bind("goTrack", "click", function () { state.tab = "track"; render(); });
     bind("goAcct2", "click", function () { state.tab = "accounts"; render(); });
+    bind("impBackup", "click", function () { document.getElementById("fileJSON").click(); });
   }
   function recentRow(e) {
     var dt = dtLabel(e.date, e.time);
@@ -388,41 +377,31 @@
 
   // ---------- TRACK ----------
   function renderTrack() {
-    var t = periodTotals(state.fScope === "month");
-    var ents = entries();
-    var inScope = state.fScope === "month" ? ents.filter(function (e) { return e.date.slice(0, 7) === thisMonth(); }) : ents;
     var q = state.fQ.trim().toLowerCase();
-    var visible = inScope.filter(function (e) {
+    var visible = entries().filter(function (e) {
       if (state.fType === "lending") { if (e.kind !== "lend" && e.kind !== "borrow" && e.kind !== "settle") return false; }
       else if (state.fType !== "all" && e.kind !== state.fType) return false;
       if (q) { var hay = ((e.where || "") + " " + (e.note || "") + " " + (e.person || "") + " " + acctName(e.account)).toLowerCase(); if (hay.indexOf(q) < 0) return false; }
       return true;
     });
-    var byWhere = {}; (state.fScope === "month" ? state.tx.filter(function (x) { return x.date.slice(0, 7) === thisMonth(); }) : state.tx).forEach(function (x) { if (x.type === "expense") { var w = (x.where || "").trim() || "(unlabeled)"; byWhere[w] = (byWhere[w] || 0) + x.amount; } });
-    var bd = Object.keys(byWhere).map(function (k) { return [k, byWhere[k]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 8);
-    var bdMax = bd.length ? bd[0][1] : 0;
-
-    var nw = netWorth();
-    var heroSub = '<select id="scope"><option value="month"' + sel(state.fScope, "month") + '>Flows: this month</option><option value="all"' + sel(state.fScope, "all") + '>Flows: all time</option></select>';
-    var hero = '<div class="hero"><div><div class="label">Net worth · across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div><div class="balance num ' + (nw >= 0 ? "pos" : "neg") + '">' + fmt(nw) + '</div>' + heroSub + '</div>' + monthPills() + '</div>';
-
-    var sidebar = card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>');
-    var whereBody = !bd.length ? '<div class="empty" style="padding:18px 6px">No expenses to break down yet.</div>'
-      : bd.map(function (e) { var pct = bdMax ? Math.round(e[1] / bdMax * 100) : 0, share = t.exp ? Math.round(e[1] / t.exp * 100) : 0; return '<div class="bd-row"><div class="cat">' + esc(e[0]) + '</div><div class="bar"><span style="width:' + pct + '%"></span></div><div class="amt num neg">' + fmt(e[1]) + ' <span style="color:var(--ink-faint);font-weight:400">' + share + '%</span></div></div>'; }).join("");
+    var shown = visible.slice(0, state.trackShow);
+    var remaining = visible.length - shown.length;
+    var listBody = !visible.length ? '<div class="empty"><div class="big">Nothing here yet</div>' + (state.accounts.length ? "Add your first entry on the left to get started." : "Add an account, then start logging.") + '</div>'
+      : '<ul class="tx">' + shown.map(entryRow).join("") + '</ul>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more · ' + remaining + ' left</button></div>' : "");
     var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select></div>';
-    var listBody = !visible.length ? '<div class="empty"><div class="big">Nothing here yet</div>Add your first entry on the left to get started.</div>' : '<ul class="tx">' + visible.map(entryRow).join("") + '</ul>';
 
-    app.innerHTML = layout(hero, sidebar, card("Where it goes", "Spending by place", whereBody) + card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listBody, listExtra));
+    var sidebar = card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge());
+    var main = (state.recurring.length ? card("Shortcuts", "Tap to log a saved template", shortcutChips()) : "") +
+      card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listBody, listExtra);
+
+    app.innerHTML = layout(heroBlock("Net worth", fmt(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()), sidebar, main);
     wireTrack();
   }
   function formHTML() {
     var isT = state.formType === "transfer";
     var fields = isT
-      ? '<div class="field"><label>From account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div>' +
-        '<div class="field"><label>To account</label><select class="inp" id="acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div>' +
-        '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
-      : '<div class="field"><label>Account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div>' +
-        '<div class="field"><label>Where</label><input id="where" type="text" maxlength="40" placeholder="' + (state.formType === "income" ? "where it came from" : "where it went") + '"></div>';
+      ? '<div class="field"><label>From account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
+      : '<div class="field"><label>Account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>Where</label><input id="where" type="text" maxlength="40" placeholder="' + (state.formType === "income" ? "where it came from" : "where it went") + '"></div>';
     return '<div class="seg three"><button data-t="expense" class="' + (state.formType === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (state.formType === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       fields +
@@ -445,9 +424,10 @@
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.formType = b.getAttribute("data-t"); render(); }; });
     var add = document.getElementById("add"); if (add) add.onclick = addEntry;
     var amt = document.getElementById("amt"); if (amt) amt.onkeydown = function (e) { if (e.key === "Enter") addEntry(); };
-    bind("scope", "change", function (el) { state.fScope = el.value; render(); });
-    bind("fType", "change", function (el) { state.fType = el.value; render(); });
-    var q = document.getElementById("fQ"); if (q) q.oninput = function () { state.fQ = q.value; var s = q.selectionStart; render(); var nq = document.getElementById("fQ"); if (nq) { nq.focus(); try { nq.setSelectionRange(s, s); } catch (e) {} } };
+    bind("fType", "change", function (el) { state.fType = el.value; state.trackShow = 30; render(); });
+    var q = document.getElementById("fQ"); if (q) q.oninput = function () { state.fQ = q.value; state.trackShow = 30; var s = q.selectionStart; render(); var nq = document.getElementById("fQ"); if (nq) { nq.focus(); try { nq.setSelectionRange(s, s); } catch (e) {} } };
+    bind("showMore", "click", function () { state.trackShow += 50; render(); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
     Array.prototype.forEach.call(document.querySelectorAll(".del"), function (b) { b.onclick = function () { var id = b.getAttribute("data-id"); state.tx = state.tx.filter(function (t) { return t.id !== id; }); saveTx(); render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-jump]"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-jump"); render(); }; });
   }
@@ -473,7 +453,7 @@
     var rows = !state.accounts.length ? '<div class="empty"><div class="big">No accounts yet</div>Add your first account on the left — a wallet, bank, or cash.</div>'
       : state.accounts.map(function (a) { var bal = acctBal(a.id), count = state.tx.filter(function (t) { return t.account === a.id || t.toAccount === a.id; }).length; return '<div class="acct-row"><span class="dot" style="width:11px;height:11px;background:' + a.color + '"></span><div class="meta"><div class="name">' + esc(a.name) + '</div><div class="sub">starting ' + fmt(a.opening || 0) + ' · ' + count + ' txn' + (count === 1 ? "" : "s") + '</div></div><div class="bal num ' + (bal >= 0 ? "pos" : "neg") + '">' + fmt(bal) + '</div><button class="mini" data-edit="' + a.id + '" title="Rename / balance">✎</button><button class="del" data-acctdel="' + a.id + '" title="Delete">×</button></div>'; }).join("");
     var sidebar = card("Add account", "A wallet, bank, or cash", '<div class="field"><label>Name</label><input id="aname" type="text" maxlength="24" placeholder="name this account"></div><div class="field"><label>Balance right now</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="aopen" type="number" step="0.01" placeholder="0.00"></div></div><div class="hint">What\'s in this account today — your starting point for tracking.</div><button class="btn" id="aadd">Add account</button>');
-    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">Every account balance, summed</div>', monthPills()), sidebar, card("Your accounts", "Balances update live with every entry", rows));
+    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">every account balance, summed</div>', monthPills()), sidebar, card("Your accounts", "Balances update live with every entry", rows));
     bind("aadd", "click", addAccount);
     Array.prototype.forEach.call(document.querySelectorAll("[data-acctdel]"), function (b) { b.onclick = function () { delAccount(b.getAttribute("data-acctdel")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-edit]"), function (b) { b.onclick = function () { editAccount(b.getAttribute("data-edit")); }; });
@@ -487,12 +467,15 @@
   function dueBadge(l) { if (l.settled || !l.due) return ""; var diff = Math.round((new Date(l.due + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000); if (diff < 0) return '<span class="badge overdue">overdue ' + fmtDate(l.due) + '</span>'; if (diff <= 5) return '<span class="badge due">due ' + fmtDate(l.due) + '</span>'; return '<span class="badge next">due ' + fmtDate(l.due) + '</span>'; }
   function renderLending() {
     var lt = lendTotals(), net = lt.owed - lt.owe;
+    var q = state.lendQ.trim().toLowerCase();
+    var pool = state.loans.filter(function (l) { if (!q) return true; return ((l.person || "") + " " + (l.note || "")).toLowerCase().indexOf(q) >= 0; });
     var listBody;
     if (!state.loans.length) listBody = '<div class="empty"><div class="big">No loans tracked</div>Record money you lent out or borrowed, and settle it when it\'s paid back.</div>';
+    else if (!pool.length) listBody = '<div class="empty">No loans match “' + esc(state.lendQ) + '”.</div>';
     else if (state.lendView === "person") {
-      var groups = {}; state.loans.forEach(function (l) { (groups[l.person] = groups[l.person] || []).push(l); });
+      var groups = {}; pool.forEach(function (l) { (groups[l.person] = groups[l.person] || []).push(l); });
       listBody = Object.keys(groups).map(function (p) { var pnet = 0; groups[p].forEach(function (l) { if (!l.settled) pnet += (l.kind === "lent" ? l.amount : -l.amount); }); return { p: p, net: pnet, loans: groups[p].slice().sort(function (a, b) { return (a.settled - b.settled) || (a.date < b.date ? 1 : -1); }) }; }).sort(function (a, b) { return Math.abs(b.net) - Math.abs(a.net) || a.p.localeCompare(b.p); }).map(function (g) { var nl = g.net > 0 ? '<span class="pos">owes you ' + raw(g.net) + '</span>' : g.net < 0 ? '<span class="neg">you owe ' + raw(g.net) + '</span>' : '<span class="neu">settled up</span>'; return '<div class="person-h"><span class="pn">' + esc(g.p) + '</span><span class="pnet">' + nl + '</span></div>' + g.loans.map(function (l) { return loanRow(l, false); }).join(""); }).join("");
-    } else listBody = state.loans.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }).map(function (l) { return loanRow(l, true); }).join("");
+    } else listBody = pool.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }).map(function (l) { return loanRow(l, true); }).join("");
 
     var sidebar = card("Record a loan", "Money moves in/out of an account too", state.accounts.length ?
       '<div class="seg"><button data-lk="lent-out" class="' + (state.lendKind === "lent-out" ? "on" : "") + '">You lent</button><button data-lk="borrowed" class="' + (state.lendKind === "borrowed" ? "on" : "") + '">You borrowed</button></div>' +
@@ -502,99 +485,114 @@
       '<div class="two"><div class="field"><label>Date</label><input id="ldate" type="date" value="' + today() + '"></div><div class="field"><label>Due <span style="font-weight:400;color:var(--ink-faint)">(opt)</span></label><input id="ldue" type="date"></div></div>' +
       '<div class="field"><label>Note <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="lnote" type="text" maxlength="40" placeholder="what for?"></div>' +
       '<button class="btn" id="ladd">Record</button>'
-      : '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>');
-    var viewSel = '<div class="filters"><select id="lview"><option value="person"' + sel(state.lendView, "person") + '>By person</option><option value="date"' + sel(state.lendView, "date") + '>By date</option></select></div>';
+      : accountNudge());
+    var extra = '<div class="filters"><input id="lendQ" type="text" placeholder="Search…" value="' + esc(state.lendQ) + '"><select id="lview"><option value="person"' + sel(state.lendView, "person") + '>By person</option><option value="date"' + sel(state.lendView, "date") + '>By date</option></select></div>';
 
-    app.innerHTML = layout(heroBlock("Net position" + (lt.over ? " · " + lt.over + " overdue" : ""), fmt(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>',
-      '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmt(lt.owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmt(lt.owe) + '</div></div></div>'),
-      sidebar, card("Loans", "Tap “Settle” when paid back", listBody, viewSel));
+    app.innerHTML = layout(heroBlock("Net position" + (lt.over ? " · " + lt.over + " overdue" : ""), fmt(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>', '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmt(lt.owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmt(lt.owe) + '</div></div></div>'), sidebar, card("Loans", "Tap “Settle” when paid back", listBody, extra));
 
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.lendKind = b.getAttribute("data-lk"); render(); }; });
     bind("lview", "change", function (el) { state.lendView = el.value; render(); });
+    var lq = document.getElementById("lendQ"); if (lq) lq.oninput = function () { state.lendQ = lq.value; var s = lq.selectionStart; render(); var n = document.getElementById("lendQ"); if (n) { n.focus(); try { n.setSelectionRange(s, s); } catch (e) {} } };
     bind("ladd", "click", addLoan);
     Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-unsettle]"), function (b) { b.onclick = function () { var l = byId(b.getAttribute("data-unsettle")); if (l) { l.settled = false; delete l.settledDate; saveLoan(); render(); } }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-loandel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-loandel"); state.loans = state.loans.filter(function (l) { return l.id !== id; }); saveLoan(); render(); }; });
   }
-  function loanRow(l, showPerson) {
-    var badge = l.settled ? '<span class="badge settled">settled</span>' : (l.kind === "lent" ? '<span class="badge lent">lent</span>' : '<span class="badge borrowed">borrowed</span>');
-    var action = l.settled ? '<button class="mini" data-unsettle="' + l.id + '">undo</button>' : '<button class="btn btn-sm" data-settle="' + l.id + '">Settle</button>';
-    return '<div class="loan-row' + (l.settled ? ' is-settled' : '') + '">' + badge + '<div class="meta"><div class="desc num">' + raw(l.amount) + (showPerson ? ' <span style="font-family:Hanken Grotesk;font-weight:600">' + esc(l.person) + '</span>' : '') + '</div><div class="tag">' + esc(acctName(l.account)) + ' · ' + dtLabel(l.date, l.time) + (l.note ? ' · ' + esc(l.note) : '') + '</div></div>' + dueBadge(l) + action + '<button class="del" data-loandel="' + l.id + '" title="Delete">×</button></div>';
-  }
+  function loanRow(l, showPerson) { var badge = l.settled ? '<span class="badge settled">settled</span>' : (l.kind === "lent" ? '<span class="badge lent">lent</span>' : '<span class="badge borrowed">borrowed</span>'); var action = l.settled ? '<button class="mini" data-unsettle="' + l.id + '">undo</button>' : '<button class="btn btn-sm" data-settle="' + l.id + '">Settle</button>'; return '<div class="loan-row' + (l.settled ? ' is-settled' : '') + '">' + badge + '<div class="meta"><div class="desc num">' + raw(l.amount) + (showPerson ? ' <span style="font-family:Hanken Grotesk;font-weight:600">' + esc(l.person) + '</span>' : '') + '</div><div class="tag">' + esc(acctName(l.account)) + ' · ' + dtLabel(l.date, l.time) + (l.note ? ' · ' + esc(l.note) : '') + '</div></div>' + dueBadge(l) + action + '<button class="del" data-loandel="' + l.id + '" title="Delete">×</button></div>'; }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
   function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { pe.focus(); pe.style.borderColor = "var(--expense)"; return; } var ae = document.getElementById("lamt"), v = parseFloat(ae.value); if (!v || v <= 0) { ae.focus(); ae.style.borderColor = "var(--expense)"; return; } state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: Math.round(v * 100) / 100, account: document.getElementById("lacct").value, date: (document.getElementById("ldate").value || today()), time: nowTime(), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false }); saveLoan(); render(); toast("Loan recorded"); }
   function settleLoan(id) { var l = byId(id); if (!l) return; l.settled = true; l.settledDate = today(); l.settledTime = nowTime(); l.settledAccount = l.account; saveLoan(); render(); toast(l.kind === "lent" ? "Marked repaid to you" : "Marked paid back"); }
 
   // ---------- TRENDS ----------
+  function weekStart(dateStr) { var dt = new Date(dateStr + "T00:00:00"); var day = (dt.getDay() + 6) % 7; dt.setDate(dt.getDate() - day); return iso(dt); }
+  function grouped(g) {
+    var map = {};
+    state.tx.forEach(function (t) { if (t.type !== "income" && t.type !== "expense") return; var k = g === "weekly" ? weekStart(t.date) : g === "yearly" ? t.date.slice(0, 4) : t.date.slice(0, 7); if (!map[k]) map[k] = { inc: 0, exp: 0 }; if (t.type === "income") map[k].inc += t.amount; else map[k].exp += t.amount; });
+    var keys = Object.keys(map).sort();
+    if (g === "weekly" || g === "monthly") keys = keys.slice(-12);
+    return keys.map(function (k) { return { key: k, inc: map[k].inc, exp: map[k].exp, net: map[k].inc - map[k].exp }; });
+  }
   function renderTrends() {
-    var data = monthly();
+    var g = state.trendGroup, data = grouped(g);
     var byWhere = {}; state.tx.forEach(function (t) { if (t.type === "expense") { var w = (t.where || "").trim() || "(unlabeled)"; byWhere[w] = (byWhere[w] || 0) + t.amount; } });
-    var places = Object.keys(byWhere).map(function (k) { return [k, byWhere[k]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 6);
-    var placeMax = places.length ? places[0][1] : 0;
+    var allPlaces = Object.keys(byWhere).map(function (k) { return [k, byWhere[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
+    var places = state.placesAll ? allPlaces : allPlaces.slice(0, 6);
+    var placeMax = allPlaces.length ? allPlaces[0][1] : 0;
     var accts = state.accounts.map(function (a) { return { name: a.name, color: a.color, bal: acctBal(a.id) }; });
     var acctMax = accts.reduce(function (m, a) { return Math.max(m, Math.abs(a.bal)); }, 0) || 1;
     var totInc = 0, totExp = 0, fees = 0, biggest = null, freq = {};
     state.tx.forEach(function (t) { if (t.type === "income") totInc += t.amount; else if (t.type === "expense") { totExp += t.amount; if (!biggest || t.amount > biggest.amount) biggest = t; var w = (t.where || "").trim(); if (w) freq[w] = (freq[w] || 0) + 1; } else if (t.type === "transfer") fees += (t.fee || 0); });
     var savings = totInc > 0 ? Math.round((totInc - totExp) / totInc * 100) : null;
     var topFreq = Object.keys(freq).sort(function (a, b) { return freq[b] - freq[a]; })[0];
-    var avgNet = data.length ? (totInc - totExp) / data.length : 0;
+    var months = grouped("monthly").length || 1, avgNet = (totInc - totExp) / months;
     var nw = netWorth();
 
-    var stats = '<div class="statcol">' +
+    var sidebar = card("By the numbers", "All-time snapshot", '<div class="statcol">' +
       stat("Avg net / month", fmt(avgNet), avgNet >= 0 ? "pos" : "neg") +
       stat("Savings rate", savings === null ? "—" : savings + "%", savings !== null && savings >= 0 ? "pos" : "neg") +
       stat("Transfer fees", fmt(fees), "neg") +
       stat("Total income", fmt(totInc), "pos") +
       stat("Total expenses", fmt(totExp), "neg") +
       stat("Biggest expense", biggest ? fmt(biggest.amount) : "—", "neg") +
-      (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") +
-      '</div>';
-    var sidebar = card("By the numbers", "All-time snapshot", stats);
+      (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") + '</div>');
 
     var main = "";
+    var groupSel = '<select id="trendGroup"><option value="weekly"' + sel(g, "weekly") + '>Weekly</option><option value="monthly"' + sel(g, "monthly") + '>Monthly</option><option value="yearly"' + sel(g, "yearly") + '>Yearly</option><option value="all"' + sel(g, "all") + '>All-time</option></select>';
+    var chartBody;
     if (data.length) {
       var maxV = Math.max.apply(null, data.map(function (d) { return Math.max(d.inc, d.exp); })) || 1;
-      var W = 700, H = 220, padB = 26, padT = 10, n = data.length, slot = W / n, group = Math.min(slot * 0.62, 56), bw = group / 2 - 2, plotH = H - padB - padT;
-      var bars = data.map(function (d, i) { var cx = i * slot + slot / 2, ih = d.inc / maxV * plotH, eh = d.exp / maxV * plotH, label = new Date(d.key + "-01T00:00:00").toLocaleDateString(undefined, { month: "short" }), yr = d.key.slice(2, 4); return '<rect x="' + (cx - bw - 1) + '" y="' + (padT + plotH - ih) + '" width="' + bw + '" height="' + ih + '" rx="2.5" style="fill:var(--income)"><title>' + label + " income " + fmt(d.inc) + '</title></rect><rect x="' + (cx + 1) + '" y="' + (padT + plotH - eh) + '" width="' + bw + '" height="' + eh + '" rx="2.5" style="fill:var(--expense)"><title>' + label + " expense " + fmt(d.exp) + '</title></rect><text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" style="fill:var(--ink-faint);font-size:11px;font-family:Hanken Grotesk">' + label + (i === 0 || label === "Jan" ? " ’" + yr : "") + '</text>'; }).join("");
+      var W = 700, H = 220, padB = 26, padT = 10, n = data.length, slot = W / n, grp = Math.min(slot * 0.62, 54), bw = grp / 2 - 2, plotH = H - padB - padT;
+      var bars = data.map(function (d, i) {
+        var cx = i * slot + slot / 2, ih = d.inc / maxV * plotH, eh = d.exp / maxV * plotH, label, suffix = "";
+        if (g === "weekly") label = fmtDate(d.key);
+        else if (g === "yearly") label = d.key;
+        else { label = new Date(d.key + "-01T00:00:00").toLocaleDateString(undefined, { month: "short" }); var yr = d.key.slice(2, 4); if (i === 0 || d.key.slice(5, 7) === "01") suffix = " ’" + yr; }
+        return '<rect x="' + (cx - bw - 1) + '" y="' + (padT + plotH - ih) + '" width="' + bw + '" height="' + ih + '" rx="2.5" style="fill:var(--income)"><title>' + label + " income " + fmt(d.inc) + '</title></rect><rect x="' + (cx + 1) + '" y="' + (padT + plotH - eh) + '" width="' + bw + '" height="' + eh + '" rx="2.5" style="fill:var(--expense)"><title>' + label + " expense " + fmt(d.exp) + '</title></rect><text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + label + suffix + '</text>';
+      }).join("");
       var baseY = padT + plotH, grid = '<line x1="0" y1="' + baseY + '" x2="' + W + '" y2="' + baseY + '" style="stroke:var(--line-strong);stroke-width:1"/><line x1="0" y1="' + (padT + plotH / 2) + '" x2="' + W + '" y2="' + (padT + plotH / 2) + '" style="stroke:var(--line);stroke-width:1;stroke-dasharray:3 4"/>';
-      main += card("Income vs. expenses", "Last " + n + " month" + (n === 1 ? "" : "s") + " · transfers &amp; loans excluded", '<div class="legend"><span><i style="background:var(--income)"></i>Income</span><span><i style="background:var(--expense)"></i>Expenses</span></div><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block;overflow:visible">' + grid + bars + '</svg>');
+      chartBody = '<div class="legend"><span><i style="background:var(--income)"></i>Income</span><span><i style="background:var(--expense)"></i>Expenses</span></div><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block;overflow:visible">' + grid + bars + '</svg>';
+    } else chartBody = '<div class="empty">No income or expenses to chart yet.</div>';
+    main += card("Income vs. expenses", "Grouped by your selection · transfers &amp; loans excluded", chartBody, groupSel);
+
+    if (allPlaces.length) {
+      var placesBody = places.map(function (e) { var pct = placeMax ? Math.round(e[1] / placeMax * 100) : 0; return '<div class="bd-row"><div class="cat">' + esc(e[0]) + '</div><div class="bar"><span style="width:' + pct + '%"></span></div><div class="amt num neg">' + fmt(e[1]) + '</div></div>'; }).join("");
+      if (allPlaces.length > 6) placesBody += '<div class="more"><button class="btn sec btn-sm" id="placesToggle">' + (state.placesAll ? "Show top 6" : "Show all " + allPlaces.length) + '</button></div>';
+      main += card("Top places", "Most spent, all time", placesBody);
     }
-    if (places.length) main += card("Top places", "Most spent, all time", places.map(function (e) { var pct = placeMax ? Math.round(e[1] / placeMax * 100) : 0; return '<div class="bd-row"><div class="cat">' + esc(e[0]) + '</div><div class="bar"><span style="width:' + pct + '%"></span></div><div class="amt num neg">' + fmt(e[1]) + '</div></div>'; }).join(""));
     if (accts.length) main += card("Across accounts", "Where your money sits now", accts.map(function (a) { var pct = Math.round(Math.abs(a.bal) / acctMax * 100); return '<div class="bd-row"><div class="cat">' + esc(a.name) + '</div><div class="bar"><span style="width:' + pct + '%;background:' + (a.bal >= 0 ? a.color : "var(--expense)") + '"></span></div><div class="amt num ' + (a.bal >= 0 ? "pos" : "neg") + '">' + fmt(a.bal) + '</div></div>'; }).join(""));
-    if (!main) main = card("Trends", "Your numbers, visualized", '<div class="empty"><div class="big">Not enough yet</div>Add accounts and a few entries and your stats will appear here.</div>');
 
     app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()), sidebar, main);
+    bind("trendGroup", "change", function (el) { state.trendGroup = el.value; render(); });
+    bind("placesToggle", "click", function () { state.placesAll = !state.placesAll; render(); });
   }
   function stat(l, v, cls) { return '<div class="stat"><div class="l">' + l + '</div><div class="v num ' + (cls || "") + '">' + v + '</div></div>'; }
 
-  // ---------- RECURRING ----------
+  // ---------- TEMPLATES (recurring + shortcuts) ----------
   function nextDueLabel(day) { var t = nextDue(day), now = new Date(), diff = Math.round((t - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000), ds = t.toLocaleDateString(undefined, { month: "short", day: "numeric" }); return '<span class="badge ' + (diff <= 3 ? "due" : "next") + '">next ' + ds + '</span>'; }
   function renderRecurring() {
     var isT = state.recType === "transfer";
-    var mOut = 0, mIn = 0; state.recurring.forEach(function (r) { if (r.type === "expense") mOut += r.amount; else if (r.type === "income") mIn += r.amount; });
-    var list = !state.recurring.length ? '<div class="empty"><div class="big">No templates yet</div>Save what you log often — rent, a paycheck, a subscription — then add it in one tap.</div>'
+    var mOut = 0, mIn = 0, dated = 0, shortc = 0; state.recurring.forEach(function (r) { if (r.dueDay) { dated++; if (r.type === "expense") mOut += r.amount; else if (r.type === "income") mIn += r.amount; } else shortc++; });
+    var list = !state.recurring.length ? '<div class="empty"><div class="big">No templates yet</div>Save what you log often. Add an <b>expected day</b> for recurring bills, or leave it blank to make a quick <b>shortcut</b>.</div>'
       : state.recurring.map(function (r) {
-        var due = r.dueDay ? nextDueLabel(r.dueDay) : "";
-        if (r.type === "transfer") return '<div class="rec-row"><span class="dot" style="background:var(--ink-faint)"></span><div class="meta"><div class="desc">' + (r.desc ? esc(r.desc) : "Transfer") + '</div><div class="tag">' + esc(acctName(r.account)) + ' → ' + esc(acctName(r.toAccount)) + (r.fee ? ' · fee ' + raw(r.fee) : '') + '</div></div>' + due + '<div class="val num neu" style="font-size:15px;font-weight:600">⇄ ' + raw(r.amount) + '</div><button class="btn btn-sm" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" title="Delete">×</button></div>';
+        var badge = r.dueDay ? nextDueLabel(r.dueDay) : '<span class="badge shortcut">shortcut</span>';
+        if (r.type === "transfer") return '<div class="rec-row"><span class="dot" style="background:var(--ink-faint)"></span><div class="meta"><div class="desc">' + (r.desc ? esc(r.desc) : "Transfer") + '</div><div class="tag">' + esc(acctName(r.account)) + ' → ' + esc(acctName(r.toAccount)) + (r.fee ? ' · fee ' + raw(r.fee) : '') + '</div></div>' + badge + '<div class="val num neu" style="font-size:15px;font-weight:600">⇄ ' + raw(r.amount) + '</div><button class="btn btn-sm" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" title="Delete">×</button></div>';
         var cls = r.type === "income" ? "pos" : "neg", sign = r.type === "income" ? "+" : "−", color = r.type === "income" ? "var(--income)" : "var(--expense)";
-        return '<div class="rec-row"><span class="dot" style="background:' + color + '"></span><div class="meta"><div class="desc">' + (r.desc ? esc(r.desc) : (r.where || (r.type === "income" ? "Income" : "Expense"))) + '</div><div class="tag">' + (r.where ? esc(r.where) + ' · ' : '') + esc(acctName(r.account)) + '</div></div>' + due + '<div class="val num ' + cls + '" style="font-size:15px;font-weight:600">' + sign + raw(r.amount) + '</div><button class="btn btn-sm" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" title="Delete">×</button></div>';
+        return '<div class="rec-row"><span class="dot" style="background:' + color + '"></span><div class="meta"><div class="desc">' + (r.desc ? esc(r.desc) : (r.where || (r.type === "income" ? "Income" : "Expense"))) + '</div><div class="tag">' + (r.where ? esc(r.where) + ' · ' : '') + esc(acctName(r.account)) + '</div></div>' + badge + '<div class="val num ' + cls + '" style="font-size:15px;font-weight:600">' + sign + raw(r.amount) + '</div><button class="btn btn-sm" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" title="Delete">×</button></div>';
       }).join("");
     var formFields = isT
       ? '<div class="field"><label>From account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="racct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(opt)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="rfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>'
       : '<div class="field"><label>Where</label><input id="rwhere" type="text" maxlength="40" placeholder="' + (state.recType === "income" ? "where it comes from" : "what it\'s for") + '"></div><div class="field"><label>Account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div>';
-    var sidebar = card("New template", "A reusable, one-tap entry", state.accounts.length ?
+    var sidebar = card("New template", "Reusable one-tap entry", state.accounts.length ?
       '<div class="seg three"><button data-rt="expense" class="' + (state.recType === "expense" ? "on" : "") + '">Expense</button><button data-rt="income" class="' + (state.recType === "income" ? "on" : "") + '">Income</button><button data-rt="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="ramt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       formFields +
       '<div class="field"><label>Label <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="rdesc" type="text" maxlength="40" placeholder="name this template"></div>' +
-      '<div class="field"><label>Expected day of month <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="rday" type="number" min="1" max="31" placeholder="e.g. 25"></div>' +
-      '<div class="hint">Shows the next expected date on Overview — handy for subscriptions &amp; bills.</div>' +
+      '<div class="field"><label>Expected day of month <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="rday" type="number" min="1" max="31" placeholder="leave blank for a shortcut"></div>' +
+      '<div class="hint">With a day → recurring (shows in Upcoming &amp; the monthly total). Blank → a one-tap shortcut.</div>' +
       '<button class="btn" id="radd">Save template</button>'
-      : '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>');
+      : accountNudge());
 
-    app.innerHTML = layout(heroBlock("Per month · recurring out", fmt(mOut), "neg", '<div class="csub">' + state.recurring.length + ' template' + (state.recurring.length === 1 ? "" : "s") + '</div>',
-      '<div class="pills"><div class="pill"><div class="label">Recurring in</div><div class="v num pos">' + fmt(mIn) + '</div></div></div>'),
-      sidebar, card("Your templates", "Tap “Log” to record one today", list));
+    app.innerHTML = layout(heroBlock("Per month · recurring out", fmt(mOut), "neg", '<div class="csub">' + dated + ' recurring · ' + shortc + ' shortcut' + (shortc === 1 ? "" : "s") + '</div>', '<div class="pills"><div class="pill"><div class="label">Recurring in</div><div class="v num pos">' + fmt(mIn) + '</div></div></div>'), sidebar, card("Your templates", "Tap “Log” to record one today", list));
 
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.recType = b.getAttribute("data-rt"); render(); }; });
     bind("radd", "click", addTemplate);
@@ -620,40 +618,30 @@
 
   // ---------- SETTINGS ----------
   function renderSettings() {
-    var hero = '<div class="hero"><div><div class="label">Ledger</div>' +
-      '<div style="font-family:\'Fraunces\',serif;font-size:34px;font-weight:600;line-height:1">Settings</div>' +
-      '<div class="csub">Preferences, data &amp; backup</div></div></div>';
-
+    var hero = '<div class="hero"><div><div class="label">Ledger</div><div style="font-family:\'Fraunces\',serif;font-size:34px;font-weight:600;line-height:1">Settings</div><div class="csub">Preferences, data &amp; backup</div></div></div>';
     var sidebar = card("Your data", "Stored privately on this device",
       '<div class="snap-row"><span class="nm">Accounts</span><span class="bl num">' + state.accounts.length + '</span></div>' +
       '<div class="snap-row"><span class="nm">Transactions</span><span class="bl num">' + state.tx.length + '</span></div>' +
       '<div class="snap-row"><span class="nm">Loans</span><span class="bl num">' + state.loans.length + '</span></div>' +
       '<div class="snap-row"><span class="nm">Templates</span><span class="bl num">' + state.recurring.length + '</span></div>' +
       '<div class="snap-row"><span class="nm">Currency</span><span class="bl num">' + state.cur + '</span></div>');
-
-    var appearance = card("Appearance", "Light or dark — your choice is remembered",
-      '<div class="seg"><button data-theme-set="light" class="' + (state.theme === "light" ? "on" : "") + '">☀️ Light</button>' +
-      '<button data-theme-set="dark" class="' + (state.theme === "dark" ? "on" : "") + '">🌙 Dark</button></div>');
-
-    var curOpts = [["$", "USD"], ["€", "EUR"], ["£", "GBP"], ["¥", "JPY"], ["₹", "INR"], ["₱", "PHP"], ["C$", "CAD"], ["A$", "AUD"], ["kr", "SEK"], ["₩", "KRW"]]
-      .map(function (o) { return '<option value="' + o[0] + '"' + sel(state.cur, o[0]) + '>' + o[0] + " " + o[1] + '</option>'; }).join("");
-    var currency = card("Currency", "Affects how amounts are displayed", '<select class="inp" id="curSel">' + curOpts + '</select>');
-
+    var appearance = card("Appearance", "Follows your device when set to System",
+      '<div class="seg three"><button data-theme-set="light" class="' + (state.theme === "light" ? "on" : "") + '">☀️ Light</button><button data-theme-set="dark" class="' + (state.theme === "dark" ? "on" : "") + '">🌙 Dark</button><button data-theme-set="system" class="' + (state.theme === "system" ? "on" : "") + '">🖥 System</button></div>');
+    var listed = CURRENCIES.some(function (c) { return c[0] === state.cur; });
+    var curOpts = CURRENCIES.map(function (o) { return '<option value="' + o[0] + '"' + sel(state.cur, o[0]) + '>' + o[0] + " · " + o[1] + '</option>'; }).join("") + '<option value="__custom"' + (listed ? "" : " selected") + '>Custom…</option>';
+    var currency = card("Currency", "Common ones below, or set any symbol",
+      '<select class="inp" id="curSel" style="margin-bottom:10px">' + curOpts + '</select>' +
+      '<div class="two" style="align-items:end"><div class="field" style="margin:0"><label>Custom symbol</label><input id="curCustom" type="text" maxlength="4" placeholder="e.g. CHF, zł, ₪" value="' + (listed ? "" : esc(state.cur)) + '"></div><button class="btn" id="curApply" style="margin-bottom:0">Apply</button></div>');
     var dataCard = card("Backup &amp; data", "Your only copy lives here unless you back it up",
-      '<div class="data-btns"><button class="btn" id="dlJSON">Download backup (.json)</button>' +
-      '<button class="btn sec" id="upJSON">Restore from backup</button>' +
-      '<button class="btn sec" id="exCSV">Export CSV</button>' +
-      '<button class="btn sec" id="imCSV">Import CSV</button></div>' +
+      '<div class="data-btns"><button class="btn" id="dlJSON">Download backup (.json)</button><button class="btn sec" id="upJSON">Restore from backup</button><button class="btn sec" id="exCSV">Export CSV</button><button class="btn sec" id="imCSV">Import CSV</button></div>' +
       '<div class="hint" style="margin-top:10px;margin-bottom:0">Backup is a full, lossless restore — use it to move between devices. CSV opens in a spreadsheet; import expects a file exported here.</div>');
-
-    var danger = card("Danger zone", "",
-      '<button class="btn" id="clearAll" style="background:var(--expense);color:#fff">Clear all data</button>' +
-      '<div class="hint" style="margin-top:10px;margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
+    var danger = card("Danger zone", "", '<button class="btn" id="clearAll" style="background:var(--expense);color:#fff">Clear all data</button><div class="hint" style="margin-top:10px;margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
 
     app.innerHTML = layout(hero, sidebar, appearance + currency + dataCard + danger);
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) { b.onclick = function () { state.theme = b.getAttribute("data-theme-set"); applyTheme(); saveSet(); render(); }; });
-    bind("curSel", "change", function (el) { state.cur = el.value; saveSet(); render(); });
+    bind("curSel", "change", function (el) { if (el.value === "__custom") { var c = document.getElementById("curCustom"); c.focus(); return; } state.cur = el.value; saveSet(); render(); });
+    bind("curApply", "click", function () { var c = document.getElementById("curCustom").value.trim(); if (c) { state.cur = c; saveSet(); render(); toast("Currency set to " + c); } });
     bind("dlJSON", "click", backupJSON);
     bind("upJSON", "click", function () { document.getElementById("fileJSON").click(); });
     bind("exCSV", "click", exportCSV);
@@ -668,9 +656,10 @@
   }
 
   // ---------- data: backup / restore / csv ----------
-  function applyTheme() { document.documentElement.setAttribute("data-theme", state.theme); var b = document.getElementById("theme"); if (b) b.textContent = state.theme === "dark" ? "☀️" : "🌙"; }
+  function resolveTheme() { if (state.theme === "system") { return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"; } return state.theme; }
+  function applyTheme() { var r = resolveTheme(); document.documentElement.setAttribute("data-theme", r); var b = document.getElementById("theme"); if (b) b.textContent = r === "dark" ? "☀️" : "🌙"; }
   function download(name, text, mime) { var blob = new Blob([text], { type: mime }), a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-  function backupJSON() { download("ledger-backup-" + today() + ".json", JSON.stringify({ app: "ledger", version: 5, exportedAt: new Date().toISOString(), currency: state.cur, accounts: state.accounts, transactions: state.tx, loans: state.loans, recurring: state.recurring }, null, 2), "application/json"); toast("Backup downloaded"); }
+  function backupJSON() { download("ledger-backup-" + today() + ".json", JSON.stringify({ app: "ledger", version: 6, exportedAt: new Date().toISOString(), currency: state.cur, accounts: state.accounts, transactions: state.tx, loans: state.loans, recurring: state.recurring }, null, 2), "application/json"); toast("Backup downloaded"); }
   function restoreJSON(text) {
     var o; try { o = JSON.parse(text); } catch (e) { toast("That file isn't valid JSON"); return; }
     if (!o || (!Array.isArray(o.accounts) && !Array.isArray(o.transactions))) { toast("Not a Ledger backup file"); return; }
@@ -679,8 +668,8 @@
     state.tx = Array.isArray(o.transactions) ? o.transactions : [];
     state.loans = Array.isArray(o.loans) ? o.loans : [];
     state.recurring = Array.isArray(o.recurring) ? o.recurring : [];
-    if (o.currency) { state.cur = o.currency; saveSet(); }
-    saveAll(); render(); toast("Backup restored");
+    if (o.currency) state.cur = o.currency;
+    saveSet(); saveAll(); render(); toast("Backup restored");
   }
   function csvCell(c) { c = String(c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }
   function exportCSV() {
@@ -692,17 +681,8 @@
     download("ledger-" + today() + ".csv", rows.map(function (r) { return r.map(csvCell).join(","); }).join("\n"), "text/csv;charset=utf-8");
     toast("CSV exported");
   }
-  function parseCSV(text) {
-    var rows = [], row = [], cur = "", i = 0, inQ = false;
-    while (i < text.length) { var c = text[i]; if (inQ) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; } else cur += c; } else { if (c === '"') inQ = true; else if (c === ",") { row.push(cur); cur = ""; } else if (c === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; } else if (c !== "\r") cur += c; } i++; }
-    if (cur.length || row.length) { row.push(cur); rows.push(row); }
-    return rows;
-  }
-  function acctIdByName(name) {
-    name = (name || "").trim(); if (!name || name === "—") return defAcct();
-    var f = state.accounts.filter(function (a) { return a.name.toLowerCase() === name.toLowerCase(); })[0]; if (f) return f.id;
-    var na = { id: uid(), name: name, opening: 0, color: PALETTE[state.accounts.length % PALETTE.length] }; state.accounts.push(na); return na.id;
-  }
+  function parseCSV(text) { var rows = [], row = [], cur = "", i = 0, inQ = false; while (i < text.length) { var c = text[i]; if (inQ) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; } else cur += c; } else { if (c === '"') inQ = true; else if (c === ",") { row.push(cur); cur = ""; } else if (c === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; } else if (c !== "\r") cur += c; } i++; } if (cur.length || row.length) { row.push(cur); rows.push(row); } return rows; }
+  function acctIdByName(name) { name = (name || "").trim(); if (!name || name === "—") return defAcct(); var f = state.accounts.filter(function (a) { return a.name.toLowerCase() === name.toLowerCase(); })[0]; if (f) return f.id; var na = { id: uid(), name: name, opening: 0, color: PALETTE[state.accounts.length % PALETTE.length] }; state.accounts.push(na); return na.id; }
   function importCSV(text) {
     var rows = parseCSV(text); if (rows.length < 2) { toast("CSV looks empty"); return; }
     var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
@@ -723,14 +703,15 @@
   }
   function readFile(input, cb) { var f = input.files && input.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { cb(String(r.result)); input.value = ""; }; r.onerror = function () { toast("Couldn't read that file"); input.value = ""; }; r.readAsText(f); }
 
-  // ---------- shared / chrome ----------
+  // ---------- chrome ----------
   function bind(id, evt, fn) { var el = document.getElementById(id); if (el) el["on" + evt] = function () { fn(el); }; }
   Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-tab"); render(); }; });
-  document.getElementById("theme").onclick = function () { state.theme = state.theme === "dark" ? "light" : "dark"; applyTheme(); saveSet(); render(); };
+  document.getElementById("theme").onclick = function () { state.theme = resolveTheme() === "dark" ? "light" : "dark"; applyTheme(); saveSet(); render(); };
   document.getElementById("settingsBtn").onclick = function () { state.tab = "settings"; render(); };
   document.getElementById("footSettings").onclick = function () { state.tab = "settings"; render(); };
   document.getElementById("fileJSON").onchange = function () { readFile(this, restoreJSON); };
   document.getElementById("fileCSV").onchange = function () { readFile(this, importCSV); };
+  if (window.matchMedia) { try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { if (state.theme === "system") applyTheme(); }); } catch (e) {} }
 
   load().then(function () { render(); });
 })();
