@@ -49,6 +49,7 @@
   .tools { display: flex; align-items: center; gap: 8px; }
   .icon-btn, .tools select { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--ink); border: 1px solid var(--line-strong); background: var(--card); border-radius: 9px; padding: 7px 10px; cursor: pointer; transition: .15s; display: inline-flex; align-items: center; gap: 6px; }
   .icon-btn:hover, .tools select:hover { border-color: var(--ink-soft); }
+  .icon-btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
   nav.tabs { display: flex; gap: 4px; background: var(--paper-2); padding: 4px; border-radius: 11px; margin-bottom: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   nav.tabs button { flex: 1; min-width: max-content; border: 0; background: transparent; padding: 9px 14px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--ink-soft); transition: .15s; white-space: nowrap; }
@@ -78,6 +79,7 @@
   .seg button.on[data-t="expense"], .seg button.on[data-rt="expense"], .seg button.on[data-lk="lent-out"] { background: var(--expense); color: #fff; }
   .seg button.on[data-t="income"], .seg button.on[data-rt="income"], .seg button.on[data-lk="borrowed"] { background: var(--income); color: #fff; }
   .seg button.on[data-t="transfer"], .seg button.on[data-rt="transfer"] { background: var(--accent); color: var(--accent-ink); }
+  .seg button.on[data-theme-set] { background: var(--accent); color: var(--accent-ink); }
 
   label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin: 0 0 5px 2px; }
   .field { margin-bottom: 12px; }
@@ -188,12 +190,7 @@
     </div>
     <div class="tools">
       <button class="icon-btn" id="theme" title="Toggle dark mode">🌙</button>
-      <select id="cur" title="Currency">
-        <option value="$">$ USD</option><option value="€">€ EUR</option><option value="£">£ GBP</option>
-        <option value="¥">¥ JPY</option><option value="₹">₹ INR</option><option value="₱">₱ PHP</option>
-        <option value="C$">C$ CAD</option><option value="A$">A$ AUD</option><option value="kr">kr SEK</option>
-        <option value="₩">₩ KRW</option>
-      </select>
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
     </div>
   </header>
 
@@ -208,7 +205,7 @@
 
   <div id="app"><div class="loading">Opening your ledger…</div></div>
 
-  <div class="foot">Saved automatically &amp; privately to you. &nbsp;·&nbsp; <button id="reset">Clear all data</button></div>
+  <div class="foot">Saved automatically &amp; privately to you. &nbsp;·&nbsp; <button id="footSettings">Settings &amp; backup</button></div>
 </div>
 <div class="toast" id="toast"></div>
 <input type="file" id="fileJSON" accept="application/json,.json" style="display:none">
@@ -316,7 +313,8 @@
   function render() {
     rebuildMap();
     Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.classList.toggle("on", b.getAttribute("data-tab") === state.tab); });
-    ({ overview: renderOverview, track: renderTrack, accounts: renderAccounts, lending: renderLending, trends: renderTrends, recurring: renderRecurring }[state.tab] || renderOverview)();
+    ({ overview: renderOverview, track: renderTrack, accounts: renderAccounts, lending: renderLending, trends: renderTrends, recurring: renderRecurring, settings: renderSettings }[state.tab] || renderOverview)();
+    var gb = document.getElementById("settingsBtn"); if (gb) gb.classList.toggle("on", state.tab === "settings");
     wireNudge();
   }
 
@@ -364,22 +362,17 @@
     var recentBody = !ents.length ? '<div class="empty">No activity yet.</div>' : '<ul class="tx">' + ents.map(recentRow).join("") + '</ul>';
     var recent = card("Recent activity", "", recentBody);
 
-    // data
-    var data = card("Backup &amp; restore", "Your data lives only on this device unless you back it up", '<div class="data-btns">' +
-      '<button class="btn" id="dlJSON">Download backup (.json)</button>' +
-      '<button class="btn sec" id="upJSON">Restore from backup</button>' +
-      '<button class="btn sec" id="exCSV">Export CSV (spreadsheet)</button>' +
-      '<button class="btn sec" id="imCSV">Import CSV (Ledger format)</button></div>' +
-      '<div class="hint" style="margin-top:10px;margin-bottom:0">Backup = full, lossless restore. CSV = open in a spreadsheet; import expects a file exported here.</div>');
+    // primary call-to-action
+    var cta = state.accounts.length
+      ? '<button class="btn" id="goTrack" style="font-size:16px;padding:14px">＋ Record a new entry</button>'
+      : '<button class="btn" id="goAcct2" style="font-size:16px;padding:14px">＋ Add your first account</button>';
 
-    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '', monthPills()), sidebar, upcoming + recent + data);
+    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, cta + upcoming + recent);
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
-    bind("dlJSON", "click", backupJSON);
-    bind("upJSON", "click", function () { document.getElementById("fileJSON").click(); });
-    bind("exCSV", "click", exportCSV);
-    bind("imCSV", "click", function () { document.getElementById("fileCSV").click(); });
+    bind("goTrack", "click", function () { state.tab = "track"; render(); });
+    bind("goAcct2", "click", function () { state.tab = "accounts"; render(); });
   }
   function recentRow(e) {
     var dt = dtLabel(e.date, e.time);
@@ -570,7 +563,7 @@
     if (accts.length) main += card("Across accounts", "Where your money sits now", accts.map(function (a) { var pct = Math.round(Math.abs(a.bal) / acctMax * 100); return '<div class="bd-row"><div class="cat">' + esc(a.name) + '</div><div class="bar"><span style="width:' + pct + '%;background:' + (a.bal >= 0 ? a.color : "var(--expense)") + '"></span></div><div class="amt num ' + (a.bal >= 0 ? "pos" : "neg") + '">' + fmt(a.bal) + '</div></div>'; }).join(""));
     if (!main) main = card("Trends", "Your numbers, visualized", '<div class="empty"><div class="big">Not enough yet</div>Add accounts and a few entries and your stats will appear here.</div>');
 
-    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '', monthPills()), sidebar, main);
+    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()), sidebar, main);
   }
   function stat(l, v, cls) { return '<div class="stat"><div class="l">' + l + '</div><div class="v num ' + (cls || "") + '">' + v + '</div></div>'; }
 
@@ -625,6 +618,55 @@
     saveTx(); toast((r.desc || r.where || "Entry") + " logged"); if (state.tab === "track" || state.tab === "overview") render();
   }
 
+  // ---------- SETTINGS ----------
+  function renderSettings() {
+    var hero = '<div class="hero"><div><div class="label">Ledger</div>' +
+      '<div style="font-family:\'Fraunces\',serif;font-size:34px;font-weight:600;line-height:1">Settings</div>' +
+      '<div class="csub">Preferences, data &amp; backup</div></div></div>';
+
+    var sidebar = card("Your data", "Stored privately on this device",
+      '<div class="snap-row"><span class="nm">Accounts</span><span class="bl num">' + state.accounts.length + '</span></div>' +
+      '<div class="snap-row"><span class="nm">Transactions</span><span class="bl num">' + state.tx.length + '</span></div>' +
+      '<div class="snap-row"><span class="nm">Loans</span><span class="bl num">' + state.loans.length + '</span></div>' +
+      '<div class="snap-row"><span class="nm">Templates</span><span class="bl num">' + state.recurring.length + '</span></div>' +
+      '<div class="snap-row"><span class="nm">Currency</span><span class="bl num">' + state.cur + '</span></div>');
+
+    var appearance = card("Appearance", "Light or dark — your choice is remembered",
+      '<div class="seg"><button data-theme-set="light" class="' + (state.theme === "light" ? "on" : "") + '">☀️ Light</button>' +
+      '<button data-theme-set="dark" class="' + (state.theme === "dark" ? "on" : "") + '">🌙 Dark</button></div>');
+
+    var curOpts = [["$", "USD"], ["€", "EUR"], ["£", "GBP"], ["¥", "JPY"], ["₹", "INR"], ["₱", "PHP"], ["C$", "CAD"], ["A$", "AUD"], ["kr", "SEK"], ["₩", "KRW"]]
+      .map(function (o) { return '<option value="' + o[0] + '"' + sel(state.cur, o[0]) + '>' + o[0] + " " + o[1] + '</option>'; }).join("");
+    var currency = card("Currency", "Affects how amounts are displayed", '<select class="inp" id="curSel">' + curOpts + '</select>');
+
+    var dataCard = card("Backup &amp; data", "Your only copy lives here unless you back it up",
+      '<div class="data-btns"><button class="btn" id="dlJSON">Download backup (.json)</button>' +
+      '<button class="btn sec" id="upJSON">Restore from backup</button>' +
+      '<button class="btn sec" id="exCSV">Export CSV</button>' +
+      '<button class="btn sec" id="imCSV">Import CSV</button></div>' +
+      '<div class="hint" style="margin-top:10px;margin-bottom:0">Backup is a full, lossless restore — use it to move between devices. CSV opens in a spreadsheet; import expects a file exported here.</div>');
+
+    var danger = card("Danger zone", "",
+      '<button class="btn" id="clearAll" style="background:var(--expense);color:#fff">Clear all data</button>' +
+      '<div class="hint" style="margin-top:10px;margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
+
+    app.innerHTML = layout(hero, sidebar, appearance + currency + dataCard + danger);
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) { b.onclick = function () { state.theme = b.getAttribute("data-theme-set"); applyTheme(); saveSet(); render(); }; });
+    bind("curSel", "change", function (el) { state.cur = el.value; saveSet(); render(); });
+    bind("dlJSON", "click", backupJSON);
+    bind("upJSON", "click", function () { document.getElementById("fileJSON").click(); });
+    bind("exCSV", "click", exportCSV);
+    bind("imCSV", "click", function () { document.getElementById("fileCSV").click(); });
+    bind("clearAll", "click", clearAllData);
+  }
+  async function clearAllData() {
+    if (!confirm("Delete ALL accounts, transactions, loans and templates? Download a backup first — this can't be undone.")) return;
+    state.tx = []; state.loans = []; state.recurring = []; state.accounts = [];
+    try { await window.storage.delete(K.tx); await window.storage.delete(K.loan); await window.storage.delete(K.rec); await window.storage.delete(K.acct); } catch (e) {}
+    render(); toast("All data cleared");
+  }
+
   // ---------- data: backup / restore / csv ----------
   function applyTheme() { document.documentElement.setAttribute("data-theme", state.theme); var b = document.getElementById("theme"); if (b) b.textContent = state.theme === "dark" ? "☀️" : "🌙"; }
   function download(name, text, mime) { var blob = new Blob([text], { type: mime }), a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
@@ -637,7 +679,7 @@
     state.tx = Array.isArray(o.transactions) ? o.transactions : [];
     state.loans = Array.isArray(o.loans) ? o.loans : [];
     state.recurring = Array.isArray(o.recurring) ? o.recurring : [];
-    if (o.currency) { state.cur = o.currency; saveSet(); document.getElementById("cur").value = state.cur; }
+    if (o.currency) { state.cur = o.currency; saveSet(); }
     saveAll(); render(); toast("Backup restored");
   }
   function csvCell(c) { c = String(c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }
@@ -684,18 +726,12 @@
   // ---------- shared / chrome ----------
   function bind(id, evt, fn) { var el = document.getElementById(id); if (el) el["on" + evt] = function () { fn(el); }; }
   Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-tab"); render(); }; });
-  document.getElementById("theme").onclick = function () { state.theme = state.theme === "dark" ? "light" : "dark"; applyTheme(); saveSet(); };
-  var curEl = document.getElementById("cur");
-  curEl.onchange = function () { state.cur = curEl.value; saveSet(); render(); };
+  document.getElementById("theme").onclick = function () { state.theme = state.theme === "dark" ? "light" : "dark"; applyTheme(); saveSet(); render(); };
+  document.getElementById("settingsBtn").onclick = function () { state.tab = "settings"; render(); };
+  document.getElementById("footSettings").onclick = function () { state.tab = "settings"; render(); };
   document.getElementById("fileJSON").onchange = function () { readFile(this, restoreJSON); };
   document.getElementById("fileCSV").onchange = function () { readFile(this, importCSV); };
-  document.getElementById("reset").onclick = async function () {
-    if (!confirm("Delete ALL accounts, transactions, loans and templates? Consider downloading a backup first. This can't be undone.")) return;
-    state.tx = []; state.loans = []; state.recurring = []; state.accounts = [];
-    try { await window.storage.delete(K.tx); await window.storage.delete(K.loan); await window.storage.delete(K.rec); await window.storage.delete(K.acct); } catch (e) {}
-    render(); toast("Cleared");
-  };
 
-  load().then(function () { curEl.value = state.cur; render(); });
+  load().then(function () { render(); });
 })();
 </script>
