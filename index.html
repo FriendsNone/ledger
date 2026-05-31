@@ -98,9 +98,10 @@
   .row-gap { display: flex; gap: 10px; flex-wrap: wrap; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 7px 13px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; gap: 7px; align-items: center; transition: .15s; }
+  .chip { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 7px 13px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; gap: 7px; align-items: center; transition: .15s; max-width: 100%; }
   .chip:hover { border-color: var(--ink-soft); }
-  .chip .amt { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .chip .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+  .chip .amt { font-family: 'JetBrains Mono', monospace; font-weight: 600; flex: none; }
 
   .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .filters select, .filters input { font-family: inherit; font-size: 13px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 9px; cursor: pointer; }
@@ -112,37 +113,32 @@
   .bar > span { display: block; height: 100%; border-radius: 5px; background: var(--expense); transition: width .4s ease; }
   .bd-row .amt { font-size: 13px; font-weight: 600; }
 
-  ul.tx { list-style: none; }
-  .tx li { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
-  .tx li:last-child { border-bottom: 0; }
+  .lrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
+  .lrow:last-child { border-bottom: 0; }
+  .lrow.is-settled { opacity: .55; }
+  .lead { flex: none; display: flex; align-items: center; }
   .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
   .dot.ring { background: transparent !important; border: 2px solid var(--ink-faint); width: 10px; height: 10px; }
-  .tx .meta { flex: 1; min-width: 0; }
-  .tx .desc { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .tx .tag { font-size: 12px; color: var(--ink-faint); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .tx .val { font-size: 15px; font-weight: 600; white-space: nowrap; }
-  .del, .mini { border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; line-height: 1; padding: 4px 7px; border-radius: 6px; transition: .15s; }
-  .del { font-size: 17px; } .mini { font-size: 13px; }
+  .body { flex: 1 1 150px; min-width: 0; }
+  .body .t { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+  .body .t.num { font-family: 'JetBrains Mono', monospace; }
+  .body .s { font-size: 12px; color: var(--ink-faint); margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px; overflow-wrap: anywhere; }
+  .end { flex: none; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .end .v { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -.02em; font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .act { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); border-radius: 7px; padding: 6px 11px; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: .15s; white-space: nowrap; }
+  .act:hover { border-color: var(--ink-soft); }
+  .act.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .del, .mini { border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; line-height: 1; padding: 4px 6px; border-radius: 6px; transition: .15s; }
+  .del { font-size: 17px; } .mini { font-size: 14px; }
   .del:hover { background: var(--expense-soft); color: var(--expense); }
   .mini:hover { background: var(--paper-2); color: var(--ink); }
-  .more { text-align: center; margin-top: 6px; }
+  .more { text-align: center; margin-top: 10px; }
 
-  .acct-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-  .acct-row:last-child { border-bottom: 0; }
-  .acct-row .meta { flex: 1; min-width: 0; }
-  .acct-row .name { font-size: 15px; font-weight: 600; }
-  .acct-row .sub { font-size: 12px; color: var(--ink-faint); }
-  .acct-row .bal { font-size: 17px; font-weight: 600; }
   .snap-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
   .snap-row:last-child { border-bottom: 0; }
   .snap-row .nm { flex: 1; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .snap-row .bl { font-size: 14px; font-weight: 600; }
 
-  .rec-row, .loan-row, .up-row { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
-  .rec-row:last-child, .loan-row:last-child, .up-row:last-child { border-bottom: 0; }
-  .rec-row .meta, .loan-row .meta, .up-row .meta { flex: 1; min-width: 0; }
-  .rec-row .desc, .loan-row .desc, .up-row .desc { font-size: 14px; font-weight: 600; }
-  .rec-row .tag, .loan-row .tag, .up-row .tag { font-size: 12px; color: var(--ink-faint); }
   .badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
   .badge.lent { background: var(--expense-soft); color: var(--expense); }
   .badge.borrowed { background: var(--income-soft); color: var(--income); }
@@ -154,7 +150,6 @@
   .person-h:first-child { margin-top: 0; }
   .person-h .pn { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; }
   .person-h .pnet { font-size: 13px; font-weight: 600; }
-  .loan-row.is-settled { opacity: .55; }
 
   .legend { display: flex; gap: 16px; font-size: 12px; color: var(--ink-soft); margin-bottom: 10px; flex-wrap: wrap; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
@@ -183,7 +178,7 @@
     .pills { gap: 16px; } .pill .v { font-size: 16px; }
     .card-b { padding: 13px 14px 15px; } .card-h { padding: 13px 14px 0; }
     nav.tabs button { padding: 8px 11px; font-size: 13px; }
-    .tx li, .rec-row, .loan-row, .up-row { padding: 9px 2px; gap: 9px; }
+    .lrow { padding: 9px 2px; gap: 5px 9px; }
     .stats { grid-template-columns: 1fr 1fr; }
     .filters input { width: 100px; }
     .bd-row { grid-template-columns: 76px 1fr auto; gap: 8px; }
@@ -316,8 +311,17 @@
     return '<div class="chips">' + sc.map(function (r) {
       var amtCls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ";
       var name = r.desc || r.where || (r.type === "transfer" ? "Transfer" : r.type);
-      return '<button class="chip" data-log="' + r.id + '">' + esc(name) + ' <span class="amt ' + amtCls + '">' + sign + raw(r.amount) + '</span></button>';
+      return '<button class="chip" data-log="' + r.id + '"><span class="nm">' + esc(name) + '</span><span class="amt ' + amtCls + '">' + sign + raw(r.amount) + '</span></button>';
     }).join("") + '</div>';
+  }
+
+  function dotEl(c) { return '<span class="dot" style="background:' + c + '"></span>'; }
+  function ringEl() { return '<span class="dot ring"></span>'; }
+  function lrow(p) {
+    return '<div class="lrow' + (p.settled ? " is-settled" : "") + '">' +
+      '<span class="lead">' + (p.lead || "") + '</span>' +
+      '<div class="body"><div class="t' + (p.tnum ? " num" : "") + '">' + p.t + '</div>' + (p.sub ? '<div class="s">' + p.sub + '</div>' : "") + '</div>' +
+      '<div class="end">' + (p.val ? '<span class="v ' + (p.valCls || "") + '">' + p.val + '</span>' : "") + (p.acts || "") + '</div></div>';
   }
 
   // ---------- render dispatch ----------
@@ -353,14 +357,18 @@
     up.sort(function (a, b) { return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0; });
     var upBody = !up.length ? '<div class="empty">Nothing scheduled. Add an expected day to a template, or a due date to a loan, and it\'ll show here.</div>'
       : up.slice(0, 8).map(function (u) {
-        var rl = relLabel(u.iso), badge = '<span class="badge ' + rl.c + '">' + rl.t + '</span>';
-        if (u.kind === "recurring") { var r = u.r, isT = r.type === "transfer", cls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ", name = r.desc || r.where || (isT ? "Transfer" : r.type); return '<div class="up-row">' + badge + '<div class="meta"><div class="desc">' + esc(name) + '</div><div class="tag">recurring · ' + esc(acctName(r.account)) + '</div></div><div class="val num ' + cls + '" style="font-size:15px;font-weight:600">' + sign + raw(r.amount) + '</div><button class="btn btn-sm" data-log="' + r.id + '">Log</button></div>'; }
-        var l = u.l, lcls = l.kind === "lent" ? "pos" : "neg", lsign = l.kind === "lent" ? "+" : "−"; return '<div class="up-row">' + badge + '<div class="meta"><div class="desc">' + (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person) + '</div><div class="tag">loan · ' + esc(acctName(l.account)) + '</div></div><div class="val num ' + lcls + '" style="font-size:15px;font-weight:600">' + lsign + raw(l.amount) + '</div><button class="btn btn-sm" data-settle="' + l.id + '">Settle</button></div>';
+        var rl = relLabel(u.iso), tb = '<span class="badge ' + rl.c + '">' + rl.t + '</span>';
+        if (u.kind === "recurring") {
+          var r = u.r, isT = r.type === "transfer", cls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ", color = r.type === "income" ? "var(--income)" : r.type === "expense" ? "var(--expense)" : "var(--ink-faint)", name = r.desc || r.where || (isT ? "Transfer" : r.type);
+          return lrow({ lead: dotEl(color), t: esc(name), sub: tb + '<span>recurring · ' + esc(acctName(r.account)) + '</span>', val: sign + raw(r.amount), valCls: cls, acts: '<button class="act primary" data-log="' + r.id + '">Log</button>' });
+        }
+        var l = u.l, lcls = l.kind === "lent" ? "pos" : "neg", lsign = l.kind === "lent" ? "+" : "−", lcolor = l.kind === "lent" ? "var(--income)" : "var(--expense)";
+        return lrow({ lead: dotEl(lcolor), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: tb + '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: lsign + raw(l.amount), valCls: lcls, acts: '<button class="act primary" data-settle="' + l.id + '">Settle</button>' });
       }).join("");
     var upcoming = card("Upcoming", "Bills, subscriptions &amp; loan due dates", upBody);
 
     var ents = entries().slice(0, 6);
-    var recent = card("Recent activity", "", !ents.length ? '<div class="empty">No activity yet.</div>' : '<ul class="tx">' + ents.map(recentRow).join("") + '</ul>');
+    var recent = card("Recent activity", "", !ents.length ? '<div class="empty">No activity yet.</div>' : '<div class="list">' + ents.map(recentRow).join("") + '</div>');
 
     app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, upcoming + recent);
 
@@ -370,17 +378,7 @@
     bind("goAcct2", "click", function () { state.tab = "accounts"; render(); });
     bind("impBackup", "click", function () { document.getElementById("fileJSON").click(); });
   }
-  function recentRow(e) {
-    var dt = dtLabel(e.date, e.time);
-    if (e.kind === "transfer") return '<li><span class="dot" style="background:var(--ink-faint)"></span><div class="meta"><div class="desc">' + (e.note ? esc(e.note) : "Transfer") + '</div><div class="tag">' + esc(acctName(e.account)) + ' → ' + esc(acctName(e.toAccount)) + ' · ' + dt + '</div></div><div class="val num neu">⇄ ' + raw(e.amount) + '</div></li>';
-    if (e.kind === "income" || e.kind === "expense") { var sign = e.kind === "income" ? "+" : "−", cls = e.kind === "income" ? "pos" : "neg"; return '<li><span class="dot" style="background:' + acctColor(e.account) + '"></span><div class="meta"><div class="desc">' + esc(e.where || e.note || "—") + '</div><div class="tag">' + esc(acctName(e.account)) + ' · ' + dt + '</div></div><div class="val num ' + cls + '">' + sign + raw(e.amount) + '</div></li>'; }
-    var label, sg, cl;
-    if (e.kind === "lend") { label = "Lent to " + e.person; sg = "−"; cl = "neg"; }
-    else if (e.kind === "borrow") { label = "Borrowed from " + e.person; sg = "+"; cl = "pos"; }
-    else if (e.loanKind === "lent") { label = "Repaid by " + e.person; sg = "+"; cl = "pos"; }
-    else { label = "Paid back " + e.person; sg = "−"; cl = "neg"; }
-    return '<li><span class="dot ring"></span><div class="meta"><div class="desc">' + esc(label) + '</div><div class="tag">' + esc(acctName(e.account)) + ' · ' + dt + ' · lending</div></div><div class="val num ' + cl + '">' + sg + raw(e.amount) + '</div></li>';
-  }
+  function recentRow(e) { return entryRow(e, true); }
 
   // ---------- TRACK ----------
   function renderTrack() {
@@ -394,7 +392,7 @@
     var shown = visible.slice(0, state.trackShow);
     var remaining = visible.length - shown.length;
     var listBody = !visible.length ? '<div class="empty"><div class="big">Nothing here yet</div>' + (state.accounts.length ? "Add your first entry on the left to get started." : "Add an account, then start logging.") + '</div>'
-      : '<ul class="tx">' + shown.map(entryRow).join("") + '</ul>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more · ' + remaining + ' left</button></div>' : "");
+      : '<div class="list">' + shown.map(function (e) { return entryRow(e); }).join("") + '</div>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more · ' + remaining + ' left</button></div>' : "");
     var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select></div>';
 
     var chips = shortcutChips();
@@ -417,16 +415,24 @@
       '<div class="two"><div class="field"><label>Date</label><input id="date" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="time" type="time" value="' + nowTime() + '"></div></div>' +
       '<button class="btn" id="add">' + (isT ? "Record transfer" : "Add " + state.formType) + '</button>';
   }
-  function entryRow(e) {
+  function entryRow(e, ro) {
     var dt = dtLabel(e.date, e.time);
-    if (e.kind === "transfer") { var feeTxt = e.fee ? " · fee " + raw(e.fee) : ""; return '<li><span class="dot" style="background:var(--ink-faint)"></span><div class="meta"><div class="desc">' + (e.note ? esc(e.note) : "Transfer") + '</div><div class="tag">' + esc(acctName(e.account)) + ' → ' + esc(acctName(e.toAccount)) + ' · ' + dt + feeTxt + '</div></div><div class="val num neu">⇄ ' + raw(e.amount) + '</div><button class="del" data-id="' + e.id + '" title="Delete">×</button></li>'; }
-    if (e.kind === "income" || e.kind === "expense") { var sign = e.kind === "income" ? "+" : "−", cls = e.kind === "income" ? "pos" : "neg", primary = e.where || e.note || "—", second = (e.where && e.note) ? " · " + esc(e.note) : ""; return '<li><span class="dot" style="background:' + acctColor(e.account) + '"></span><div class="meta"><div class="desc">' + esc(primary) + '</div><div class="tag">' + esc(acctName(e.account)) + ' · ' + dt + second + '</div></div><div class="val num ' + cls + '">' + sign + raw(e.amount) + '</div><button class="del" data-id="' + e.id + '" title="Delete">×</button></li>'; }
-    var label, sign2, cls2;
-    if (e.kind === "lend") { label = "Lent to " + e.person; sign2 = "−"; cls2 = "neg"; }
-    else if (e.kind === "borrow") { label = "Borrowed from " + e.person; sign2 = "+"; cls2 = "pos"; }
-    else if (e.loanKind === "lent") { label = "Repaid by " + e.person; sign2 = "+"; cls2 = "pos"; }
-    else { label = "Paid back " + e.person; sign2 = "−"; cls2 = "neg"; }
-    return '<li><span class="dot ring"></span><div class="meta"><div class="desc">' + esc(label) + '</div><div class="tag">' + esc(acctName(e.account)) + ' · ' + dt + ' · lending</div></div><div class="val num ' + cls2 + '">' + sign2 + raw(e.amount) + '</div><button class="mini" data-jump="lending" title="Manage in Lending">↗</button></li>';
+    if (e.kind === "transfer") {
+      var sub = '<span>' + esc(acctName(e.account)) + ' → ' + esc(acctName(e.toAccount)) + ' · ' + dt + '</span>' + (e.fee ? '<span class="badge next">fee ' + raw(e.fee) + '</span>' : "");
+      return lrow({ lead: dotEl("var(--ink-faint)"), t: esc(e.note || "Transfer"), sub: sub, val: "⇄ " + raw(e.amount), valCls: "neu", acts: ro ? "" : '<button class="del" data-id="' + e.id + '" title="Delete">×</button>' });
+    }
+    if (e.kind === "income" || e.kind === "expense") {
+      var sign = e.kind === "income" ? "+" : "−", cls = e.kind === "income" ? "pos" : "neg";
+      var sub2 = '<span>' + esc(acctName(e.account)) + ' · ' + dt + (e.where && e.note ? " · " + esc(e.note) : "") + '</span>';
+      return lrow({ lead: dotEl(acctColor(e.account)), t: esc(e.where || e.note || "—"), sub: sub2, val: sign + raw(e.amount), valCls: cls, acts: ro ? "" : '<button class="del" data-id="' + e.id + '" title="Delete">×</button>' });
+    }
+    var label, sg, cl;
+    if (e.kind === "lend") { label = "Lent to " + e.person; sg = "−"; cl = "neg"; }
+    else if (e.kind === "borrow") { label = "Borrowed from " + e.person; sg = "+"; cl = "pos"; }
+    else if (e.loanKind === "lent") { label = "Repaid by " + e.person; sg = "+"; cl = "pos"; }
+    else { label = "Paid back " + e.person; sg = "−"; cl = "neg"; }
+    var sub3 = '<span>' + esc(acctName(e.account)) + ' · ' + dt + '</span><span class="badge next">lending</span>';
+    return lrow({ lead: ringEl(), t: esc(label), sub: sub3, val: sg + raw(e.amount), valCls: cl, acts: ro ? "" : '<button class="mini" data-jump="lending" title="Manage in Lending">↗</button>' });
   }
   function wireTrack() {
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.formType = b.getAttribute("data-t"); render(); }; });
@@ -459,7 +465,7 @@
   function renderAccounts() {
     var nw = netWorth();
     var rows = !state.accounts.length ? '<div class="empty"><div class="big">No accounts yet</div>Add your first account on the left — a wallet, bank, or cash.</div>'
-      : state.accounts.map(function (a) { var bal = acctBal(a.id), count = state.tx.filter(function (t) { return t.account === a.id || t.toAccount === a.id; }).length; return '<div class="acct-row"><span class="dot" style="width:11px;height:11px;background:' + a.color + '"></span><div class="meta"><div class="name">' + esc(a.name) + '</div><div class="sub">starting ' + fmt(a.opening || 0) + ' · ' + count + ' txn' + (count === 1 ? "" : "s") + '</div></div><div class="bal num ' + (bal >= 0 ? "pos" : "neg") + '">' + fmt(bal) + '</div><button class="mini" data-edit="' + a.id + '" title="Rename / balance">✎</button><button class="del" data-acctdel="' + a.id + '" title="Delete">×</button></div>'; }).join("");
+      : state.accounts.map(function (a) { var bal = acctBal(a.id), count = state.tx.filter(function (t) { return t.account === a.id || t.toAccount === a.id; }).length; return lrow({ lead: dotEl(a.color), t: esc(a.name), sub: '<span>starting ' + fmt(a.opening || 0) + ' · ' + count + ' txn' + (count === 1 ? "" : "s") + '</span>', val: fmt(bal), valCls: bal >= 0 ? "pos" : "neg", acts: '<button class="mini" data-edit="' + a.id + '" title="Rename / balance">✎</button><button class="del" data-acctdel="' + a.id + '" title="Delete">×</button>' }); }).join("");
     var sidebar = card("Add account", "A wallet, bank, or cash", '<div class="field"><label>Name</label><input id="aname" type="text" maxlength="24" placeholder="name this account"></div><div class="field"><label>Balance right now</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="aopen" type="number" step="0.01" placeholder="0.00"></div></div><div class="hint">What\'s in this account today — your starting point for tracking.</div><button class="btn" id="aadd">Add account</button>');
     app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">every account balance, summed</div>', monthPills()), sidebar, card("Your accounts", "Balances update live with every entry", rows));
     bind("aadd", "click", addAccount);
@@ -506,7 +512,14 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-unsettle]"), function (b) { b.onclick = function () { var l = byId(b.getAttribute("data-unsettle")); if (l) { l.settled = false; delete l.settledDate; saveLoan(); render(); } }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-loandel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-loandel"); state.loans = state.loans.filter(function (l) { return l.id !== id; }); saveLoan(); render(); }; });
   }
-  function loanRow(l, showPerson) { var badge = l.settled ? '<span class="badge settled">settled</span>' : (l.kind === "lent" ? '<span class="badge lent">lent</span>' : '<span class="badge borrowed">borrowed</span>'); var action = l.settled ? '<button class="mini" data-unsettle="' + l.id + '">undo</button>' : '<button class="btn btn-sm" data-settle="' + l.id + '">Settle</button>'; return '<div class="loan-row' + (l.settled ? ' is-settled' : '') + '">' + badge + '<div class="meta"><div class="desc num">' + raw(l.amount) + (showPerson ? ' <span style="font-family:Hanken Grotesk;font-weight:600">' + esc(l.person) + '</span>' : '') + '</div><div class="tag">' + esc(acctName(l.account)) + ' · ' + dtLabel(l.date, l.time) + (l.note ? ' · ' + esc(l.note) : '') + '</div></div>' + dueBadge(l) + action + '<button class="del" data-loandel="' + l.id + '" title="Delete">×</button></div>'; }
+  function loanRow(l, showPerson) {
+    var t = showPerson ? esc(l.person) : (l.kind === "lent" ? "Lent out" : "Borrowed");
+    var sub = '<span>' + esc(acctName(l.account)) + ' · ' + dtLabel(l.date, l.time) + (l.note ? " · " + esc(l.note) : "") + '</span>';
+    if (showPerson) sub += (l.kind === "lent" ? '<span class="badge lent">lent out</span>' : '<span class="badge borrowed">borrowed</span>');
+    sub += l.settled ? '<span class="badge settled">settled</span>' : dueBadge(l);
+    var acts = (l.settled ? '<button class="act" data-unsettle="' + l.id + '">Undo</button>' : '<button class="act primary" data-settle="' + l.id + '">Settle</button>') + '<button class="del" data-loandel="' + l.id + '" title="Delete">×</button>';
+    return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled });
+  }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
   function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { pe.focus(); pe.style.borderColor = "var(--expense)"; return; } var ae = document.getElementById("lamt"), v = parseFloat(ae.value); if (!v || v <= 0) { ae.focus(); ae.style.borderColor = "var(--expense)"; return; } state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: Math.round(v * 100) / 100, account: document.getElementById("lacct").value, date: (document.getElementById("ldate").value || today()), time: nowTime(), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false }); saveLoan(); render(); toast("Loan recorded"); }
   function settleLoan(id) { var l = byId(id); if (!l) return; l.settled = true; l.settledDate = today(); l.settledTime = nowTime(); l.settledAccount = l.account; saveLoan(); render(); toast(l.kind === "lent" ? "Marked repaid to you" : "Marked paid back"); }
@@ -583,9 +596,14 @@
     var list = !state.recurring.length ? '<div class="empty"><div class="big">No templates yet</div>Save what you log often. Add an <b>expected day</b> for recurring bills, or leave it blank to make a quick <b>shortcut</b>.</div>'
       : state.recurring.map(function (r) {
         var badge = r.dueDay ? nextDueLabel(r.dueDay) : '<span class="badge shortcut">shortcut</span>';
-        if (r.type === "transfer") return '<div class="rec-row"><span class="dot" style="background:var(--ink-faint)"></span><div class="meta"><div class="desc">' + (r.desc ? esc(r.desc) : "Transfer") + '</div><div class="tag">' + esc(acctName(r.account)) + ' → ' + esc(acctName(r.toAccount)) + (r.fee ? ' · fee ' + raw(r.fee) : '') + '</div></div>' + badge + '<div class="val num neu" style="font-size:15px;font-weight:600">⇄ ' + raw(r.amount) + '</div><button class="btn btn-sm" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" title="Delete">×</button></div>';
+        var acts = '<button class="act primary" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" title="Delete">×</button>';
+        if (r.type === "transfer") {
+          var subT = '<span>' + esc(acctName(r.account)) + ' → ' + esc(acctName(r.toAccount)) + (r.fee ? " · fee " + raw(r.fee) : "") + '</span>' + badge;
+          return lrow({ lead: dotEl("var(--ink-faint)"), t: r.desc ? esc(r.desc) : "Transfer", sub: subT, val: "⇄ " + raw(r.amount), valCls: "neu", acts: acts });
+        }
         var cls = r.type === "income" ? "pos" : "neg", sign = r.type === "income" ? "+" : "−", color = r.type === "income" ? "var(--income)" : "var(--expense)";
-        return '<div class="rec-row"><span class="dot" style="background:' + color + '"></span><div class="meta"><div class="desc">' + (r.desc ? esc(r.desc) : (r.where || (r.type === "income" ? "Income" : "Expense"))) + '</div><div class="tag">' + (r.where ? esc(r.where) + ' · ' : '') + esc(acctName(r.account)) + '</div></div>' + badge + '<div class="val num ' + cls + '" style="font-size:15px;font-weight:600">' + sign + raw(r.amount) + '</div><button class="btn btn-sm" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" title="Delete">×</button></div>';
+        var subE = '<span>' + (r.where ? esc(r.where) + " · " : "") + esc(acctName(r.account)) + '</span>' + badge;
+        return lrow({ lead: dotEl(color), t: r.desc ? esc(r.desc) : (r.where || (r.type === "income" ? "Income" : "Expense")), sub: subE, val: sign + raw(r.amount), valCls: cls, acts: acts });
       }).join("");
     var formFields = isT
       ? '<div class="field"><label>From account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="racct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(opt)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="rfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>'
