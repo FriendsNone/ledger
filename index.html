@@ -59,10 +59,11 @@
   .hero .label { font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--ink-faint); margin-bottom: 6px; }
   .hero .balance { font-size: 42px; font-weight: 600; line-height: 1; }
   .hero .csub { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
-  .pills { display: flex; gap: 22px; }
+  .pills { display: flex; gap: 22px; flex-wrap: wrap; }
   .pill .label { font-size: 11px; } .pill .v { font-size: 20px; font-weight: 600; }
 
   .cols { display: grid; grid-template-columns: 360px 1fr; gap: 16px; align-items: start; }
+  .cols > div { min-width: 0; }
   .stack { display: flex; flex-direction: column; gap: 16px; }
   @media (max-width: 780px) { .cols { grid-template-columns: 1fr; } }
 
@@ -302,7 +303,8 @@
   // ---------- layout primitives ----------
   function heroBlock(label, val, valCls, sub, pills) { return '<div class="hero"><div><div class="label">' + label + '</div><div class="balance num ' + valCls + '">' + val + '</div>' + (sub || "") + '</div>' + (pills || "") + '</div>'; }
   function monthPills() { var t = periodTotals(true); return '<div class="pills"><div class="pill"><div class="label">Income · this month</div><div class="v num pos">' + fmt(t.inc) + '</div></div><div class="pill"><div class="label">Expenses · this month</div><div class="v num neg">' + fmt(t.exp) + '</div></div></div>'; }
-  function layout(hero, sidebar, main) { return hero + '<div class="cols"><div class="stack">' + sidebar + '</div><div class="stack">' + main + '</div></div>'; }
+  function colsBlock(sidebar, main) { return '<div class="cols"><div class="stack">' + sidebar + '</div><div class="stack">' + main + '</div></div>'; }
+  function layout(hero, sidebar, main) { return hero + colsBlock(sidebar, main); }
   function card(title, sub, body, headExtra) { var h = '<div class="card-h"' + (headExtra ? ' style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px"' : '') + '><div><h2>' + title + '</h2>' + (sub ? '<div class="sub">' + sub + '</div>' : "") + '</div>' + (headExtra || "") + '</div>'; return '<div class="card">' + h + '<div class="card-b">' + body + '</div></div>'; }
   function accountNudge() { return '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>'; }
   function wireNudge() { var g = document.getElementById("goAcct"); if (g) g.onclick = function () { state.tab = "accounts"; render(); }; }
@@ -335,11 +337,15 @@
     var snap = !state.accounts.length ? '<div class="empty"><div class="big">No accounts</div>Add one to begin.</div>'
       : state.accounts.map(function (a) { var b = acctBal(a.id); return '<div class="snap-row"><span class="dot" style="background:' + a.color + '"></span><span class="nm">' + esc(a.name) + '</span><span class="bl num ' + (b >= 0 ? "pos" : "neg") + '">' + fmt(b) + '</span></div>'; }).join("");
     var chips = shortcutChips();
-    var sidebar = card("Accounts", state.accounts.length + " total", snap) + (chips ? card("Quick log", "Tap to record a saved shortcut", chips) : "");
+    var sidebar = card("Accounts", state.accounts.length + " total", snap);
 
-    var cta = state.accounts.length
-      ? '<button class="btn" id="goTrack" style="font-size:16px;padding:14px">＋ Record a new entry</button>'
-      : '<div class="row-gap"><button class="btn" id="goAcct2" style="flex:1;font-size:16px;padding:14px">＋ Add your first account</button><button class="btn sec" id="impBackup" style="flex:1;font-size:16px;padding:14px">Import a backup</button></div>';
+    var action;
+    if (!state.accounts.length) {
+      action = card("Get started", "Add an account, or restore a backup", '<div class="row-gap"><button class="btn" id="goAcct2" style="flex:1;font-size:16px;padding:14px">＋ Add your first account</button><button class="btn sec" id="impBackup" style="flex:1;font-size:16px;padding:14px">Import a backup</button></div>');
+    } else {
+      var newBtn = '<button class="btn ' + (chips ? "sec" : "") + '" id="goTrack" style="font-size:16px;padding:14px' + (chips ? ";margin-top:12px" : "") + '">＋ New entry</button>';
+      action = card("Quick log", chips ? "Tap a shortcut to log instantly — or add something new" : "Record an entry, or save templates for one-tap logging", (chips || "") + newBtn);
+    }
 
     var up = [];
     state.recurring.forEach(function (r) { if (r.dueDay) up.push({ kind: "recurring", iso: iso(nextDue(r.dueDay)), r: r }); });
@@ -353,12 +359,10 @@
       }).join("");
     var upcoming = card("Upcoming", "Bills, subscriptions &amp; loan due dates", upBody);
 
-    var quick = "";
-
     var ents = entries().slice(0, 6);
     var recent = card("Recent activity", "", !ents.length ? '<div class="empty">No activity yet.</div>' : '<ul class="tx">' + ents.map(recentRow).join("") + '</ul>');
 
-    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, cta + upcoming + recent);
+    app.innerHTML = heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()) + action + colsBlock(sidebar, upcoming + recent);
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
@@ -394,10 +398,11 @@
     var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select></div>';
 
     var chips = shortcutChips();
-    var sidebar = card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge()) + (chips ? card("Quick log", "Tap to record a saved shortcut", chips) : "");
+    var quick = chips ? card("Quick log", "Tap to record a saved shortcut", chips) : "";
+    var sidebar = card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge());
     var main = card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listBody, listExtra);
 
-    app.innerHTML = layout(heroBlock("Net worth", fmt(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()), sidebar, main);
+    app.innerHTML = heroBlock("Net worth", fmt(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()) + quick + colsBlock(sidebar, main);
     wireTrack();
   }
   function formHTML() {
