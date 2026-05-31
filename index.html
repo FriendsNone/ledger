@@ -35,7 +35,7 @@
     font-family: 'Hanken Grotesk', sans-serif; background: var(--paper);
     background-image: repeating-linear-gradient(transparent, transparent 31px, var(--rule) 31px, var(--rule) 32px);
     color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.45;
-    padding: 26px 18px 70px; transition: background-color .25s, color .25s;
+    padding: 26px 18px 70px; transition: background-color .25s, color .25s; overflow-x: hidden;
   }
   .wrap { max-width: 940px; margin: 0 auto; }
   .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
@@ -184,6 +184,8 @@
     .tx li, .rec-row, .loan-row, .up-row { padding: 9px 2px; gap: 9px; }
     .stats { grid-template-columns: 1fr 1fr; }
     .filters input { width: 100px; }
+    .bd-row { grid-template-columns: 76px 1fr auto; gap: 8px; }
+    .pill .label { font-size: 10px; }
   }
 </style>
 
@@ -194,7 +196,6 @@
       <div><h1>Ledger</h1><p>A quiet place to watch your money</p></div>
     </div>
     <div class="tools">
-      <button class="icon-btn" id="theme" title="Toggle dark mode">🌙</button>
       <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
     </div>
   </header>
@@ -204,8 +205,8 @@
     <button data-tab="track">Track</button>
     <button data-tab="accounts">Accounts</button>
     <button data-tab="lending">Lending</button>
-    <button data-tab="trends">Trends</button>
     <button data-tab="recurring">Templates</button>
+    <button data-tab="trends">Trends</button>
   </nav>
 
   <div id="app"><div class="loading">Opening your ledger…</div></div>
@@ -226,7 +227,7 @@
 
   var state = {
     accounts: [], tx: [], loans: [], recurring: [],
-    cur: "$", theme: "light",
+    cur: "$", theme: "system",
     tab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
     fType: "all", fQ: "", trackShow: 30, lendQ: "", trendGroup: "monthly", placesAll: false
   };
@@ -301,14 +302,15 @@
   // ---------- layout primitives ----------
   function heroBlock(label, val, valCls, sub, pills) { return '<div class="hero"><div><div class="label">' + label + '</div><div class="balance num ' + valCls + '">' + val + '</div>' + (sub || "") + '</div>' + (pills || "") + '</div>'; }
   function monthPills() { var t = periodTotals(true); return '<div class="pills"><div class="pill"><div class="label">Income · this month</div><div class="v num pos">' + fmt(t.inc) + '</div></div><div class="pill"><div class="label">Expenses · this month</div><div class="v num neg">' + fmt(t.exp) + '</div></div></div>'; }
-  function layout(hero, sidebar, main) { return hero + '<div class="cols"><div>' + sidebar + '</div><div class="stack">' + main + '</div></div>'; }
+  function layout(hero, sidebar, main) { return hero + '<div class="cols"><div class="stack">' + sidebar + '</div><div class="stack">' + main + '</div></div>'; }
   function card(title, sub, body, headExtra) { var h = '<div class="card-h"' + (headExtra ? ' style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px"' : '') + '><div><h2>' + title + '</h2>' + (sub ? '<div class="sub">' + sub + '</div>' : "") + '</div>' + (headExtra || "") + '</div>'; return '<div class="card">' + h + '<div class="card-b">' + body + '</div></div>'; }
   function accountNudge() { return '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>'; }
   function wireNudge() { var g = document.getElementById("goAcct"); if (g) g.onclick = function () { state.tab = "accounts"; render(); }; }
 
   function shortcutChips() {
-    if (!state.recurring.length) return "";
-    return '<div class="chips">' + state.recurring.map(function (r) {
+    var sc = state.recurring.filter(function (r) { return !r.dueDay; });
+    if (!sc.length) return "";
+    return '<div class="chips">' + sc.map(function (r) {
       var amtCls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ";
       var name = r.desc || r.where || (r.type === "transfer" ? "Transfer" : r.type);
       return '<button class="chip" data-log="' + r.id + '">' + esc(name) + ' <span class="amt ' + amtCls + '">' + sign + raw(r.amount) + '</span></button>';
@@ -332,7 +334,8 @@
     var nw = netWorth();
     var snap = !state.accounts.length ? '<div class="empty"><div class="big">No accounts</div>Add one to begin.</div>'
       : state.accounts.map(function (a) { var b = acctBal(a.id); return '<div class="snap-row"><span class="dot" style="background:' + a.color + '"></span><span class="nm">' + esc(a.name) + '</span><span class="bl num ' + (b >= 0 ? "pos" : "neg") + '">' + fmt(b) + '</span></div>'; }).join("");
-    var sidebar = card("Accounts", state.accounts.length + " total", snap);
+    var chips = shortcutChips();
+    var sidebar = card("Accounts", state.accounts.length + " total", snap) + (chips ? card("Quick log", "Tap to record a saved shortcut", chips) : "");
 
     var cta = state.accounts.length
       ? '<button class="btn" id="goTrack" style="font-size:16px;padding:14px">＋ Record a new entry</button>'
@@ -350,12 +353,12 @@
       }).join("");
     var upcoming = card("Upcoming", "Bills, subscriptions &amp; loan due dates", upBody);
 
-    var quick = state.recurring.length ? card("Quick log", "One tap to record a saved entry", shortcutChips()) : "";
+    var quick = "";
 
     var ents = entries().slice(0, 6);
     var recent = card("Recent activity", "", !ents.length ? '<div class="empty">No activity yet.</div>' : '<ul class="tx">' + ents.map(recentRow).join("") + '</ul>');
 
-    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, cta + upcoming + quick + recent);
+    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, cta + upcoming + recent);
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
@@ -390,9 +393,9 @@
       : '<ul class="tx">' + shown.map(entryRow).join("") + '</ul>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more · ' + remaining + ' left</button></div>' : "");
     var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select></div>';
 
-    var sidebar = card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge());
-    var main = (state.recurring.length ? card("Shortcuts", "Tap to log a saved template", shortcutChips()) : "") +
-      card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listBody, listExtra);
+    var chips = shortcutChips();
+    var sidebar = card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge()) + (chips ? card("Quick log", "Tap to record a saved shortcut", chips) : "");
+    var main = card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listBody, listExtra);
 
     app.innerHTML = layout(heroBlock("Net worth", fmt(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()), sidebar, main);
     wireTrack();
@@ -537,7 +540,7 @@
       (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") + '</div>');
 
     var main = "";
-    var groupSel = '<select id="trendGroup"><option value="weekly"' + sel(g, "weekly") + '>Weekly</option><option value="monthly"' + sel(g, "monthly") + '>Monthly</option><option value="yearly"' + sel(g, "yearly") + '>Yearly</option><option value="all"' + sel(g, "all") + '>All-time</option></select>';
+    var groupSel = '<div class="filters"><select id="trendGroup"><option value="weekly"' + sel(g, "weekly") + '>Weekly</option><option value="monthly"' + sel(g, "monthly") + '>Monthly</option><option value="yearly"' + sel(g, "yearly") + '>Yearly</option><option value="all"' + sel(g, "all") + '>All-time</option></select></div>';
     var chartBody;
     if (data.length) {
       var maxV = Math.max.apply(null, data.map(function (d) { return Math.max(d.inc, d.exp); })) || 1;
@@ -550,7 +553,7 @@
         return '<rect x="' + (cx - bw - 1) + '" y="' + (padT + plotH - ih) + '" width="' + bw + '" height="' + ih + '" rx="2.5" style="fill:var(--income)"><title>' + label + " income " + fmt(d.inc) + '</title></rect><rect x="' + (cx + 1) + '" y="' + (padT + plotH - eh) + '" width="' + bw + '" height="' + eh + '" rx="2.5" style="fill:var(--expense)"><title>' + label + " expense " + fmt(d.exp) + '</title></rect><text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + label + suffix + '</text>';
       }).join("");
       var baseY = padT + plotH, grid = '<line x1="0" y1="' + baseY + '" x2="' + W + '" y2="' + baseY + '" style="stroke:var(--line-strong);stroke-width:1"/><line x1="0" y1="' + (padT + plotH / 2) + '" x2="' + W + '" y2="' + (padT + plotH / 2) + '" style="stroke:var(--line);stroke-width:1;stroke-dasharray:3 4"/>';
-      chartBody = '<div class="legend"><span><i style="background:var(--income)"></i>Income</span><span><i style="background:var(--expense)"></i>Expenses</span></div><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block;overflow:visible">' + grid + bars + '</svg>';
+      chartBody = '<div class="legend"><span><i style="background:var(--income)"></i>Income</span><span><i style="background:var(--expense)"></i>Expenses</span></div><div style="overflow-x:auto;margin:0 -2px"><svg viewBox="0 0 ' + W + ' ' + H + '" style="display:block;width:100%;min-width:' + Math.max(320, n * 44) + 'px;height:auto">' + grid + bars + '</svg></div>';
     } else chartBody = '<div class="empty">No income or expenses to chart yet.</div>';
     main += card("Income vs. expenses", "Grouped by your selection · transfers &amp; loans excluded", chartBody, groupSel);
 
@@ -706,7 +709,6 @@
   // ---------- chrome ----------
   function bind(id, evt, fn) { var el = document.getElementById(id); if (el) el["on" + evt] = function () { fn(el); }; }
   Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-tab"); render(); }; });
-  document.getElementById("theme").onclick = function () { state.theme = resolveTheme() === "dark" ? "light" : "dark"; applyTheme(); saveSet(); render(); };
   document.getElementById("settingsBtn").onclick = function () { state.tab = "settings"; render(); };
   document.getElementById("footSettings").onclick = function () { state.tab = "settings"; render(); };
   document.getElementById("fileJSON").onchange = function () { readFile(this, restoreJSON); };
