@@ -156,6 +156,8 @@
   .modal h3 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; margin-bottom: 14px; }
   .modal-f { display: flex; gap: 10px; margin-top: 4px; }
   .modal-f .btn { width: auto; flex: 1; }
+  .modal-msg { font-size: 14px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 4px; }
+  .btn.danger { background: var(--expense); color: #fff; }
   .badge.lent { background: var(--expense-soft); color: var(--expense); }
   .badge.borrowed { background: var(--income-soft); color: var(--income); }
   .badge.settled, .badge.shortcut { background: var(--paper-2); color: var(--ink-faint); }
@@ -338,14 +340,20 @@
   function periodTotals(month) { return totalsFlow(month ? function (e) { return e.date.slice(0, 7) === thisMonth(); } : null); }
   function lendTotals() { var owed = 0, owe = 0, over = 0; state.loans.forEach(function (l) { if (l.settled) return; if (l.kind === "lent") owed += l.amount; else owe += l.amount; if (isOverdue(l)) over++; }); return { owed: owed, owe: owe, over: over }; }
 
+  function tstamp(d, t) { return new Date((d || "1970-01-01") + "T" + (t || "00:00") + ":00").getTime() || 0; }
   function entries() {
     var out = [];
-    state.tx.forEach(function (t) { out.push({ src: "tx", id: t.id, kind: t.type, date: t.date, time: t.time || "", created: t.created || 0, amount: t.amount, where: t.where || "", note: t.desc || "", account: t.account, toAccount: t.toAccount, fee: t.fee || 0 }); });
+    state.tx.forEach(function (t) { out.push({ src: "tx", id: t.id, kind: t.type, date: t.date, time: t.time || "", created: t.created != null ? t.created : tstamp(t.date, t.time), amount: t.amount, where: t.where || "", note: t.desc || "", account: t.account, toAccount: t.toAccount, fee: t.fee || 0 }); });
     state.loans.forEach(function (l) {
-      out.push({ src: "loan", id: l.id, kind: l.kind === "lent" ? "lend" : "borrow", date: l.date, time: l.time || "", created: l.created || 0, amount: l.amount, person: l.person, account: l.account, note: l.note || "" });
-      if (l.settled) out.push({ src: "settle", id: l.id, kind: "settle", loanKind: l.kind, date: l.settledDate || l.date, time: l.settledTime || "", created: (l.created || 0) + 1, amount: l.settledAmount != null ? l.settledAmount : l.amount, person: l.person, account: l.settledAccount || l.account, note: l.note || "" });
+      out.push({ src: "loan", id: l.id, kind: l.kind === "lent" ? "lend" : "borrow", date: l.date, time: l.time || "", created: l.created != null ? l.created : tstamp(l.date, l.time), amount: l.amount, person: l.person, account: l.account, note: l.note || "" });
+      if (l.settled) out.push({ src: "settle", id: l.id, kind: "settle", loanKind: l.kind, date: l.settledDate || l.date, time: l.settledTime || "", created: l.settledCreated != null ? l.settledCreated : tstamp(l.settledDate || l.date, l.settledTime) + 1, amount: l.settledAmount != null ? l.settledAmount : l.amount, person: l.person, account: l.settledAccount || l.account, note: l.note || "" });
     });
-    return out.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : (a.time < b.time ? 1 : a.time > b.time ? -1 : (a.created < b.created ? 1 : -1)); });
+    return out.sort(function (a, b) {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      var at = a.time || "", bt = b.time || ""; if (at !== bt) return at < bt ? 1 : -1;
+      if (a.created !== b.created) return a.created < b.created ? 1 : -1;
+      return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+    });
   }
 
   // ---------- layout primitives ----------
@@ -557,8 +565,23 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-edit]"), function (b) { b.onclick = function () { editAccount(b.getAttribute("data-edit")); }; });
   }
   function addAccount() { var el = document.getElementById("aname"), name = el.value.trim(); if (!name) { el.focus(); el.style.borderColor = "var(--expense)"; return; } var open = parseFloat(document.getElementById("aopen").value) || 0; state.accounts.push({ id: uid(), name: name, opening: Math.round(open * 100) / 100, color: PALETTE[state.accounts.length % PALETTE.length] }); saveAcct(); render(); toast("Account added"); }
-  function editAccount(id) { var a = amap[id]; if (!a) return; var name = prompt("Account name:", a.name); if (name === null) return; var op = prompt("Balance right now (" + state.cur + "):", a.opening || 0); if (op === null) return; a.name = name.trim() || a.name; a.opening = Math.round((parseFloat(op) || 0) * 100) / 100; saveAcct(); render(); toast("Account updated"); }
-  function delAccount(id) { var count = state.tx.filter(function (t) { return t.account === id || t.toAccount === id; }).length + state.loans.filter(function (l) { return l.account === id || l.settledAccount === id; }).length; if (!confirm(count ? "Delete this account? " + count + " linked record" + (count === 1 ? "" : "s") + " will lose their account label." : "Delete this account?")) return; state.accounts = state.accounts.filter(function (a) { return a.id !== id; }); saveAcct(); render(); toast("Account deleted"); }
+  function editAccount(id) {
+    var a = amap[id]; if (!a) return;
+    var body = '<div class="field"><label>Account name</label><input id="eAName" type="text" maxlength="24" value="' + esc(a.name) + '"></div>' +
+      '<div class="field"><label>Balance right now</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eAOpen" type="number" step="0.01" value="' + (a.opening || 0) + '"></div></div>' +
+      '<div class="hint">This is the starting point every balance builds on.</div>';
+    openModal("Edit account", body, "Save", function () {
+      var name = document.getElementById("eAName").value.trim(); if (!name) { document.getElementById("eAName").focus(); return false; }
+      a.name = name; a.opening = Math.round((parseFloat(document.getElementById("eAOpen").value) || 0) * 100) / 100;
+      saveAcct(); render(); toast("Account updated");
+    });
+  }
+  function delAccount(id) {
+    var count = state.tx.filter(function (t) { return t.account === id || t.toAccount === id; }).length + state.loans.filter(function (l) { return l.account === id || l.settledAccount === id; }).length;
+    confirmModal("Delete account?", count ? "It has " + count + " linked record" + (count === 1 ? "" : "s") + " — they'll keep their amounts but lose this account label." : "This removes the account; you can add it again anytime.", "Delete", function () {
+      state.accounts = state.accounts.filter(function (a) { return a.id !== id; }); saveAcct(); render(); toast("Account deleted");
+    }, true);
+  }
 
   // ---------- LENDING ----------
   function isOverdue(l) { return !l.settled && l.due && l.due < today(); }
@@ -610,7 +633,7 @@
     return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled });
   }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
-  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { pe.focus(); pe.style.borderColor = "var(--expense)"; return; } var ae = document.getElementById("lamt"), v = parseFloat(ae.value); if (!v || v <= 0) { ae.focus(); ae.style.borderColor = "var(--expense)"; return; } state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: Math.round(v * 100) / 100, account: document.getElementById("lacct").value, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false }); saveLoan(); render(); toast("Loan recorded"); }
+  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { pe.focus(); pe.style.borderColor = "var(--expense)"; return; } var ae = document.getElementById("lamt"), v = parseFloat(ae.value); if (!v || v <= 0) { ae.focus(); ae.style.borderColor = "var(--expense)"; return; } state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: Math.round(v * 100) / 100, account: document.getElementById("lacct").value, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); saveLoan(); render(); toast("Loan recorded"); }
   function settleLoan(id) {
     var l = byId(id); if (!l) return;
     var lent = l.kind === "lent";
@@ -623,7 +646,7 @@
       var raw0 = parseFloat(document.getElementById("sAmt").value);
       if (!(raw0 >= 0)) { document.getElementById("sAmt").focus(); return false; }
       l.settled = true; l.settledAmount = Math.round(raw0 * 100) / 100; l.settledAccount = document.getElementById("sAcct").value;
-      l.settledDate = document.getElementById("sDate").value || today(); l.settledTime = document.getElementById("sTime").value || nowTime();
+      l.settledDate = document.getElementById("sDate").value || today(); l.settledTime = document.getElementById("sTime").value || nowTime(); l.settledCreated = Date.now();
       saveLoan(); render(); toast(lent ? "Marked repaid to you" : "Marked paid back");
     });
     var sAmt = document.getElementById("sAmt");
@@ -804,11 +827,12 @@
     bind("imCSV", "click", function () { document.getElementById("fileCSV").click(); });
     bind("clearAll", "click", clearAllData);
   }
-  async function clearAllData() {
-    if (!confirm("Delete ALL accounts, transactions, loans and templates? Download a backup first — this can't be undone.")) return;
-    state.tx = []; state.loans = []; state.recurring = []; state.accounts = [];
-    try { await store.del(K.tx); await store.del(K.loan); await store.del(K.rec); await store.del(K.acct); } catch (e) {}
-    render(); toast("All data cleared");
+  function clearAllData() {
+    confirmModal("Clear all data?", "This permanently deletes every account, transaction, loan and template on this device. Download a backup first — this can't be undone.", "Delete everything", function () {
+      state.tx = []; state.loans = []; state.recurring = []; state.accounts = [];
+      (async function () { try { await store.del(K.tx); await store.del(K.loan); await store.del(K.rec); await store.del(K.acct); } catch (e) {} })();
+      render(); toast("All data cleared");
+    }, true);
   }
 
   // ---------- data: backup / restore / csv ----------
@@ -819,13 +843,14 @@
   function restoreJSON(text) {
     var o; try { o = JSON.parse(text); } catch (e) { toast("That file isn't valid JSON"); return; }
     if (!o || (!Array.isArray(o.accounts) && !Array.isArray(o.transactions))) { toast("Not a Ledger backup file"); return; }
-    if (!confirm("Restore this backup? It will REPLACE all current data.")) return;
-    state.accounts = Array.isArray(o.accounts) ? o.accounts : [];
-    state.tx = Array.isArray(o.transactions) ? o.transactions : [];
-    state.loans = Array.isArray(o.loans) ? o.loans : [];
-    state.recurring = Array.isArray(o.recurring) ? o.recurring : [];
-    if (o.currency) state.cur = o.currency;
-    saveSet(); saveAll(); render(); toast("Backup restored");
+    confirmModal("Restore backup?", "This replaces all current data with the accounts, transactions, loans and templates in this backup.", "Restore", function () {
+      state.accounts = Array.isArray(o.accounts) ? o.accounts : [];
+      state.tx = Array.isArray(o.transactions) ? o.transactions : [];
+      state.loans = Array.isArray(o.loans) ? o.loans : [];
+      state.recurring = Array.isArray(o.recurring) ? o.recurring : [];
+      if (o.currency) state.cur = o.currency;
+      saveSet(); saveAll(); render(); toast("Backup restored");
+    }, true);
   }
   function csvCell(c) { c = String(c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }
   function exportCSV() {
@@ -843,34 +868,36 @@
     var rows = parseCSV(text); if (rows.length < 2) { toast("CSV looks empty"); return; }
     var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
     if (head.indexOf("type") < 0 || head.indexOf("amount") < 0) { toast("Unrecognized CSV — expects a file exported here"); return; }
-    if (!confirm("Import " + (rows.length - 1) + " rows? They'll be ADDED to your current data.")) return;
-    var added = 0;
+    confirmModal("Import CSV?", "This adds " + (rows.length - 1) + " row" + (rows.length - 1 === 1 ? "" : "s") + " to your current data — nothing is replaced.", "Import", function () {
+      var added = 0;
     for (var i = 1; i < rows.length; i++) {
       var r = rows[i]; if (!r || r.length < 5) continue;
       var date = (r[0] || "").trim(), time = (r[1] || "").trim(), type = (r[2] || "").trim().toLowerCase(), wp = (r[3] || "").trim(), amt = parseFloat(r[4]), acc = (r[5] || "").trim(), tos = (r[6] || "").trim(), fee = parseFloat(r[7]) || 0, note = (r[8] || "").trim();
       if (!date || isNaN(amt)) continue;
       if (type === "transfer") state.tx.push({ id: uid(), type: "transfer", amount: amt, fee: fee, account: acctIdByName(acc), toAccount: acctIdByName(tos), desc: note, date: date, time: time, created: Date.now() + i });
       else if (type === "income" || type === "expense") state.tx.push({ id: uid(), type: type, amount: amt, where: wp, account: acctIdByName(acc), desc: note, date: date, time: time, created: Date.now() + i });
-      else if (type === "lent out" || type === "borrowed") { var loan = { id: uid(), kind: type === "lent out" ? "lent" : "borrowed", person: wp, amount: amt, account: acctIdByName(acc), date: date, time: time, note: note, settled: false }; var st = tos.toLowerCase(); if (st.indexOf("settled") === 0) { loan.settled = true; loan.settledDate = tos.split(" ")[1] || date; loan.settledAccount = loan.account; } else if (st.indexOf("due") === 0) loan.due = tos.split(" ")[1] || ""; state.loans.push(loan); }
+      else if (type === "lent out" || type === "borrowed") { var loan = { id: uid(), kind: type === "lent out" ? "lent" : "borrowed", person: wp, amount: amt, account: acctIdByName(acc), date: date, time: time, note: note, settled: false, created: Date.now() + i }; var st = tos.toLowerCase(); if (st.indexOf("settled") === 0) { loan.settled = true; loan.settledDate = tos.split(" ")[1] || date; loan.settledAccount = loan.account; } else if (st.indexOf("due") === 0) loan.due = tos.split(" ")[1] || ""; state.loans.push(loan); }
       else continue;
       added++;
     }
-    saveAll(); render(); toast("Imported " + added + " record" + (added === 1 ? "" : "s"));
+      saveAll(); render(); toast("Imported " + added + " record" + (added === 1 ? "" : "s"));
+    });
   }
   function readFile(input, cb) { var f = input.files && input.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { cb(String(r.result)); input.value = ""; }; r.onerror = function () { toast("Couldn't read that file"); input.value = ""; }; r.readAsText(f); }
 
   // ---------- chrome ----------
   function bind(id, evt, fn) { var el = document.getElementById(id); if (el) el["on" + evt] = function () { fn(el); }; }
   var modalConfirm = null;
-  function openModal(title, body, okLabel, onConfirm) {
-    modalConfirm = onConfirm;
+  function openModal(title, body, okLabel, onConfirm, opts) {
+    modalConfirm = onConfirm; opts = opts || {};
     var m = document.getElementById("modal");
-    m.innerHTML = '<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true"><h3>' + title + '</h3><div class="modal-b">' + body + '</div><div class="modal-f"><button class="btn sec" id="mCancel">Cancel</button><button class="btn" id="mOk">' + okLabel + '</button></div></div></div>';
+    m.innerHTML = '<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true"><h3>' + title + '</h3><div class="modal-b">' + body + '</div><div class="modal-f"><button class="btn sec" id="mCancel">' + (opts.cancelLabel || "Cancel") + '</button><button class="btn' + (opts.danger ? " danger" : "") + '" id="mOk">' + okLabel + '</button></div></div></div>';
     m.style.display = "block";
     document.getElementById("mCancel").onclick = closeModal;
     m.querySelector(".modal-bg").onclick = function (e) { if (e.target === this) closeModal(); };
     document.getElementById("mOk").onclick = function () { if (modalConfirm && modalConfirm() === false) return; closeModal(); };
   }
+  function confirmModal(title, msg, okLabel, onConfirm, danger) { openModal(title, '<div class="modal-msg">' + msg + '</div>', okLabel, onConfirm, { danger: !!danger }); }
   function closeModal() { var m = document.getElementById("modal"); m.style.display = "none"; m.innerHTML = ""; modalConfirm = null; }
   Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-tab"); render(); }; });
   document.getElementById("settingsBtn").onclick = function () { state.tab = "settings"; render(); };
