@@ -1,4 +1,4 @@
-<!-- Ledger — warm, utilitarian money tracker · v6 -->
+<!-- Ledger — warm, utilitarian money tracker · v7 (custom settle + edit) -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ledger</title>
@@ -148,6 +148,14 @@
   .snap-row .bl { font-size: 14px; font-weight: 600; }
 
   .badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+  .badge.gain { background: var(--income-soft); color: var(--income); }
+  .badge.loss { background: var(--expense-soft); color: var(--expense); }
+  #modal { display: none; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(20,16,10,.45); display: flex; align-items: center; justify-content: center; padding: 18px; z-index: 100; }
+  .modal { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 24px 64px rgba(40,34,22,.30); width: 100%; max-width: 420px; max-height: calc(100vh - 36px); overflow-y: auto; padding: 20px 20px 18px; }
+  .modal h3 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; margin-bottom: 14px; }
+  .modal-f { display: flex; gap: 10px; margin-top: 4px; }
+  .modal-f .btn { width: auto; flex: 1; }
   .badge.lent { background: var(--expense-soft); color: var(--expense); }
   .badge.borrowed { background: var(--income-soft); color: var(--income); }
   .badge.settled, .badge.shortcut { background: var(--paper-2); color: var(--ink-faint); }
@@ -219,6 +227,7 @@
   <div class="foot">Saved automatically &amp; privately to you. &nbsp;·&nbsp; <button id="footSettings">Settings &amp; backup</button></div>
 </div>
 <div class="toast" id="toast"></div>
+<div id="modal"></div>
 <input type="file" id="fileJSON" accept="application/json,.json" style="display:none">
 <input type="file" id="fileCSV" accept=".csv,text/csv" style="display:none">
 
@@ -301,8 +310,9 @@
       else if (t.type === "transfer") { if (t.account === id) b -= (t.amount + (t.fee || 0)); if (t.toAccount === id) b += t.amount; }
     });
     state.loans.forEach(function (l) {
-      if (l.kind === "lent") { if (l.account === id) b -= l.amount; if (l.settled && l.settledAccount === id) b += l.amount; }
-      else { if (l.account === id) b += l.amount; if (l.settled && l.settledAccount === id) b -= l.amount; }
+      var sa = l.settledAmount != null ? l.settledAmount : l.amount;
+      if (l.kind === "lent") { if (l.account === id) b -= l.amount; if (l.settled && l.settledAccount === id) b += sa; }
+      else { if (l.account === id) b += l.amount; if (l.settled && l.settledAccount === id) b -= sa; }
     });
     return b;
   }
@@ -316,7 +326,7 @@
     state.tx.forEach(function (t) { out.push({ src: "tx", id: t.id, kind: t.type, date: t.date, time: t.time || "", created: t.created || 0, amount: t.amount, where: t.where || "", note: t.desc || "", account: t.account, toAccount: t.toAccount, fee: t.fee || 0 }); });
     state.loans.forEach(function (l) {
       out.push({ src: "loan", id: l.id, kind: l.kind === "lent" ? "lend" : "borrow", date: l.date, time: l.time || "", created: l.created || 0, amount: l.amount, person: l.person, account: l.account, note: l.note || "" });
-      if (l.settled) out.push({ src: "settle", id: l.id, kind: "settle", loanKind: l.kind, date: l.settledDate || l.date, time: l.settledTime || "", created: (l.created || 0) + 1, amount: l.amount, person: l.person, account: l.settledAccount || l.account, note: l.note || "" });
+      if (l.settled) out.push({ src: "settle", id: l.id, kind: "settle", loanKind: l.kind, date: l.settledDate || l.date, time: l.settledTime || "", created: (l.created || 0) + 1, amount: l.settledAmount != null ? l.settledAmount : l.amount, person: l.person, account: l.settledAccount || l.account, note: l.note || "" });
     });
     return out.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : (a.time < b.time ? 1 : a.time > b.time ? -1 : (a.created < b.created ? 1 : -1)); });
   }
@@ -444,12 +454,12 @@
     var dt = dtLabel(e.date, e.time);
     if (e.kind === "transfer") {
       var sub = '<span>' + esc(acctName(e.account)) + ' → ' + esc(acctName(e.toAccount)) + ' · ' + dt + '</span>' + (e.fee ? '<span class="badge next">fee ' + raw(e.fee) + '</span>' : "");
-      return lrow({ lead: dotEl("var(--ink-faint)"), t: esc(e.note || "Transfer"), sub: sub, val: "⇄ " + raw(e.amount), valCls: "neu", acts: ro ? "" : '<button class="del" data-id="' + e.id + '" title="Delete">×</button>' });
+      return lrow({ lead: dotEl("var(--ink-faint)"), t: esc(e.note || "Transfer"), sub: sub, val: "⇄ " + raw(e.amount), valCls: "neu", acts: ro ? "" : '<button class="mini" data-edit-tx="' + e.id + '" title="Edit">✎</button><button class="del" data-id="' + e.id + '" title="Delete">×</button>' });
     }
     if (e.kind === "income" || e.kind === "expense") {
       var sign = e.kind === "income" ? "+" : "−", cls = e.kind === "income" ? "pos" : "neg";
       var sub2 = '<span>' + esc(acctName(e.account)) + ' · ' + dt + (e.where && e.note ? " · " + esc(e.note) : "") + '</span>';
-      return lrow({ lead: dotEl(acctColor(e.account)), t: esc(e.where || e.note || "—"), sub: sub2, val: sign + raw(e.amount), valCls: cls, acts: ro ? "" : '<button class="del" data-id="' + e.id + '" title="Delete">×</button>' });
+      return lrow({ lead: dotEl(acctColor(e.account)), t: esc(e.where || e.note || "—"), sub: sub2, val: sign + raw(e.amount), valCls: cls, acts: ro ? "" : '<button class="mini" data-edit-tx="' + e.id + '" title="Edit">✎</button><button class="del" data-id="' + e.id + '" title="Delete">×</button>' });
     }
     var label, sg, cl;
     if (e.kind === "lend") { label = "Lent to " + e.person; sg = "−"; cl = "neg"; }
@@ -468,6 +478,7 @@
     bind("showMore", "click", function () { state.trackShow += 50; render(); });
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
     Array.prototype.forEach.call(document.querySelectorAll(".del"), function (b) { b.onclick = function () { var id = b.getAttribute("data-id"); state.tx = state.tx.filter(function (t) { return t.id !== id; }); saveTx(); render(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-edit-tx]"), function (b) { b.onclick = function () { editEntry(b.getAttribute("data-edit-tx")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-jump]"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-jump"); render(); }; });
   }
   function addEntry() {
@@ -484,6 +495,37 @@
     }
     state.tx.push({ id: uid(), type: state.formType, amount: v, where: document.getElementById("where").value.trim(), account: document.getElementById("acct").value, desc: document.getElementById("desc").value.trim(), date: date, time: time, created: Date.now() });
     saveTx(); render(); toast("Entry added");
+  }
+  function editEntry(id) {
+    var t = state.tx.filter(function (x) { return x.id === id; })[0]; if (!t) return;
+    var body;
+    if (t.type === "transfer") {
+      body = '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + t.amount + '"></div></div>' +
+        '<div class="field"><label>From account</label><select class="inp" id="eAcct">' + acctOptions(t.account) + '</select></div>' +
+        '<div class="field"><label>To account</label><select class="inp" id="eAcct2">' + acctOptions(t.toAccount) + '</select></div>' +
+        '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eFee" type="number" step="0.01" min="0" value="' + (t.fee || 0) + '"></div></div>' +
+        '<div class="field"><label>Note</label><input id="eDesc" type="text" maxlength="60" value="' + esc(t.desc || "") + '"></div>' +
+        '<div class="two"><div class="field"><label>Date</label><input id="eDate" type="date" value="' + t.date + '"></div><div class="field"><label>Time</label><input id="eTime" type="time" value="' + (t.time || "") + '"></div></div>';
+    } else {
+      body = '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + t.amount + '"></div></div>' +
+        '<div class="field"><label>Where</label><input id="eWhere" type="text" maxlength="40" value="' + esc(t.where || "") + '"></div>' +
+        '<div class="field"><label>Account</label><select class="inp" id="eAcct">' + acctOptions(t.account) + '</select></div>' +
+        '<div class="field"><label>Note</label><input id="eDesc" type="text" maxlength="60" value="' + esc(t.desc || "") + '"></div>' +
+        '<div class="two"><div class="field"><label>Date</label><input id="eDate" type="date" value="' + t.date + '"></div><div class="field"><label>Time</label><input id="eTime" type="time" value="' + (t.time || "") + '"></div></div>';
+    }
+    openModal("Edit " + t.type, body, "Save", function () {
+      var v = Math.round((parseFloat(document.getElementById("eAmt").value) || 0) * 100) / 100;
+      if (!(v > 0)) { document.getElementById("eAmt").focus(); return false; }
+      if (t.type === "transfer") {
+        var from = document.getElementById("eAcct").value, to = document.getElementById("eAcct2").value;
+        if (from === to) { toast("Pick two different accounts"); return false; }
+        t.account = from; t.toAccount = to; t.fee = Math.round((parseFloat(document.getElementById("eFee").value) || 0) * 100) / 100;
+      } else {
+        t.account = document.getElementById("eAcct").value; t.where = document.getElementById("eWhere").value.trim();
+      }
+      t.amount = v; t.desc = document.getElementById("eDesc").value.trim(); t.date = document.getElementById("eDate").value || t.date; t.time = document.getElementById("eTime").value || "";
+      saveTx(); render(); toast("Entry updated");
+    });
   }
 
   // ---------- ACCOUNTS ----------
@@ -534,20 +576,62 @@
     var lq = document.getElementById("lendQ"); if (lq) lq.oninput = function () { state.lendQ = lq.value; var s = lq.selectionStart; render(); var n = document.getElementById("lendQ"); if (n) { n.focus(); try { n.setSelectionRange(s, s); } catch (e) {} } };
     bind("ladd", "click", addLoan);
     Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-unsettle]"), function (b) { b.onclick = function () { var l = byId(b.getAttribute("data-unsettle")); if (l) { l.settled = false; delete l.settledDate; saveLoan(); render(); } }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-loanedit]"), function (b) { b.onclick = function () { editLoan(b.getAttribute("data-loanedit")); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-unsettle]"), function (b) { b.onclick = function () { var l = byId(b.getAttribute("data-unsettle")); if (l) { l.settled = false; delete l.settledDate; delete l.settledTime; delete l.settledAccount; delete l.settledAmount; saveLoan(); render(); } }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-loandel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-loandel"); state.loans = state.loans.filter(function (l) { return l.id !== id; }); saveLoan(); render(); }; });
   }
   function loanRow(l, showPerson) {
     var t = showPerson ? esc(l.person) : (l.kind === "lent" ? "Lent out" : "Borrowed");
     var sub = '<span>' + esc(acctName(l.account)) + ' · ' + dtLabel(l.date, l.time) + (l.note ? " · " + esc(l.note) : "") + '</span>';
     if (showPerson) sub += (l.kind === "lent" ? '<span class="badge lent">lent out</span>' : '<span class="badge borrowed">borrowed</span>');
-    sub += l.settled ? '<span class="badge settled">settled</span>' : dueBadge(l);
-    var acts = (l.settled ? '<button class="act" data-unsettle="' + l.id + '">Undo</button>' : '<button class="act primary" data-settle="' + l.id + '">Settle</button>') + '<button class="del" data-loandel="' + l.id + '" title="Delete">×</button>';
-    return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled });
+    var settledAmt = l.settledAmount != null ? l.settledAmount : l.amount;
+    var gain = l.kind === "lent" ? settledAmt - l.amount : l.amount - settledAmt;
+    if (l.settled) { sub += '<span class="badge settled">settled</span>'; if (Math.abs(gain) >= 0.005) sub += '<span class="badge ' + (gain > 0 ? "gain" : "loss") + '">' + (gain > 0 ? "+" : "−") + raw(Math.abs(gain)) + '</span>'; }
+    else sub += dueBadge(l);
+    var acts = '<button class="mini" data-loanedit="' + l.id + '" title="Edit">✎</button>' + (l.settled ? '<button class="act" data-unsettle="' + l.id + '">Undo</button>' : '<button class="act primary" data-settle="' + l.id + '">Settle</button>') + '<button class="del" data-loandel="' + l.id + '" title="Delete">×</button>';
+    return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled });
   }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
   function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { pe.focus(); pe.style.borderColor = "var(--expense)"; return; } var ae = document.getElementById("lamt"), v = parseFloat(ae.value); if (!v || v <= 0) { ae.focus(); ae.style.borderColor = "var(--expense)"; return; } state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: Math.round(v * 100) / 100, account: document.getElementById("lacct").value, date: (document.getElementById("ldate").value || today()), time: nowTime(), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false }); saveLoan(); render(); toast("Loan recorded"); }
-  function settleLoan(id) { var l = byId(id); if (!l) return; l.settled = true; l.settledDate = today(); l.settledTime = nowTime(); l.settledAccount = l.account; saveLoan(); render(); toast(l.kind === "lent" ? "Marked repaid to you" : "Marked paid back"); }
+  function settleLoan(id) {
+    var l = byId(id); if (!l) return;
+    var lent = l.kind === "lent";
+    var body =
+      '<div class="field"><label>' + (lent ? "Amount received" : "Amount paid back") + '</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="sAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
+      '<div class="field"><label>' + (lent ? "Into account" : "From account") + '</label><select class="inp" id="sAcct">' + acctOptions(l.account) + '</select></div>' +
+      '<div class="two"><div class="field"><label>Date</label><input id="sDate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="sTime" type="time" value="' + nowTime() + '"></div></div>' +
+      '<div class="hint" id="sHint"></div>';
+    openModal(lent ? "Mark repaid to you" : "Mark paid back", body, "Settle", function () {
+      var raw0 = parseFloat(document.getElementById("sAmt").value);
+      if (!(raw0 >= 0)) { document.getElementById("sAmt").focus(); return false; }
+      l.settled = true; l.settledAmount = Math.round(raw0 * 100) / 100; l.settledAccount = document.getElementById("sAcct").value;
+      l.settledDate = document.getElementById("sDate").value || today(); l.settledTime = document.getElementById("sTime").value || nowTime();
+      saveLoan(); render(); toast(lent ? "Marked repaid to you" : "Marked paid back");
+    });
+    var sAmt = document.getElementById("sAmt");
+    function upd() {
+      var v = Math.round((parseFloat(sAmt.value) || 0) * 100) / 100, d = v - l.amount, h = document.getElementById("sHint");
+      if (Math.abs(d) < 0.005) { h.textContent = "Settling the full " + raw(l.amount) + "."; return; }
+      var gain = lent ? d : -d;
+      h.innerHTML = raw(Math.abs(d)) + (d > 0 ? " more than" : " less than") + " the " + raw(l.amount) + " " + (lent ? "lent" : "borrowed") + " — recorded as a " + (gain >= 0 ? '<span style="color:var(--income);font-weight:700">gain</span>' : '<span style="color:var(--expense);font-weight:700">cost</span>') + " of " + raw(Math.abs(gain)) + ".";
+    }
+    sAmt.oninput = upd; upd();
+  }
+  function editLoan(id) {
+    var l = byId(id); if (!l) return;
+    var lent = l.kind === "lent";
+    var body = '<div class="field"><label>Person</label><input id="eLPerson" type="text" maxlength="24" value="' + esc(l.person) + '"></div>' +
+      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
+      '<div class="field"><label>' + (lent ? "From account" : "Into account") + '</label><select class="inp" id="eLAcct">' + acctOptions(l.account) + '</select></div>' +
+      '<div class="two"><div class="field"><label>Date</label><input id="eLDate" type="date" value="' + l.date + '"></div><div class="field"><label>Due <span style="font-weight:400;color:var(--ink-faint)">(opt)</span></label><input id="eLDue" type="date" value="' + (l.due || "") + '"></div></div>' +
+      '<div class="field"><label>Note</label><input id="eLNote" type="text" maxlength="40" value="' + esc(l.note || "") + '"></div>';
+    openModal("Edit loan", body, "Save", function () {
+      var p = document.getElementById("eLPerson").value.trim(); if (!p) { document.getElementById("eLPerson").focus(); return false; }
+      var v = Math.round((parseFloat(document.getElementById("eLAmt").value) || 0) * 100) / 100; if (!(v > 0)) { document.getElementById("eLAmt").focus(); return false; }
+      l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.date = document.getElementById("eLDate").value || l.date; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim();
+      saveLoan(); render(); toast("Loan updated");
+    });
+  }
 
   // ---------- TRENDS ----------
   function weekStart(dateStr) { var dt = new Date(dateStr + "T00:00:00"); var day = (dt.getDay() + 6) % 7; dt.setDate(dt.getDate() - day); return iso(dt); }
@@ -757,12 +841,24 @@
 
   // ---------- chrome ----------
   function bind(id, evt, fn) { var el = document.getElementById(id); if (el) el["on" + evt] = function () { fn(el); }; }
+  var modalConfirm = null;
+  function openModal(title, body, okLabel, onConfirm) {
+    modalConfirm = onConfirm;
+    var m = document.getElementById("modal");
+    m.innerHTML = '<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true"><h3>' + title + '</h3><div class="modal-b">' + body + '</div><div class="modal-f"><button class="btn sec" id="mCancel">Cancel</button><button class="btn" id="mOk">' + okLabel + '</button></div></div></div>';
+    m.style.display = "block";
+    document.getElementById("mCancel").onclick = closeModal;
+    m.querySelector(".modal-bg").onclick = function (e) { if (e.target === this) closeModal(); };
+    document.getElementById("mOk").onclick = function () { if (modalConfirm && modalConfirm() === false) return; closeModal(); };
+  }
+  function closeModal() { var m = document.getElementById("modal"); m.style.display = "none"; m.innerHTML = ""; modalConfirm = null; }
   Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-tab"); render(); }; });
   document.getElementById("settingsBtn").onclick = function () { state.tab = "settings"; render(); };
   document.getElementById("footSettings").onclick = function () { state.tab = "settings"; render(); };
   document.getElementById("fileJSON").onchange = function () { readFile(this, restoreJSON); };
   document.getElementById("fileCSV").onchange = function () { readFile(this, importCSV); };
   if (window.matchMedia) { try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { if (state.theme === "system") applyTheme(); }); } catch (e) {} }
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModal(); });
 
   load().then(function () { render(); if (store.mode === "memory only") { try { toast("No storage here — data won't be saved on this page"); } catch (e) {} } });
 })();
