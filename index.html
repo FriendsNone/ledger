@@ -80,14 +80,23 @@
   .card-h { padding: 15px 18px 0; }
   .card-h h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 17px; }
   .card-h .sub { font-size: 12px; color: var(--ink-faint); }
+  .card-h.ch { display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .card-h.ch:hover .chev { color: var(--ink); }
+  .chev { font-family: 'JetBrains Mono', monospace; font-size: 17px; line-height: 1; color: var(--ink-faint); transition: transform .25s ease; flex: none; }
+  .card.collapsed .card-h.ch .chev { transform: rotate(-90deg); }
+  .cwrap { display: grid; grid-template-rows: 1fr; }
+  .card.collapsible .cwrap { transition: grid-template-rows .3s ease; }
+  .card.collapsible .cwrap > .card-b { overflow: hidden; min-height: 0; transition: opacity .2s ease; }
+  .card.collapsed .cwrap { grid-template-rows: 0fr; }
+  .card.collapsed .cwrap > .card-b { opacity: 0; }
   .card-b { padding: 16px 18px 18px; }
 
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; background: var(--paper-2); padding: 4px; border-radius: 10px; margin-bottom: 14px; }
   .seg.three { grid-template-columns: 1fr 1fr 1fr; }
   .seg button { border: 0; background: transparent; padding: 9px 4px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); transition: .15s; }
-  .seg button.on[data-t="expense"], .seg button.on[data-rt="expense"], .seg button.on[data-lk="lent-out"] { background: var(--expense); color: #fff; }
-  .seg button.on[data-t="income"], .seg button.on[data-rt="income"], .seg button.on[data-lk="borrowed"] { background: var(--income); color: #fff; }
-  .seg button.on[data-t="transfer"], .seg button.on[data-rt="transfer"], .seg button.on[data-theme-set] { background: var(--accent); color: var(--accent-ink); }
+  .seg button.on[data-t="expense"], .seg button.on[data-rt="expense"], .seg button.on[data-et="expense"], .seg button.on[data-lk="lent-out"] { background: var(--expense); color: #fff; }
+  .seg button.on[data-t="income"], .seg button.on[data-rt="income"], .seg button.on[data-et="income"], .seg button.on[data-lk="borrowed"] { background: var(--income); color: #fff; }
+  .seg button.on[data-t="transfer"], .seg button.on[data-rt="transfer"], .seg button.on[data-et="transfer"], .seg button.on[data-theme-set] { background: var(--accent); color: var(--accent-ink); }
 
   label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin: 0 0 5px 2px; }
   .field { margin-bottom: 12px; min-width: 0; }
@@ -158,6 +167,27 @@
   .modal-f .btn { width: auto; flex: 1; }
   .modal-msg { font-size: 14px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 4px; }
   .btn.danger { background: var(--expense); color: #fff; }
+
+  .nag { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--amber-soft); border: 1px solid var(--line); border-radius: 11px; padding: 9px 8px 9px 13px; margin-bottom: 16px; font-size: 13px; color: var(--ink); animation: nagIn .26s ease; }
+  .nag-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); flex: none; }
+  .nag-msg { flex: 1; min-width: 150px; }
+  .nag-acts { display: flex; align-items: center; gap: 4px; }
+  .nag .btn-sm { width: auto; }
+  .nag-x { border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; font-size: 18px; line-height: 1; padding: 3px 8px; border-radius: 7px; }
+  .nag-x:hover { background: rgba(120,90,20,.12); color: var(--ink); }
+  #backupNag:empty { display: none; }
+
+  #settingsBtn { transition: transform .25s ease, border-color .15s, background .15s, color .15s; }
+  #settingsBtn:hover { transform: rotate(28deg); }
+  @keyframes nagIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  @keyframes viewIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes softIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+  .view-enter > .hero { animation: viewIn .24s ease both; }
+  .view-enter > .cols { animation: softIn .3s ease both; }
+  .modal-bg { animation: softIn .18s ease; }
+  .modal { animation: modalIn .2s cubic-bezier(.2,.8,.2,1); }
+  @media (prefers-reduced-motion: reduce) { .nag, .view-enter > .hero, .view-enter > .cols, .modal-bg, .modal, .chev, .cwrap { animation: none !important; transition: none !important; } }
   .badge.lent { background: var(--expense-soft); color: var(--expense); }
   .badge.borrowed { background: var(--income-soft); color: var(--income); }
   .badge.settled, .badge.shortcut { background: var(--paper-2); color: var(--ink-faint); }
@@ -224,6 +254,8 @@
     <button data-tab="trends">Trends</button>
   </nav>
 
+  <div id="backupNag"></div>
+
   <div id="app"><div class="loading">Opening your ledger…</div></div>
 
   <div class="foot">Saved automatically &amp; privately to you. &nbsp;·&nbsp; <button id="footSettings">Settings &amp; backup</button></div>
@@ -245,9 +277,10 @@
     accounts: [], tx: [], loans: [], recurring: [],
     cur: "$", theme: "system",
     tab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
-    fType: "all", fQ: "", trackShow: 30, lendQ: "", trendGroup: "monthly", placesAll: false
+    fType: "all", fQ: "", trackShow: 30, lendQ: "", trendGroup: "monthly", placesAll: false,
+    lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false
   };
-  var amap = {};
+  var amap = {}, lastTab = null;
   var app = document.getElementById("app"), toastEl = document.getElementById("toast"), toastT;
 
   // ---------- storage (Claude artifact + standalone browser) ----------
@@ -271,7 +304,7 @@
   function set(key, val) { try { store.set(key, JSON.stringify(val)); } catch (e) {} }
   function saveTx() { set(K.tx, state.tx); } function saveAcct() { set(K.acct, state.accounts); }
   function saveLoan() { set(K.loan, state.loans); } function saveRec() { set(K.rec, state.recurring); }
-  function saveSet() { set(K.set, { cur: state.cur, theme: state.theme }); }
+  function saveSet() { set(K.set, { cur: state.cur, theme: state.theme, lastBackup: state.lastBackup, backupCount: state.backupCount, collapsed: state.collapsed }); }
   function saveAll() { saveAcct(); saveTx(); saveLoan(); saveRec(); }
   async function getv(key) { try { var r = await store.get(key); return r && r.value ? JSON.parse(r.value) : null; } catch (e) { return null; } }
   async function load() {
@@ -279,7 +312,7 @@
     var tx = await getv(K.tx); if (Array.isArray(tx)) state.tx = tx;
     var l = await getv(K.loan); if (Array.isArray(l)) state.loans = l;
     var r = await getv(K.rec); if (Array.isArray(r)) state.recurring = r;
-    var s = await getv(K.set); if (s) { if (s.cur) state.cur = s.cur; if (s.theme) state.theme = s.theme; }
+    var s = await getv(K.set); if (s) { if (s.cur) state.cur = s.cur; if (s.theme) state.theme = s.theme; if (s.lastBackup) state.lastBackup = s.lastBackup; if (typeof s.backupCount === "number") state.backupCount = s.backupCount; if (s.collapsed && typeof s.collapsed === "object") state.collapsed = s.collapsed; }
     applyTheme();
   }
 
@@ -361,7 +394,16 @@
   function monthPills() { var t = periodTotals(true); return '<div class="pills"><div class="pill"><div class="label">Income · this month</div><div class="v num pos">' + fmt(t.inc) + '</div></div><div class="pill"><div class="label">Expenses · this month</div><div class="v num neg">' + fmt(t.exp) + '</div></div></div>'; }
   function colsBlock(sidebar, main) { return '<div class="cols"><div class="stack">' + sidebar + '</div><div class="stack">' + main + '</div></div>'; }
   function layout(hero, sidebar, main) { return hero + colsBlock(sidebar, main); }
-  function card(title, sub, body, headExtra) { var h = '<div class="card-h"' + (headExtra ? ' style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px"' : '') + '><div><h2>' + title + '</h2>' + (sub ? '<div class="sub">' + sub + '</div>' : "") + '</div>' + (headExtra || "") + '</div>'; return '<div class="card">' + h + '<div class="card-b">' + body + '</div></div>'; }
+  function card(title, sub, body, headExtra, opts) {
+    opts = opts || {};
+    var coll = !!opts.collapsible, key = opts.key || title, isColl = coll && !!state.collapsed[key], h;
+    if (coll) {
+      h = '<div class="card-h ch" data-collapse="' + esc(key) + '"><div><h2>' + title + '</h2>' + (sub ? '<div class="sub">' + sub + '</div>' : "") + '</div><span class="chev">⌄</span></div>';
+    } else {
+      h = '<div class="card-h"' + (headExtra ? ' style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px"' : '') + '><div><h2>' + title + '</h2>' + (sub ? '<div class="sub">' + sub + '</div>' : "") + '</div>' + (headExtra || "") + '</div>';
+    }
+    return '<div class="card' + (coll ? " collapsible" : "") + (isColl ? " collapsed" : "") + '">' + h + '<div class="cwrap"><div class="card-b">' + body + '</div></div></div>';
+  }
   function accountNudge() { return '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>'; }
   function wireNudge() { var g = document.getElementById("goAcct"); if (g) g.onclick = function () { state.tab = "accounts"; render(); }; }
 
@@ -390,7 +432,34 @@
     Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.classList.toggle("on", b.getAttribute("data-tab") === state.tab); });
     ({ overview: renderOverview, track: renderTrack, accounts: renderAccounts, lending: renderLending, trends: renderTrends, recurring: renderRecurring, settings: renderSettings }[state.tab] || renderOverview)();
     var gb = document.getElementById("settingsBtn"); if (gb) gb.classList.toggle("on", state.tab === "settings");
-    wireNudge();
+    app.classList.toggle("view-enter", state.tab !== lastTab); lastTab = state.tab;
+    wireNudge(); wireCollapse(); renderBackupNag();
+  }
+  function wireCollapse() {
+    Array.prototype.forEach.call(document.querySelectorAll(".card-h.ch"), function (h) {
+      h.onclick = function () {
+        var key = h.getAttribute("data-collapse"), c = h.parentNode, now = !c.classList.contains("collapsed");
+        c.classList.toggle("collapsed", now); state.collapsed[key] = now; saveSet();
+      };
+    });
+  }
+
+  // ---------- backup reminder ----------
+  function totalRecords() { return state.tx.length + state.loans.length + state.recurring.length + state.accounts.length; }
+  function backupDue() {
+    var total = totalRecords();
+    if (state.backupCount == null) return total >= 5;
+    if (total === state.backupCount) return false;
+    var days = state.lastBackup ? (Date.now() - state.lastBackup) / 864e5 : 999;
+    return days >= 7 || Math.abs(total - state.backupCount) >= 20;
+  }
+  function renderBackupNag() {
+    var el = document.getElementById("backupNag"); if (!el) return;
+    if (state.nagDismissed || !backupDue()) { el.innerHTML = ""; return; }
+    var msg = state.backupCount == null ? "You haven’t backed up yet." : "Your data has changed since your last backup.";
+    el.innerHTML = '<div class="nag"><span class="nag-dot"></span><span class="nag-msg">' + msg + ' Keep a copy somewhere safe.</span><span class="nag-acts"><button class="btn btn-sm" id="nagBackup">Download backup</button><button class="nag-x" id="nagDismiss" title="Not now">×</button></span></div>';
+    bind("nagBackup", "click", backupJSON);
+    bind("nagDismiss", "click", function () { state.nagDismissed = true; renderBackupNag(); });
   }
 
   // ---------- OVERVIEW ----------
@@ -409,7 +478,7 @@
       var newBtn = '<button class="btn ' + (chips ? "sec" : "") + '" id="goTrack" style="font-size:16px;padding:14px' + (chips ? ";margin-top:12px" : "") + '">＋ New entry</button>';
       firstCard = card("Quick log", chips ? "Tap a shortcut, or add something new" : "Record an entry, or save a template for one-tap logging", (chips || "") + newBtn);
     }
-    var sidebar = firstCard + (state.accounts.length ? card("Accounts", state.accounts.length + " total", snap) : "");
+    var sidebar = firstCard + (state.accounts.length ? card("Accounts", state.accounts.length + " total", snap, null, { collapsible: true, key: "ov-accounts" }) : "");
 
     var up = [];
     state.recurring.forEach(function (r) { if (r.dueDay) up.push({ kind: "recurring", iso: iso(nextDue(r.dueDay)), r: r }); });
@@ -457,7 +526,7 @@
 
     var chips = shortcutChips();
     var quickCard = chips ? card("Quick log", "Tap to record a saved shortcut", chips) : "";
-    var sidebar = quickCard + card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge());
+    var sidebar = quickCard + card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge(), null, { collapsible: true, key: "track-add" });
     var main = card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listBody, listExtra);
 
     app.innerHTML = layout(heroBlock("Net worth", fmt(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()), sidebar, main);
@@ -523,33 +592,49 @@
   }
   function editEntry(id) {
     var t = state.tx.filter(function (x) { return x.id === id; })[0]; if (!t) return;
-    var body;
-    if (t.type === "transfer") {
-      body = '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + t.amount + '"></div></div>' +
-        '<div class="field"><label>From account</label><select class="inp" id="eAcct">' + acctOptions(t.account) + '</select></div>' +
-        '<div class="field"><label>To account</label><select class="inp" id="eAcct2">' + acctOptions(t.toAccount) + '</select></div>' +
-        '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eFee" type="number" step="0.01" min="0" value="' + (t.fee || 0) + '"></div></div>' +
-        '<div class="field"><label>Note</label><input id="eDesc" type="text" maxlength="60" value="' + esc(t.desc || "") + '"></div>' +
-        '<div class="two"><div class="field"><label>Date</label><input id="eDate" type="date" value="' + t.date + '"></div><div class="field"><label>Time</label><input id="eTime" type="time" value="' + (t.time || "") + '"></div></div>';
-    } else {
-      body = '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + t.amount + '"></div></div>' +
-        '<div class="field"><label>Where</label><input id="eWhere" type="text" maxlength="40" value="' + esc(t.where || "") + '"></div>' +
-        '<div class="field"><label>Account</label><select class="inp" id="eAcct">' + acctOptions(t.account) + '</select></div>' +
-        '<div class="field"><label>Note</label><input id="eDesc" type="text" maxlength="60" value="' + esc(t.desc || "") + '"></div>' +
-        '<div class="two"><div class="field"><label>Date</label><input id="eDate" type="date" value="' + t.date + '"></div><div class="field"><label>Time</label><input id="eTime" type="time" value="' + (t.time || "") + '"></div></div>';
-    }
-    openModal("Edit " + t.type, body, "Save", function () {
-      var v = Math.round((parseFloat(document.getElementById("eAmt").value) || 0) * 100) / 100;
-      if (!(v > 0)) { document.getElementById("eAmt").focus(); return false; }
-      if (t.type === "transfer") {
-        var from = document.getElementById("eAcct").value, to = document.getElementById("eAcct2").value;
-        if (from === to) { toast("Pick two different accounts"); return false; }
-        t.account = from; t.toAccount = to; t.fee = Math.round((parseFloat(document.getElementById("eFee").value) || 0) * 100) / 100;
+    var d = { type: t.type, amount: t.amount, where: t.where || "", account: t.account, toAccount: t.toAccount, fee: t.fee || 0, desc: t.desc || "", date: t.date, time: t.time || "" };
+    function fieldsFor(ty) {
+      var out = '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + d.amount + '"></div></div>';
+      if (ty === "transfer") {
+        out += '<div class="field"><label>From account</label><select class="inp" id="eAcct">' + acctOptions(d.account) + '</select></div>' +
+          '<div class="field"><label>To account</label><select class="inp" id="eAcct2">' + acctOptions(d.toAccount || (state.accounts[1] ? state.accounts[1].id : d.account)) + '</select></div>' +
+          '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eFee" type="number" step="0.01" min="0" value="' + (d.fee || 0) + '"></div></div>';
       } else {
-        t.account = document.getElementById("eAcct").value; t.where = document.getElementById("eWhere").value.trim();
+        out += '<div class="field"><label>Where</label><input id="eWhere" type="text" maxlength="40" value="' + esc(d.where) + '" placeholder="' + (ty === "income" ? "where it came from" : "where it went") + '"></div>' +
+          '<div class="field"><label>Account</label><select class="inp" id="eAcct">' + acctOptions(d.account) + '</select></div>';
       }
-      t.amount = v; t.desc = document.getElementById("eDesc").value.trim(); t.date = document.getElementById("eDate").value || t.date; t.time = document.getElementById("eTime").value || "";
+      out += '<div class="field"><label>Note <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="eDesc" type="text" maxlength="60" value="' + esc(d.desc) + '"></div>' +
+        '<div class="two"><div class="field"><label>Date</label><input id="eDate" type="date" value="' + d.date + '"></div><div class="field"><label>Time</label><input id="eTime" type="time" value="' + d.time + '"></div></div>';
+      return out;
+    }
+    function readInto() {
+      var g = function (i) { return document.getElementById(i); };
+      if (g("eAmt")) d.amount = g("eAmt").value;
+      if (g("eDesc")) d.desc = g("eDesc").value;
+      if (g("eDate")) d.date = g("eDate").value;
+      if (g("eTime")) d.time = g("eTime").value;
+      if (g("eWhere")) d.where = g("eWhere").value;
+      if (g("eAcct")) d.account = g("eAcct").value;
+      if (g("eAcct2")) d.toAccount = g("eAcct2").value;
+      if (g("eFee")) d.fee = g("eFee").value;
+    }
+    var body = '<div class="seg three" id="eSeg"><button data-et="expense" class="' + (d.type === "expense" ? "on" : "") + '">Expense</button><button data-et="income" class="' + (d.type === "income" ? "on" : "") + '">Income</button><button data-et="transfer" class="' + (d.type === "transfer" ? "on" : "") + '">Transfer</button></div><div id="eFields">' + fieldsFor(d.type) + '</div>';
+    openModal("Edit entry", body, "Save", function () {
+      readInto();
+      var v = Math.round((parseFloat(d.amount) || 0) * 100) / 100;
+      if (!(v > 0)) { var ae = document.getElementById("eAmt"); if (ae) ae.focus(); return false; }
+      if (d.type === "transfer" && d.account === d.toAccount) { toast("Pick two different accounts"); return false; }
+      t.type = d.type; t.amount = v; t.desc = (d.desc || "").trim(); t.date = d.date || t.date; t.time = d.time || "";
+      if (d.type === "transfer") { t.account = d.account; t.toAccount = d.toAccount; t.fee = Math.round((parseFloat(d.fee) || 0) * 100) / 100; delete t.where; }
+      else { t.account = d.account; t.where = (d.where || "").trim(); delete t.toAccount; delete t.fee; }
       saveTx(); render(); toast("Entry updated");
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#eSeg button"), function (b) {
+      b.onclick = function () {
+        readInto(); d.type = b.getAttribute("data-et");
+        document.getElementById("eFields").innerHTML = fieldsFor(d.type);
+        Array.prototype.forEach.call(document.querySelectorAll("#eSeg button"), function (x) { x.classList.toggle("on", x.getAttribute("data-et") === d.type); });
+      };
     });
   }
 
@@ -558,7 +643,7 @@
     var nw = netWorth();
     var rows = !state.accounts.length ? '<div class="empty"><div class="big">No accounts yet</div>Add your first account on the left — a wallet, bank, or cash.</div>'
       : state.accounts.map(function (a) { var bal = acctBal(a.id), count = state.tx.filter(function (t) { return t.account === a.id || t.toAccount === a.id; }).length; return lrow({ lead: dotEl(a.color), t: esc(a.name), sub: '<span>starting ' + fmt(a.opening || 0) + ' · ' + count + ' txn' + (count === 1 ? "" : "s") + '</span>', val: fmt(bal), valCls: bal >= 0 ? "pos" : "neg", acts: '<button class="mini" data-edit="' + a.id + '" title="Rename / balance">✎</button><button class="del" data-acctdel="' + a.id + '" title="Delete">×</button>' }); }).join("");
-    var sidebar = card("Add account", "A wallet, bank, or cash", '<div class="field"><label>Name</label><input id="aname" type="text" maxlength="24" placeholder="name this account"></div><div class="field"><label>Balance right now</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="aopen" type="number" step="0.01" placeholder="0.00"></div></div><div class="hint">What\'s in this account today — your starting point for tracking.</div><button class="btn" id="aadd">Add account</button>');
+    var sidebar = card("Add account", "A wallet, bank, or cash", '<div class="field"><label>Name</label><input id="aname" type="text" maxlength="24" placeholder="name this account"></div><div class="field"><label>Balance right now</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="aopen" type="number" step="0.01" placeholder="0.00"></div></div><div class="hint">What\'s in this account today — your starting point for tracking.</div><button class="btn" id="aadd">Add account</button>', null, { collapsible: true, key: "acct-add" });
     app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">every account balance, summed</div>', monthPills()), sidebar, card("Your accounts", "Balances update live with every entry", rows));
     bind("aadd", "click", addAccount);
     Array.prototype.forEach.call(document.querySelectorAll("[data-acctdel]"), function (b) { b.onclick = function () { delAccount(b.getAttribute("data-acctdel")); }; });
@@ -607,7 +692,7 @@
       '<div class="field"><label>Due <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="ldue" type="date"></div>' +
       '<div class="field"><label>Note <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="lnote" type="text" maxlength="40" placeholder="what for?"></div>' +
       '<button class="btn" id="ladd">Record</button>'
-      : accountNudge());
+      : accountNudge(), null, { collapsible: true, key: "lend-add" });
     var extra = '<div class="filters"><input id="lendQ" type="text" placeholder="Search…" value="' + esc(state.lendQ) + '"><select id="lview"><option value="person"' + sel(state.lendView, "person") + '>By person</option><option value="date"' + sel(state.lendView, "date") + '>By date</option></select></div>';
 
     app.innerHTML = layout(heroBlock("Net position" + (lt.over ? " · " + lt.over + " overdue" : ""), fmt(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>', '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmt(lt.owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmt(lt.owe) + '</div></div></div>'), sidebar, card("Loans", "Tap “Settle” when paid back", listBody, extra));
@@ -707,7 +792,7 @@
       stat("Total income", fmt(totInc), "pos") +
       stat("Total expenses", fmt(totExp), "neg") +
       stat("Biggest expense", biggest ? fmt(biggest.amount) : "—", "neg") +
-      (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") + '</div>');
+      (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") + '</div>', null, { collapsible: true, key: "trends-stats" });
 
     var main = "";
     var groupSel = '<div class="filters"><select id="trendGroup"><option value="weekly"' + sel(g, "weekly") + '>Weekly</option><option value="monthly"' + sel(g, "monthly") + '>Monthly</option><option value="yearly"' + sel(g, "yearly") + '>Yearly</option><option value="all"' + sel(g, "all") + '>All-time</option></select></div>';
@@ -768,7 +853,7 @@
       '<div class="field"><label>Expected day of month <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="rday" type="number" min="1" max="31" placeholder="leave blank for a shortcut"></div>' +
       '<div class="hint">With a day → recurring (shows in Upcoming &amp; the monthly total). Blank → a one-tap shortcut.</div>' +
       '<button class="btn" id="radd">Save template</button>'
-      : accountNudge());
+      : accountNudge(), null, { collapsible: true, key: "rec-add" });
 
     app.innerHTML = layout(heroBlock("Per month · recurring out", fmt(mOut), "neg", '<div class="csub">' + dated + ' recurring · ' + shortc + ' shortcut' + (shortc === 1 ? "" : "s") + '</div>', '<div class="pills"><div class="pill"><div class="label">Recurring in</div><div class="v num pos">' + fmt(mIn) + '</div></div></div>'), sidebar, card("Your templates", "Tap “Log” to record one today", list));
 
@@ -830,6 +915,7 @@
   function clearAllData() {
     confirmModal("Clear all data?", "This permanently deletes every account, transaction, loan and template on this device. Download a backup first — this can't be undone.", "Delete everything", function () {
       state.tx = []; state.loans = []; state.recurring = []; state.accounts = [];
+      state.backupCount = 0;
       (async function () { try { await store.del(K.tx); await store.del(K.loan); await store.del(K.rec); await store.del(K.acct); } catch (e) {} })();
       render(); toast("All data cleared");
     }, true);
@@ -839,7 +925,7 @@
   function resolveTheme() { if (state.theme === "system") { return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"; } return state.theme; }
   function applyTheme() { var r = resolveTheme(); document.documentElement.setAttribute("data-theme", r); var b = document.getElementById("theme"); if (b) b.textContent = r === "dark" ? "☀️" : "🌙"; }
   function download(name, text, mime) { var blob = new Blob([text], { type: mime }), a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-  function backupJSON() { download("ledger-backup-" + today() + ".json", JSON.stringify({ app: "ledger", version: 6, exportedAt: new Date().toISOString(), currency: state.cur, accounts: state.accounts, transactions: state.tx, loans: state.loans, recurring: state.recurring }, null, 2), "application/json"); toast("Backup downloaded"); }
+  function backupJSON() { download("ledger-backup-" + today() + ".json", JSON.stringify({ app: "ledger", version: 7, exportedAt: new Date().toISOString(), currency: state.cur, accounts: state.accounts, transactions: state.tx, loans: state.loans, recurring: state.recurring }, null, 2), "application/json"); state.lastBackup = Date.now(); state.backupCount = totalRecords(); state.nagDismissed = false; saveSet(); renderBackupNag(); toast("Backup downloaded"); }
   function restoreJSON(text) {
     var o; try { o = JSON.parse(text); } catch (e) { toast("That file isn't valid JSON"); return; }
     if (!o || (!Array.isArray(o.accounts) && !Array.isArray(o.transactions))) { toast("Not a Ledger backup file"); return; }
@@ -849,6 +935,7 @@
       state.loans = Array.isArray(o.loans) ? o.loans : [];
       state.recurring = Array.isArray(o.recurring) ? o.recurring : [];
       if (o.currency) state.cur = o.currency;
+      state.lastBackup = Date.now(); state.backupCount = totalRecords(); state.nagDismissed = false;
       saveSet(); saveAll(); render(); toast("Backup restored");
     }, true);
   }
