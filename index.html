@@ -177,6 +177,12 @@
   .nag-x:hover { background: rgba(120,90,20,.12); color: var(--ink); }
   #backupNag:empty { display: none; }
 
+  .day-div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 14px 4px 6px; }
+  .list > .day-div:first-child { padding-top: 2px; }
+  .day-date { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-faint); }
+  .day-net { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .day-net.neg { color: var(--ink-soft); }
+
   #settingsBtn { transition: transform .25s ease, border-color .15s, background .15s, color .15s; }
   #settingsBtn:hover { transform: rotate(28deg); }
   @keyframes nagIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
@@ -334,6 +340,16 @@
   function fmtDate(d) { return new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
   function fmtTime(t) { if (!t) return ""; var pr = t.split(":"), h = +pr[0], ap = h >= 12 ? "PM" : "AM", hh = h % 12 || 12; return hh + ":" + pr[1] + " " + ap; }
   function dtLabel(d, t) { return fmtDate(d) + (t ? ", " + fmtTime(t) : ""); }
+  function relDay(d) {
+    var t0 = new Date(today() + "T00:00:00"), dd = new Date(d + "T00:00:00");
+    if (isNaN(dd.getTime())) return d;
+    var diff = Math.round((t0 - dd) / 864e5);
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Yesterday";
+    if (diff > 1 && diff < 7) return dd.toLocaleDateString(undefined, { weekday: "long" });
+    return dd.toLocaleDateString(undefined, dd.getFullYear() === t0.getFullYear() ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
+  }
+  function metaLine(parts) { return parts.filter(Boolean).join(" · "); }
   function sel(a, b) { return a === b ? " selected" : ""; }
   function iso(dt) { return dt.getFullYear() + "-" + p2(dt.getMonth() + 1) + "-" + p2(dt.getDate()); }
 
@@ -497,7 +513,7 @@
     var upcoming = card("Upcoming", "Bills, subscriptions &amp; loan due dates", upBody);
 
     var ents = entries().slice(0, 6);
-    var recent = card("Recent activity", "", !ents.length ? '<div class="empty">No activity yet.</div>' : '<div class="list">' + ents.map(recentRow).join("") + '</div>');
+    var recent = card("Recent activity", "", !ents.length ? '<div class="empty">No activity yet.</div>' : '<div class="list">' + groupedRows(ents, true, false) + '</div>');
 
     app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, upcoming + recent);
 
@@ -521,7 +537,7 @@
     var shown = visible.slice(0, state.trackShow);
     var remaining = visible.length - shown.length;
     var listBody = !visible.length ? '<div class="empty"><div class="big">Nothing here yet</div>' + (state.accounts.length ? "Add your first entry on the left to get started." : "Add an account, then start logging.") + '</div>'
-      : '<div class="list">' + shown.map(function (e) { return entryRow(e); }).join("") + '</div>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more · ' + remaining + ' left</button></div>' : "");
+      : '<div class="list">' + groupedRows(shown, false, state.fType === "all" && !q) + '</div>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more · ' + remaining + ' left</button></div>' : "");
     var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select></div>';
 
     var chips = shortcutChips();
@@ -545,14 +561,14 @@
       '<button class="btn" id="add">' + (isT ? "Record transfer" : "Add " + state.formType) + '</button>';
   }
   function entryRow(e, ro) {
-    var dt = dtLabel(e.date, e.time);
+    var rt = fmtTime(e.time);
     if (e.kind === "transfer") {
-      var sub = '<span>' + esc(acctName(e.account)) + ' → ' + esc(acctName(e.toAccount)) + ' · ' + dt + '</span>' + (e.fee ? '<span class="badge next">fee ' + raw(e.fee) + '</span>' : "");
+      var sub = '<span>' + metaLine([esc(acctName(e.account)) + ' → ' + esc(acctName(e.toAccount)), rt]) + '</span>' + (e.fee ? '<span class="badge next">fee ' + raw(e.fee) + '</span>' : "");
       return lrow({ lead: dotEl("var(--ink-faint)"), t: esc(e.note || "Transfer"), sub: sub, val: "⇄ " + raw(e.amount), valCls: "neu", acts: ro ? "" : '<button class="mini" data-edit-tx="' + e.id + '" title="Edit">✎</button><button class="del" data-id="' + e.id + '" title="Delete">×</button>' });
     }
     if (e.kind === "income" || e.kind === "expense") {
       var sign = e.kind === "income" ? "+" : "−", cls = e.kind === "income" ? "pos" : "neg";
-      var sub2 = '<span>' + esc(acctName(e.account)) + ' · ' + dt + (e.where && e.note ? " · " + esc(e.note) : "") + '</span>';
+      var sub2 = '<span>' + metaLine([esc(acctName(e.account)), rt, (e.where && e.note ? esc(e.note) : "")]) + '</span>';
       return lrow({ lead: dotEl(acctColor(e.account)), t: esc(e.where || e.note || "—"), sub: sub2, val: sign + raw(e.amount), valCls: cls, acts: ro ? "" : '<button class="mini" data-edit-tx="' + e.id + '" title="Edit">✎</button><button class="del" data-id="' + e.id + '" title="Delete">×</button>' });
     }
     var label, sg, cl;
@@ -560,8 +576,23 @@
     else if (e.kind === "borrow") { label = "Borrowed from " + e.person; sg = "+"; cl = "pos"; }
     else if (e.loanKind === "lent") { label = "Repaid by " + e.person; sg = "+"; cl = "pos"; }
     else { label = "Paid back " + e.person; sg = "−"; cl = "neg"; }
-    var sub3 = '<span>' + esc(acctName(e.account)) + ' · ' + dt + '</span><span class="badge next">lending</span>';
+    var sub3 = '<span>' + metaLine([esc(acctName(e.account)), rt]) + '</span><span class="badge next">lending</span>';
     return lrow({ lead: ringEl(), t: esc(label), sub: sub3, val: sg + raw(e.amount), valCls: cl, acts: ro ? "" : '<button class="mini" data-jump="lending" title="Manage in Lending">↗</button>' });
+  }
+  function dayNetMap() { var m = {}; flowEvents().forEach(function (f) { m[f.date] = (m[f.date] || 0) + (f.inc || 0) - (f.exp || 0); }); return m; }
+  function groupedRows(list, ro, showNet) {
+    var net = showNet ? dayNetMap() : null, html = "", last = null;
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      if (e.date !== last) {
+        last = e.date;
+        var right = "";
+        if (net) { var v = net[e.date]; if (v != null && Math.round(v * 100) !== 0) right = '<span class="day-net ' + (v >= 0 ? "pos" : "neg") + '">' + (v >= 0 ? "+" : "−") + raw(v) + '</span>'; }
+        html += '<div class="day-div"><span class="day-date">' + relDay(e.date) + '</span>' + right + '</div>';
+      }
+      html += entryRow(e, ro);
+    }
+    return html;
   }
   function wireTrack() {
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.formType = b.getAttribute("data-t"); render(); }; });
