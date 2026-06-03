@@ -86,9 +86,11 @@
   .card.collapsed .card-h.ch .chev { transform: rotate(-90deg); }
   .cwrap { display: grid; grid-template-rows: 1fr; }
   .card.collapsible .cwrap { transition: grid-template-rows .3s ease; }
-  .card.collapsible .cwrap > .card-b { overflow: hidden; min-height: 0; transition: opacity .2s ease; }
+  .card-h.ch { transition: padding .3s ease; }
+  .card.collapsible .cwrap > .card-b { overflow: hidden; min-height: 0; transition: opacity .2s ease, padding .3s ease; }
   .card.collapsed .cwrap { grid-template-rows: 0fr; }
-  .card.collapsed .cwrap > .card-b { opacity: 0; }
+  .card.collapsed .cwrap > .card-b { opacity: 0; padding-top: 0; padding-bottom: 0; }
+  .card.collapsed > .card-h.ch { padding-bottom: 15px; }
   .card-b { padding: 16px 18px 18px; }
 
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; background: var(--paper-2); padding: 4px; border-radius: 10px; margin-bottom: 14px; }
@@ -183,8 +185,7 @@
   .day-net { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-variant-numeric: tabular-nums; }
   .day-net.neg { color: var(--ink-soft); }
 
-  #settingsBtn { transition: transform .25s ease, border-color .15s, background .15s, color .15s; }
-  #settingsBtn:hover { transform: rotate(28deg); }
+  #settingsBtn { transition: border-color .15s, background .15s, color .15s; }
   @keyframes nagIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
   @keyframes viewIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @keyframes softIn { from { opacity: 0; } to { opacity: 1; } }
@@ -221,8 +222,10 @@
   .foot button { background: none; border: 0; color: var(--ink-faint); text-decoration: underline; cursor: pointer; font-family: inherit; font-size: 12px; }
   .foot button:hover { color: var(--expense); }
 
-  .toast { position: fixed; left: 50%; bottom: 26px; translate: -50% 20px; background: var(--accent); color: var(--accent-ink); padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: .25s; z-index: 50; max-width: 90%; text-align: center; }
-  .toast.show { opacity: 1; translate: -50% 0; }
+  .toast { position: fixed; left: 50%; bottom: 26px; translate: -50% 20px; background: var(--accent); color: var(--accent-ink); padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: .25s; z-index: 50; max-width: 90%; display: flex; align-items: center; gap: 14px; justify-content: center; }
+  .toast.show { opacity: 1; translate: -50% 0; pointer-events: auto; }
+  .toast-undo { background: rgba(0,0,0,.16); border: 0; color: inherit; font: inherit; font-weight: 700; padding: 3px 13px; border-radius: 999px; cursor: pointer; }
+  .toast-undo:hover { background: rgba(0,0,0,.26); }
 
   @media (max-width: 480px) {
     body { padding: 18px 12px 60px; background-image: none; }
@@ -282,7 +285,7 @@
   var state = {
     accounts: [], tx: [], loans: [], recurring: [],
     cur: "$", theme: "system",
-    tab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
+    tab: "overview", prevTab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
     fType: "all", fQ: "", trackShow: 30, lendQ: "", trendGroup: "monthly", placesAll: false,
     lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false
   };
@@ -332,6 +335,15 @@
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
   function toast(msg) { toastEl.textContent = msg; toastEl.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(function () { toastEl.classList.remove("show"); }, 2100); }
+  function snapState() { return JSON.stringify({ tx: state.tx, loans: state.loans, recurring: state.recurring, accounts: state.accounts, cur: state.cur }); }
+  function undoTo(snap) { var o = JSON.parse(snap); state.tx = o.tx; state.loans = o.loans; state.recurring = o.recurring; state.accounts = o.accounts; state.cur = o.cur; saveAll(); saveSet(); render(); toast("Undone"); }
+  function commit(label, fn) { var snap = snapState(); fn(); saveAll(); render(); toastUndo(label, snap); }
+  function toastUndo(label, snap) {
+    toastEl.innerHTML = '<span>' + label + '</span><button class="toast-undo" id="toastUndo">Undo</button>';
+    toastEl.classList.add("show"); clearTimeout(toastT);
+    var u = document.getElementById("toastUndo"); if (u) u.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); undoTo(snap); };
+    toastT = setTimeout(function () { toastEl.classList.remove("show"); }, 6000);
+  }
   function rebuildMap() { amap = {}; state.accounts.forEach(function (a) { amap[a.id] = a; }); }
   function acctName(id) { return amap[id] ? amap[id].name : "—"; }
   function acctColor(id) { return amap[id] ? amap[id].color : "var(--ink-faint)"; }
@@ -603,7 +615,7 @@
     var q = document.getElementById("fQ"); if (q) q.oninput = function () { state.fQ = q.value; state.trackShow = 30; var s = q.selectionStart; render(); var nq = document.getElementById("fQ"); if (nq) { nq.focus(); try { nq.setSelectionRange(s, s); } catch (e) {} } };
     bind("showMore", "click", function () { state.trackShow += 50; render(); });
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
-    Array.prototype.forEach.call(document.querySelectorAll(".del"), function (b) { b.onclick = function () { var id = b.getAttribute("data-id"); state.tx = state.tx.filter(function (t) { return t.id !== id; }); saveTx(); render(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll(".del"), function (b) { b.onclick = function () { var id = b.getAttribute("data-id"); commit("Entry deleted", function () { state.tx = state.tx.filter(function (t) { return t.id !== id; }); }); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-edit-tx]"), function (b) { b.onclick = function () { editEntry(b.getAttribute("data-edit-tx")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-jump]"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-jump"); render(); }; });
   }
@@ -656,10 +668,11 @@
       var v = Math.round((parseFloat(d.amount) || 0) * 100) / 100;
       if (!(v > 0)) { var ae = document.getElementById("eAmt"); if (ae) ae.focus(); return false; }
       if (d.type === "transfer" && d.account === d.toAccount) { toast("Pick two different accounts"); return false; }
-      t.type = d.type; t.amount = v; t.desc = (d.desc || "").trim(); t.date = d.date || t.date; t.time = d.time || "";
-      if (d.type === "transfer") { t.account = d.account; t.toAccount = d.toAccount; t.fee = Math.round((parseFloat(d.fee) || 0) * 100) / 100; delete t.where; }
-      else { t.account = d.account; t.where = (d.where || "").trim(); delete t.toAccount; delete t.fee; }
-      saveTx(); render(); toast("Entry updated");
+      commit("Entry edited", function () {
+        t.type = d.type; t.amount = v; t.desc = (d.desc || "").trim(); t.date = d.date || t.date; t.time = d.time || "";
+        if (d.type === "transfer") { t.account = d.account; t.toAccount = d.toAccount; t.fee = Math.round((parseFloat(d.fee) || 0) * 100) / 100; delete t.where; }
+        else { t.account = d.account; t.where = (d.where || "").trim(); delete t.toAccount; delete t.fee; }
+      });
     });
     Array.prototype.forEach.call(document.querySelectorAll("#eSeg button"), function (b) {
       b.onclick = function () {
@@ -689,14 +702,14 @@
       '<div class="hint">This is the starting point every balance builds on.</div>';
     openModal("Edit account", body, "Save", function () {
       var name = document.getElementById("eAName").value.trim(); if (!name) { document.getElementById("eAName").focus(); return false; }
-      a.name = name; a.opening = Math.round((parseFloat(document.getElementById("eAOpen").value) || 0) * 100) / 100;
-      saveAcct(); render(); toast("Account updated");
+      var open = Math.round((parseFloat(document.getElementById("eAOpen").value) || 0) * 100) / 100;
+      commit("Account updated", function () { a.name = name; a.opening = open; });
     });
   }
   function delAccount(id) {
     var count = state.tx.filter(function (t) { return t.account === id || t.toAccount === id; }).length + state.loans.filter(function (l) { return l.account === id || l.settledAccount === id; }).length;
     confirmModal("Delete account?", count ? "It has " + count + " linked record" + (count === 1 ? "" : "s") + " — they'll keep their amounts but lose this account label." : "This removes the account; you can add it again anytime.", "Delete", function () {
-      state.accounts = state.accounts.filter(function (a) { return a.id !== id; }); saveAcct(); render(); toast("Account deleted");
+      commit("Account deleted", function () { state.accounts = state.accounts.filter(function (a) { return a.id !== id; }); });
     }, true);
   }
 
@@ -736,8 +749,8 @@
     bind("ladd", "click", addLoan);
     Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-loanedit]"), function (b) { b.onclick = function () { editLoan(b.getAttribute("data-loanedit")); }; });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-unsettle]"), function (b) { b.onclick = function () { var l = byId(b.getAttribute("data-unsettle")); if (l) { l.settled = false; delete l.settledDate; delete l.settledTime; delete l.settledAccount; delete l.settledAmount; saveLoan(); render(); } }; });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-loandel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-loandel"); state.loans = state.loans.filter(function (l) { return l.id !== id; }); saveLoan(); render(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-unsettle]"), function (b) { b.onclick = function () { var l = byId(b.getAttribute("data-unsettle")); if (l) commit("Settle undone", function () { l.settled = false; delete l.settledDate; delete l.settledTime; delete l.settledAccount; delete l.settledAmount; delete l.settledCreated; }); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-loandel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-loandel"); commit("Loan deleted", function () { state.loans = state.loans.filter(function (l) { return l.id !== id; }); }); }; });
   }
   function loanRow(l, showPerson) {
     var t = showPerson ? esc(l.person) : (l.kind === "lent" ? "Lent out" : "Borrowed");
@@ -764,9 +777,8 @@
     openModal(lent ? "Mark repaid to you" : "Mark paid back", body, "Settle", function () {
       var raw0 = parseFloat(document.getElementById("sAmt").value);
       if (!(raw0 >= 0)) { document.getElementById("sAmt").focus(); return false; }
-      l.settled = true; l.settledAmount = Math.round(raw0 * 100) / 100; l.settledAccount = document.getElementById("sAcct").value;
-      l.settledDate = document.getElementById("sDate").value || today(); l.settledTime = document.getElementById("sTime").value || nowTime(); l.settledCreated = Date.now();
-      saveLoan(); render(); toast(lent ? "Marked repaid to you" : "Marked paid back");
+      var amt = Math.round(raw0 * 100) / 100, acct = document.getElementById("sAcct").value, sd = document.getElementById("sDate").value || today(), st = document.getElementById("sTime").value || nowTime();
+      commit(lent ? "Marked repaid" : "Marked paid back", function () { l.settled = true; l.settledAmount = amt; l.settledAccount = acct; l.settledDate = sd; l.settledTime = st; l.settledCreated = Date.now(); });
     });
     var sAmt = document.getElementById("sAmt");
     function upd() {
@@ -790,8 +802,7 @@
     openModal("Edit loan", body, "Save", function () {
       var p = document.getElementById("eLPerson").value.trim(); if (!p) { document.getElementById("eLPerson").focus(); return false; }
       var v = Math.round((parseFloat(document.getElementById("eLAmt").value) || 0) * 100) / 100; if (!(v > 0)) { document.getElementById("eLAmt").focus(); return false; }
-      l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.fee = Math.round((parseFloat(document.getElementById("eLFee").value) || 0) * 100) / 100; l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim();
-      saveLoan(); render(); toast("Loan updated");
+      commit("Loan edited", function () { l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.fee = Math.round((parseFloat(document.getElementById("eLFee").value) || 0) * 100) / 100; l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim(); });
     });
   }
 
@@ -895,7 +906,7 @@
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.recType = b.getAttribute("data-rt"); render(); }; });
     bind("radd", "click", addTemplate);
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-recdel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-recdel"); state.recurring = state.recurring.filter(function (r) { return r.id !== id; }); saveRec(); render(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-recdel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-recdel"); commit("Template deleted", function () { state.recurring = state.recurring.filter(function (r) { return r.id !== id; }); }); }; });
   }
   function addTemplate() {
     var el = document.getElementById("ramt"), v = parseFloat(el.value);
@@ -1022,8 +1033,8 @@
   function confirmModal(title, msg, okLabel, onConfirm, danger) { openModal(title, '<div class="modal-msg">' + msg + '</div>', okLabel, onConfirm, { danger: !!danger }); }
   function closeModal() { var m = document.getElementById("modal"); m.style.display = "none"; m.innerHTML = ""; modalConfirm = null; }
   Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-tab"); render(); }; });
-  document.getElementById("settingsBtn").onclick = function () { state.tab = "settings"; render(); };
-  document.getElementById("footSettings").onclick = function () { state.tab = "settings"; render(); };
+  document.getElementById("settingsBtn").onclick = function () { if (state.tab === "settings") { state.tab = state.prevTab || "overview"; } else { state.prevTab = state.tab; state.tab = "settings"; } render(); };
+  document.getElementById("footSettings").onclick = function () { if (state.tab !== "settings") state.prevTab = state.tab; state.tab = "settings"; render(); };
   document.getElementById("fileJSON").onchange = function () { readFile(this, restoreJSON); };
   document.getElementById("fileCSV").onchange = function () { readFile(this, importCSV); };
   if (window.matchMedia) { try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { if (state.theme === "system") applyTheme(); }); } catch (e) {} }
