@@ -362,8 +362,8 @@
     });
     state.loans.forEach(function (l) {
       var sa = l.settledAmount != null ? l.settledAmount : l.amount;
-      if (l.kind === "lent") { if (l.account === id) b -= l.amount; if (l.settled && l.settledAccount === id) b += sa; }
-      else { if (l.account === id) b += l.amount; if (l.settled && l.settledAccount === id) b -= sa; }
+      if (l.kind === "lent") { if (l.account === id) b -= (l.amount + (l.fee || 0)); if (l.settled && l.settledAccount === id) b += sa; }
+      else { if (l.account === id) b += (l.amount - (l.fee || 0)); if (l.settled && l.settledAccount === id) b -= sa; }
     });
     return b;
   }
@@ -376,6 +376,7 @@
       else if (t.type === "transfer" && t.fee) ev.push({ date: t.date, inc: 0, exp: t.fee });
     });
     state.loans.forEach(function (l) {
+      if (l.fee) ev.push({ date: l.date, inc: 0, exp: l.fee });
       if (!l.settled) return;
       var sa = l.settledAmount != null ? l.settledAmount : l.amount;
       var gain = l.kind === "lent" ? sa - l.amount : l.amount - sa;
@@ -394,7 +395,7 @@
     var out = [];
     state.tx.forEach(function (t) { out.push({ src: "tx", id: t.id, kind: t.type, date: t.date, time: t.time || "", created: t.created != null ? t.created : tstamp(t.date, t.time), amount: t.amount, where: t.where || "", note: t.desc || "", account: t.account, toAccount: t.toAccount, fee: t.fee || 0 }); });
     state.loans.forEach(function (l) {
-      out.push({ src: "loan", id: l.id, kind: l.kind === "lent" ? "lend" : "borrow", date: l.date, time: l.time || "", created: l.created != null ? l.created : tstamp(l.date, l.time), amount: l.amount, person: l.person, account: l.account, note: l.note || "" });
+      out.push({ src: "loan", id: l.id, kind: l.kind === "lent" ? "lend" : "borrow", date: l.date, time: l.time || "", created: l.created != null ? l.created : tstamp(l.date, l.time), amount: l.amount, fee: l.fee || 0, person: l.person, account: l.account, note: l.note || "" });
       if (l.settled) out.push({ src: "settle", id: l.id, kind: "settle", loanKind: l.kind, date: l.settledDate || l.date, time: l.settledTime || "", created: l.settledCreated != null ? l.settledCreated : tstamp(l.settledDate || l.date, l.settledTime) + 1, amount: l.settledAmount != null ? l.settledAmount : l.amount, person: l.person, account: l.settledAccount || l.account, note: l.note || "" });
     });
     return out.sort(function (a, b) {
@@ -576,7 +577,7 @@
     else if (e.kind === "borrow") { label = "Borrowed from " + e.person; sg = "+"; cl = "pos"; }
     else if (e.loanKind === "lent") { label = "Repaid by " + e.person; sg = "+"; cl = "pos"; }
     else { label = "Paid back " + e.person; sg = "−"; cl = "neg"; }
-    var sub3 = '<span>' + metaLine([esc(acctName(e.account)), rt]) + '</span><span class="badge next">lending</span>';
+    var sub3 = '<span>' + metaLine([esc(acctName(e.account)), rt]) + '</span>' + (e.fee ? '<span class="badge next">fee ' + raw(e.fee) + '</span>' : "") + '<span class="badge next">lending</span>';
     return lrow({ lead: ringEl(), t: esc(label), sub: sub3, val: sg + raw(e.amount), valCls: cl, acts: ro ? "" : '<button class="mini" data-jump="lending" title="Manage in Lending">↗</button>' });
   }
   function dayNetMap() { var m = {}; flowEvents().forEach(function (f) { m[f.date] = (m[f.date] || 0) + (f.inc || 0) - (f.exp || 0); }); return m; }
@@ -719,6 +720,7 @@
       '<div class="field"><label>Person</label><input id="lperson" type="text" maxlength="24" placeholder="who?"></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lamt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       '<div class="field"><label>' + (state.lendKind === "lent-out" ? "From account" : "Into account") + '</label><select class="inp" id="lacct">' + acctOptions(defAcct()) + '</select></div>' +
+      '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lfee" type="number" step="0.01" min="0" placeholder="0.00"></div><div class="hint">A cost you paid' + (state.lendKind === "lent-out" ? " to send this" : " to receive this") + ' (e.g. a transfer fee). Counts as your expense; doesn’t change what’s owed.</div></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="ldate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="ltime" type="time" value="' + nowTime() + '"></div></div>' +
       '<div class="field"><label>Due <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="ldue" type="date"></div>' +
       '<div class="field"><label>Note <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="lnote" type="text" maxlength="40" placeholder="what for?"></div>' +
@@ -745,11 +747,12 @@
     var gain = l.kind === "lent" ? settledAmt - l.amount : l.amount - settledAmt;
     if (l.settled) { sub += '<span class="badge settled">settled</span>'; if (Math.abs(gain) >= 0.005) sub += '<span class="badge ' + (gain > 0 ? "gain" : "loss") + '">' + (gain > 0 ? "+" : "−") + raw(Math.abs(gain)) + '</span>'; }
     else sub += dueBadge(l);
+    if (l.fee) sub += '<span class="badge next">fee ' + raw(l.fee) + '</span>';
     var acts = '<button class="mini" data-loanedit="' + l.id + '" title="Edit">✎</button>' + (l.settled ? '<button class="act" data-unsettle="' + l.id + '">Undo</button>' : '<button class="act primary" data-settle="' + l.id + '">Settle</button>') + '<button class="del" data-loandel="' + l.id + '" title="Delete">×</button>';
     return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled });
   }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
-  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { pe.focus(); pe.style.borderColor = "var(--expense)"; return; } var ae = document.getElementById("lamt"), v = parseFloat(ae.value); if (!v || v <= 0) { ae.focus(); ae.style.borderColor = "var(--expense)"; return; } state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: Math.round(v * 100) / 100, account: document.getElementById("lacct").value, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); saveLoan(); render(); toast("Loan recorded"); }
+  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { pe.focus(); pe.style.borderColor = "var(--expense)"; return; } var ae = document.getElementById("lamt"), v = parseFloat(ae.value); if (!v || v <= 0) { ae.focus(); ae.style.borderColor = "var(--expense)"; return; } state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: Math.round(v * 100) / 100, account: document.getElementById("lacct").value, fee: Math.round((parseFloat(document.getElementById("lfee").value) || 0) * 100) / 100, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); saveLoan(); render(); toast("Loan recorded"); }
   function settleLoan(id) {
     var l = byId(id); if (!l) return;
     var lent = l.kind === "lent";
@@ -780,13 +783,14 @@
     var body = '<div class="field"><label>Person</label><input id="eLPerson" type="text" maxlength="24" value="' + esc(l.person) + '"></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
       '<div class="field"><label>' + (lent ? "From account" : "Into account") + '</label><select class="inp" id="eLAcct">' + acctOptions(l.account) + '</select></div>' +
+      '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLFee" type="number" step="0.01" min="0" value="' + (l.fee || 0) + '"></div></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="eLDate" type="date" value="' + l.date + '"></div><div class="field"><label>Time</label><input id="eLTime" type="time" value="' + (l.time || "") + '"></div></div>' +
       '<div class="field"><label>Due <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="eLDue" type="date" value="' + (l.due || "") + '"></div>' +
       '<div class="field"><label>Note</label><input id="eLNote" type="text" maxlength="40" value="' + esc(l.note || "") + '"></div>';
     openModal("Edit loan", body, "Save", function () {
       var p = document.getElementById("eLPerson").value.trim(); if (!p) { document.getElementById("eLPerson").focus(); return false; }
       var v = Math.round((parseFloat(document.getElementById("eLAmt").value) || 0) * 100) / 100; if (!(v > 0)) { document.getElementById("eLAmt").focus(); return false; }
-      l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim();
+      l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.fee = Math.round((parseFloat(document.getElementById("eLFee").value) || 0) * 100) / 100; l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim();
       saveLoan(); render(); toast("Loan updated");
     });
   }
