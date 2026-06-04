@@ -84,17 +84,13 @@
   .card-h.ch:hover .chev { color: var(--ink); }
   .chev { font-family: 'JetBrains Mono', monospace; font-size: 17px; line-height: 1; color: var(--ink-faint); transition: transform .25s ease; flex: none; }
   .card.collapsed .chev { transform: rotate(-90deg); }
-  .card-h.hx { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px; }
-  .hx-title { display: flex; align-items: center; gap: 6px; }
-  .chev-btn { border: 0; background: transparent; cursor: pointer; padding: 2px 4px; border-radius: 6px; display: inline-flex; align-items: center; color: var(--ink-faint); }
-  .chev-btn:hover { color: var(--ink); background: rgba(0,0,0,.05); }
   .cwrap { display: grid; grid-template-rows: 1fr; }
   .card.collapsible .cwrap { transition: grid-template-rows .3s ease; }
   .card-h.ch { transition: padding .3s ease; }
   .card.collapsible .cwrap > .card-b { overflow: hidden; min-height: 0; transition: opacity .2s ease, padding .3s ease; }
   .card.collapsed .cwrap { grid-template-rows: 0fr; }
   .card.collapsed .cwrap > .card-b { opacity: 0; padding-top: 0; padding-bottom: 0; }
-  .card.collapsed > .card-h.ch, .card.collapsed > .card-h.hx { padding-bottom: 15px; }
+  .card.collapsed > .card-h.ch { padding-bottom: 15px; }
   .card-b { padding: 16px 18px 18px; }
 
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; background: var(--paper-2); padding: 4px; border-radius: 10px; margin-bottom: 14px; }
@@ -128,7 +124,9 @@
   .chip .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
   .chip .amt { font-family: 'JetBrains Mono', monospace; font-weight: 600; flex: none; }
 
-  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .filters > input { flex: 1 1 140px; }
+  .filters > select { flex: 0 1 auto; }
   .filters select, .filters input { font-family: inherit; font-size: 13px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 9px; cursor: pointer; }
   .filters input { cursor: text; width: 120px; }
 
@@ -459,16 +457,9 @@
     var key = opts.key || (state.tab + ":" + title);
     var isColl = coll && !!state.collapsed[key];
     var titleBlock = '<div><h2>' + title + '</h2>' + (sub ? '<div class="sub">' + sub + '</div>' : "") + '</div>';
-    var chevSpan = '<span class="chev">' + icon("caret-down") + '</span>';
-    var h;
-    if (headExtra) {
-      var chevBtn = coll ? '<button class="chev-btn" data-collapse="' + esc(key) + '" aria-expanded="' + (isColl ? "false" : "true") + '" aria-label="Toggle ' + esc(title) + '">' + chevSpan + '</button>' : "";
-      h = '<div class="card-h hx"><div class="hx-title">' + titleBlock + chevBtn + '</div>' + headExtra + '</div>';
-    } else if (coll) {
-      h = '<div class="card-h ch" data-collapse="' + esc(key) + '" role="button" tabindex="0" aria-expanded="' + (isColl ? "false" : "true") + '">' + titleBlock + chevSpan + '</div>';
-    } else {
-      h = '<div class="card-h">' + titleBlock + '</div>';
-    }
+    var h = coll
+      ? '<div class="card-h ch" data-collapse="' + esc(key) + '" role="button" tabindex="0" aria-expanded="' + (isColl ? "false" : "true") + '">' + titleBlock + '<span class="chev">' + icon("caret-down") + '</span></div>'
+      : '<div class="card-h">' + titleBlock + '</div>';
     return '<div class="card' + (coll ? " collapsible" : "") + (isColl ? " collapsed" : "") + '">' + h + '<div class="cwrap"><div class="card-b">' + body + '</div></div></div>';
   }
   function accountNudge() { return '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>'; }
@@ -612,7 +603,7 @@
     var chips = shortcutChips();
     var quickCard = chips ? card("Quick log", "Tap to record a saved shortcut", chips) : "";
     var sidebar = quickCard + card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge(), null, { collapsible: true, key: "track-add" });
-    var main = card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listBody, listExtra);
+    var main = card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listExtra + listBody);
 
     app.innerHTML = layout(heroBlock("Net worth", fmt(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()), sidebar, main);
     wireTrack();
@@ -793,7 +784,7 @@
       : accountNudge(), null, { collapsible: true, key: "lend-add" });
     var extra = '<div class="filters"><input id="lendQ" type="text" placeholder="Search…" value="' + esc(state.lendQ) + '"><select id="lview"><option value="person"' + sel(state.lendView, "person") + '>By person</option><option value="date"' + sel(state.lendView, "date") + '>By date</option></select></div>';
 
-    app.innerHTML = layout(heroBlock("Net position" + (lt.over ? " · " + lt.over + " overdue" : ""), fmt(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>', '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmt(lt.owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmt(lt.owe) + '</div></div></div>'), sidebar, card("Loans", "Tap “Settle” when paid back", listBody, extra));
+    app.innerHTML = layout(heroBlock("Net position" + (lt.over ? " · " + lt.over + " overdue" : ""), fmt(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>', '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmt(lt.owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmt(lt.owe) + '</div></div></div>'), sidebar, card("Loans", "Tap “Settle” when paid back", extra + listBody));
 
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.lendKind = b.getAttribute("data-lk"); render(); }; });
     bind("lview", "change", function (el) { state.lendView = el.value; render(); });
