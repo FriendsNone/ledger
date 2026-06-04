@@ -105,6 +105,8 @@
   input, select.inp { width: 100%; min-width: 0; font-family: inherit; font-size: 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 9px; padding: 10px 12px; transition: border-color .15s, box-shadow .15s; }
   input:focus, select.inp:focus { outline: 0; border-color: var(--ink-soft); box-shadow: 0 0 0 3px rgba(120,110,90,.14); }
   .amount-wrap { position: relative; }
+  input.invalid, select.invalid { border-color: var(--expense) !important; box-shadow: 0 0 0 3px rgba(190,70,55,.16); animation: shake .28s; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-4px); } 40%,80% { transform: translateX(4px); } }
   .amount-wrap .sym { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; font-size: 15px; }
   .amount-wrap input { padding-left: 32px; font-family: 'JetBrains Mono', monospace; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -378,6 +380,8 @@
   }
   function metaLine(parts) { return parts.filter(Boolean).join(" · "); }
   function icon(name) { return '<svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-' + name + '"></use></svg>'; }
+  function flagInvalid(el) { if (!el) return; el.classList.add("invalid"); try { el.focus(); } catch (e) {} el.addEventListener("input", function h() { el.classList.remove("invalid"); el.removeEventListener("input", h); }); }
+  function readAmt(id, allowZero) { var el = document.getElementById(id); if (!el) return null; var v = parseFloat(el.value); if (!isFinite(v) || v < 0 || v > 1e12 || (!allowZero && v <= 0)) { flagInvalid(el); return null; } return Math.round(v * 100) / 100; }
   function uniqSorted(arr) { var seen = {}, out = []; arr.forEach(function (v) { v = (v || "").trim(); var k = v.toLowerCase(); if (v && !seen[k]) { seen[k] = 1; out.push(v); } }); return out.sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; }); }
   function fillSuggest() {
     var w = document.getElementById("whereList"), p = document.getElementById("personList");
@@ -488,6 +492,7 @@
     if (tabChanged) saveSet();
     wireNudge(); wireCollapse(); renderBackupNag(); fillSuggest();
     Array.prototype.forEach.call(document.querySelectorAll("[data-jump]"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-jump"); render(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('input[type="number"]'), function (i) { if (!i.getAttribute("inputmode")) i.setAttribute("inputmode", "decimal"); });
   }
   function wireCollapse() {
     Array.prototype.forEach.call(document.querySelectorAll(".card-h.ch"), function (h) {
@@ -610,7 +615,7 @@
       fields +
       '<div class="field"><label>Note <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="desc" type="text" maxlength="60" placeholder="anything to remember"></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="date" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="time" type="time" value="' + nowTime() + '"></div></div>' +
-      '<button class="btn" id="add">' + (isT ? "Record transfer" : "Add " + state.formType) + '</button>';
+      '<button class="btn" id="add">' + icon('plus') + (isT ? "Record transfer" : "Add " + state.formType) + '</button>';
   }
   function entryRow(e, ro) {
     var rt = fmtTime(e.time);
@@ -659,9 +664,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-jump]"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-jump"); render(); }; });
   }
   function addEntry() {
-    var amtEl = document.getElementById("amt"), v = parseFloat(amtEl.value);
-    if (!v || v <= 0) { amtEl.focus(); amtEl.style.borderColor = "var(--expense)"; return; }
-    v = Math.round(v * 100) / 100;
+    var v = readAmt("amt"); if (v === null) return;
     var date = (document.getElementById("date").value || today()), time = (document.getElementById("time").value || "");
     if (state.formType === "transfer") {
       var from = document.getElementById("acct").value, to = document.getElementById("acct2").value;
@@ -702,8 +705,7 @@
     var body = '<div class="seg three" id="eSeg"><button data-et="expense" class="' + (d.type === "expense" ? "on" : "") + '">Expense</button><button data-et="income" class="' + (d.type === "income" ? "on" : "") + '">Income</button><button data-et="transfer" class="' + (d.type === "transfer" ? "on" : "") + '">Transfer</button></div><div id="eFields">' + fieldsFor(d.type) + '</div>';
     openModal("Edit entry", body, "Save", function () {
       readInto();
-      var v = Math.round((parseFloat(d.amount) || 0) * 100) / 100;
-      if (!(v > 0)) { var ae = document.getElementById("eAmt"); if (ae) ae.focus(); return false; }
+      var v = readAmt("eAmt"); if (v === null) return false;
       if (d.type === "transfer" && d.account === d.toAccount) { toast("Pick two different accounts"); return false; }
       commit("Entry edited", function () {
         t.type = d.type; t.amount = v; t.desc = (d.desc || "").trim(); t.date = d.date || t.date; t.time = d.time || "";
@@ -731,7 +733,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-acctdel]"), function (b) { b.onclick = function () { delAccount(b.getAttribute("data-acctdel")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-edit]"), function (b) { b.onclick = function () { editAccount(b.getAttribute("data-edit")); }; });
   }
-  function addAccount() { var el = document.getElementById("aname"), name = el.value.trim(); if (!name) { el.focus(); el.style.borderColor = "var(--expense)"; return; } var open = parseFloat(document.getElementById("aopen").value) || 0; commit("Account added", function () { state.accounts.push({ id: uid(), name: name, opening: Math.round(open * 100) / 100, color: PALETTE[state.accounts.length % PALETTE.length] }); }); }
+  function addAccount() { var el = document.getElementById("aname"), name = el.value.trim(); if (!name) { flagInvalid(el); return; } var open = parseFloat(document.getElementById("aopen").value) || 0; commit("Account added", function () { state.accounts.push({ id: uid(), name: name, opening: Math.round(open * 100) / 100, color: PALETTE[state.accounts.length % PALETTE.length] }); }); }
   function editAccount(id) {
     var a = amap[id]; if (!a) return;
     var body = '<div class="field"><label>Account name</label><input id="eAName" type="text" maxlength="24" value="' + esc(a.name) + '"></div>' +
@@ -803,7 +805,7 @@
     return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled });
   }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
-  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { pe.focus(); pe.style.borderColor = "var(--expense)"; return; } var ae = document.getElementById("lamt"), v = parseFloat(ae.value); if (!v || v <= 0) { ae.focus(); ae.style.borderColor = "var(--expense)"; return; } state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: Math.round(v * 100) / 100, account: document.getElementById("lacct").value, fee: Math.round((parseFloat(document.getElementById("lfee").value) || 0) * 100) / 100, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); saveLoan(); render(); toast("Loan recorded"); }
+  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { flagInvalid(pe); return; } var v = readAmt("lamt"); if (v === null) return; var fee = Math.round((parseFloat(document.getElementById("lfee").value) || 0) * 100) / 100; commit("Loan recorded", function () { state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: v, account: document.getElementById("lacct").value, fee: fee, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); }); }
   function settleLoan(id) {
     var l = byId(id); if (!l) return;
     var lent = l.kind === "lent";
@@ -813,9 +815,8 @@
       '<div class="two"><div class="field"><label>Date</label><input id="sDate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="sTime" type="time" value="' + nowTime() + '"></div></div>' +
       '<div class="hint" id="sHint"></div>';
     openModal(lent ? "Mark repaid to you" : "Mark paid back", body, "Settle", function () {
-      var raw0 = parseFloat(document.getElementById("sAmt").value);
-      if (!(raw0 >= 0)) { document.getElementById("sAmt").focus(); return false; }
-      var amt = Math.round(raw0 * 100) / 100, acct = document.getElementById("sAcct").value, sd = document.getElementById("sDate").value || today(), st = document.getElementById("sTime").value || nowTime();
+      var amt = readAmt("sAmt", true); if (amt === null) return false;
+      var acct = document.getElementById("sAcct").value, sd = document.getElementById("sDate").value || today(), st = document.getElementById("sTime").value || nowTime();
       commit(lent ? "Marked repaid" : "Marked paid back", function () { l.settled = true; l.settledAmount = amt; l.settledAccount = acct; l.settledDate = sd; l.settledTime = st; l.settledCreated = Date.now(); });
     });
     var sAmt = document.getElementById("sAmt");
@@ -838,8 +839,8 @@
       '<div class="field"><label>Due <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="eLDue" type="date" value="' + (l.due || "") + '"></div>' +
       '<div class="field"><label>Note</label><input id="eLNote" type="text" maxlength="40" value="' + esc(l.note || "") + '"></div>';
     openModal("Edit loan", body, "Save", function () {
-      var p = document.getElementById("eLPerson").value.trim(); if (!p) { document.getElementById("eLPerson").focus(); return false; }
-      var v = Math.round((parseFloat(document.getElementById("eLAmt").value) || 0) * 100) / 100; if (!(v > 0)) { document.getElementById("eLAmt").focus(); return false; }
+      var p = document.getElementById("eLPerson").value.trim(); if (!p) { flagInvalid(document.getElementById("eLPerson")); return false; }
+      var v = readAmt("eLAmt"); if (v === null) return false;
       commit("Loan edited", function () { l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.fee = Math.round((parseFloat(document.getElementById("eLFee").value) || 0) * 100) / 100; l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim(); });
     });
   }
@@ -947,9 +948,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-recdel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-recdel"); commit("Template deleted", function () { state.recurring = state.recurring.filter(function (r) { return r.id !== id; }); }); }; });
   }
   function addTemplate() {
-    var el = document.getElementById("ramt"), v = parseFloat(el.value);
-    if (!v || v <= 0) { el.focus(); el.style.borderColor = "var(--expense)"; return; }
-    v = Math.round(v * 100) / 100;
+    var v = readAmt("ramt"); if (v === null) return;
     var day = parseInt(document.getElementById("rday").value, 10); day = (day >= 1 && day <= 31) ? day : 0;
     var base = { id: uid(), type: state.recType, amount: v, desc: document.getElementById("rdesc").value.trim(), dueDay: day };
     if (state.recType === "transfer") { var from = document.getElementById("racct").value, to = document.getElementById("racct2").value; if (from === to) { toast("Pick two different accounts"); return; } base.account = from; base.toAccount = to; base.fee = Math.round((parseFloat(document.getElementById("rfee").value) || 0) * 100) / 100; }
@@ -984,7 +983,7 @@
     var dataCard = card("Backup &amp; data", "Your only copy lives here unless you back it up",
       '<div class="data-btns"><button class="btn" id="dlJSON">' + icon("download-simple") + 'Download backup (.json)</button><button class="btn sec" id="upJSON">' + icon("upload-simple") + 'Restore from backup</button><button class="btn sec" id="exCSV">' + icon("download-simple") + 'Export CSV</button><button class="btn sec" id="imCSV">' + icon("upload-simple") + 'Import CSV</button></div>' +
       '<div class="hint" style="margin-top:10px;margin-bottom:0">Backup is a full, lossless restore — use it to move between devices. CSV opens in a spreadsheet; import expects a file exported here.</div>');
-    var danger = card("Danger zone", "", '<button class="btn" id="clearAll" style="background:var(--expense);color:#fff">Clear all data</button><div class="hint" style="margin-top:10px;margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
+    var danger = card("Danger zone", "", '<button class="btn" id="clearAll" style="background:var(--expense);color:#fff">' + icon('trash') + 'Clear all data</button><div class="hint" style="margin-top:10px;margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
 
     app.innerHTML = layout(hero, sidebar, appearance + currency + dataCard + danger);
 
