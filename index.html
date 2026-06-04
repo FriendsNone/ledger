@@ -183,7 +183,6 @@
   .list > .day-div:first-child { padding-top: 2px; }
   .day-date { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-faint); }
   .day-net { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-variant-numeric: tabular-nums; }
-  .day-net.neg { color: var(--ink-soft); }
 
   #settingsBtn { transition: border-color .15s, background .15s, color .15s; }
   @keyframes nagIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
@@ -231,7 +230,7 @@
     body { padding: 18px 12px 60px; background-image: none; }
     .brand h1 { font-size: 22px; } .brand p { display: none; }
     .mark { width: 32px; height: 32px; font-size: 18px; }
-    .hero { padding: 16px; } .hero .balance { font-size: 32px; }
+    .hero { padding: 16px; flex-direction: column; align-items: stretch; gap: 14px; } .hero .balance { font-size: 32px; }
     .pills { gap: 16px; } .pill .v { font-size: 16px; }
     .card-b { padding: 13px 14px 15px; } .card-h { padding: 13px 14px 0; }
     nav.tabs button { padding: 8px 11px; font-size: 13px; }
@@ -270,6 +269,8 @@
   <div class="foot">Saved automatically &amp; privately to you. &nbsp;·&nbsp; <button id="footSettings">Settings &amp; backup</button></div>
 </div>
 <div class="toast" id="toast"></div>
+<datalist id="whereList"></datalist>
+<datalist id="personList"></datalist>
 <div id="modal"></div>
 <input type="file" id="fileJSON" accept="application/json,.json" style="display:none">
 <input type="file" id="fileCSV" accept=".csv,text/csv" style="display:none">
@@ -362,6 +363,12 @@
     return dd.toLocaleDateString(undefined, dd.getFullYear() === t0.getFullYear() ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
   }
   function metaLine(parts) { return parts.filter(Boolean).join(" · "); }
+  function uniqSorted(arr) { var seen = {}, out = []; arr.forEach(function (v) { v = (v || "").trim(); var k = v.toLowerCase(); if (v && !seen[k]) { seen[k] = 1; out.push(v); } }); return out.sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; }); }
+  function fillSuggest() {
+    var w = document.getElementById("whereList"), p = document.getElementById("personList");
+    if (w) w.innerHTML = uniqSorted(state.tx.map(function (t) { return t.where; })).map(function (v) { return '<option value="' + esc(v) + '">'; }).join("");
+    if (p) p.innerHTML = uniqSorted(state.loans.map(function (l) { return l.person; })).map(function (v) { return '<option value="' + esc(v) + '">'; }).join("");
+  }
   function sel(a, b) { return a === b ? " selected" : ""; }
   function iso(dt) { return dt.getFullYear() + "-" + p2(dt.getMonth() + 1) + "-" + p2(dt.getDate()); }
 
@@ -462,7 +469,8 @@
     ({ overview: renderOverview, track: renderTrack, accounts: renderAccounts, lending: renderLending, trends: renderTrends, recurring: renderRecurring, settings: renderSettings }[state.tab] || renderOverview)();
     var gb = document.getElementById("settingsBtn"); if (gb) gb.classList.toggle("on", state.tab === "settings");
     app.classList.toggle("view-enter", state.tab !== lastTab); lastTab = state.tab;
-    wireNudge(); wireCollapse(); renderBackupNag();
+    wireNudge(); wireCollapse(); renderBackupNag(); fillSuggest();
+    Array.prototype.forEach.call(document.querySelectorAll("[data-jump]"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-jump"); render(); }; });
   }
   function wireCollapse() {
     Array.prototype.forEach.call(document.querySelectorAll(".card-h.ch"), function (h) {
@@ -525,8 +533,10 @@
       }).join("");
     var upcoming = card("Upcoming", "Bills, subscriptions &amp; loan due dates", upBody);
 
-    var ents = entries().slice(0, 6);
-    var recent = card("Recent activity", "", !ents.length ? '<div class="empty">No activity yet.</div>' : '<div class="list">' + groupedRows(ents, true, false) + '</div>');
+    var weekAgo = new Date(today() + "T00:00:00"); weekAgo.setDate(weekAgo.getDate() - 6); var waStr = weekAgo.getFullYear() + "-" + ("0" + (weekAgo.getMonth() + 1)).slice(-2) + "-" + ("0" + weekAgo.getDate()).slice(-2);
+    var entsAll = entries().filter(function (e) { return e.date >= waStr; }), ents = entsAll.slice(0, 40);
+    var recentBody = !ents.length ? '<div class="empty">Nothing in the last week yet.</div>' : '<div class="list">' + groupedRows(ents, true, false) + '</div>' + (entsAll.length > ents.length ? '<div class="more"><button class="btn sec btn-sm" data-jump="track">See all in Track</button></div>' : "");
+    var recent = card("Recent activity", "Past 7 days", recentBody);
 
     app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, upcoming + recent);
 
@@ -565,7 +575,7 @@
     var isT = state.formType === "transfer";
     var fields = isT
       ? '<div class="field"><label>From account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
-      : '<div class="field"><label>Account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>Where</label><input id="where" type="text" maxlength="40" placeholder="' + (state.formType === "income" ? "where it came from" : "where it went") + '"></div>';
+      : '<div class="field"><label>Account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>Where</label><input id="where" type="text" maxlength="40" list="whereList" placeholder="' + (state.formType === "income" ? "where it came from" : "where it went") + '"></div>';
     return '<div class="seg three"><button data-t="expense" class="' + (state.formType === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (state.formType === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       fields +
@@ -628,11 +638,9 @@
       var from = document.getElementById("acct").value, to = document.getElementById("acct2").value;
       if (from === to) { toast("Pick two different accounts"); return; }
       var fee = Math.round((parseFloat(document.getElementById("fee").value) || 0) * 100) / 100;
-      state.tx.push({ id: uid(), type: "transfer", amount: v, fee: fee, account: from, toAccount: to, desc: document.getElementById("desc").value.trim(), date: date, time: time, created: Date.now() });
-      saveTx(); render(); toast("Transfer recorded"); return;
+      commit("Transfer recorded", function () { state.tx.push({ id: uid(), type: "transfer", amount: v, fee: fee, account: from, toAccount: to, desc: document.getElementById("desc").value.trim(), date: date, time: time, created: Date.now() }); }); return;
     }
-    state.tx.push({ id: uid(), type: state.formType, amount: v, where: document.getElementById("where").value.trim(), account: document.getElementById("acct").value, desc: document.getElementById("desc").value.trim(), date: date, time: time, created: Date.now() });
-    saveTx(); render(); toast("Entry added");
+    commit("Entry added", function () { state.tx.push({ id: uid(), type: state.formType, amount: v, where: document.getElementById("where").value.trim(), account: document.getElementById("acct").value, desc: document.getElementById("desc").value.trim(), date: date, time: time, created: Date.now() }); });
   }
   function editEntry(id) {
     var t = state.tx.filter(function (x) { return x.id === id; })[0]; if (!t) return;
@@ -694,7 +702,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-acctdel]"), function (b) { b.onclick = function () { delAccount(b.getAttribute("data-acctdel")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-edit]"), function (b) { b.onclick = function () { editAccount(b.getAttribute("data-edit")); }; });
   }
-  function addAccount() { var el = document.getElementById("aname"), name = el.value.trim(); if (!name) { el.focus(); el.style.borderColor = "var(--expense)"; return; } var open = parseFloat(document.getElementById("aopen").value) || 0; state.accounts.push({ id: uid(), name: name, opening: Math.round(open * 100) / 100, color: PALETTE[state.accounts.length % PALETTE.length] }); saveAcct(); render(); toast("Account added"); }
+  function addAccount() { var el = document.getElementById("aname"), name = el.value.trim(); if (!name) { el.focus(); el.style.borderColor = "var(--expense)"; return; } var open = parseFloat(document.getElementById("aopen").value) || 0; commit("Account added", function () { state.accounts.push({ id: uid(), name: name, opening: Math.round(open * 100) / 100, color: PALETTE[state.accounts.length % PALETTE.length] }); }); }
   function editAccount(id) {
     var a = amap[id]; if (!a) return;
     var body = '<div class="field"><label>Account name</label><input id="eAName" type="text" maxlength="24" value="' + esc(a.name) + '"></div>' +
@@ -730,10 +738,11 @@
 
     var sidebar = card("Record a loan", "Money moves in/out of an account too", state.accounts.length ?
       '<div class="seg"><button data-lk="lent-out" class="' + (state.lendKind === "lent-out" ? "on" : "") + '">You lent</button><button data-lk="borrowed" class="' + (state.lendKind === "borrowed" ? "on" : "") + '">You borrowed</button></div>' +
-      '<div class="field"><label>Person</label><input id="lperson" type="text" maxlength="24" placeholder="who?"></div>' +
+      '<div class="field"><label>Person</label><input id="lperson" type="text" maxlength="24" list="personList" placeholder="who?"></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lamt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       '<div class="field"><label>' + (state.lendKind === "lent-out" ? "From account" : "Into account") + '</label><select class="inp" id="lacct">' + acctOptions(defAcct()) + '</select></div>' +
-      '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lfee" type="number" step="0.01" min="0" placeholder="0.00"></div><div class="hint">A cost you paid' + (state.lendKind === "lent-out" ? " to send this" : " to receive this") + ' (e.g. a transfer fee). Counts as your expense; doesn’t change what’s owed.</div></div>' +
+      '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>' +
+      '<div class="hint">A cost you paid' + (state.lendKind === "lent-out" ? " to send this" : " to receive this") + ' (e.g. a transfer fee). Counts as your expense; doesn’t change what’s owed.</div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="ldate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="ltime" type="time" value="' + nowTime() + '"></div></div>' +
       '<div class="field"><label>Due <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="ldue" type="date"></div>' +
       '<div class="field"><label>Note <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="lnote" type="text" maxlength="40" placeholder="what for?"></div>' +
@@ -890,7 +899,7 @@
       }).join("");
     var formFields = isT
       ? '<div class="field"><label>From account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="racct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(opt)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="rfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>'
-      : '<div class="field"><label>Where</label><input id="rwhere" type="text" maxlength="40" placeholder="' + (state.recType === "income" ? "where it comes from" : "what it\'s for") + '"></div><div class="field"><label>Account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div>';
+      : '<div class="field"><label>Where</label><input id="rwhere" type="text" maxlength="40" list="whereList" placeholder="' + (state.recType === "income" ? "where it comes from" : "what it\'s for") + '"></div><div class="field"><label>Account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div>';
     var sidebar = card("New template", "Reusable one-tap entry", state.accounts.length ?
       '<div class="seg three"><button data-rt="expense" class="' + (state.recType === "expense" ? "on" : "") + '">Expense</button><button data-rt="income" class="' + (state.recType === "income" ? "on" : "") + '">Income</button><button data-rt="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="ramt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
@@ -916,13 +925,14 @@
     var base = { id: uid(), type: state.recType, amount: v, desc: document.getElementById("rdesc").value.trim(), dueDay: day };
     if (state.recType === "transfer") { var from = document.getElementById("racct").value, to = document.getElementById("racct2").value; if (from === to) { toast("Pick two different accounts"); return; } base.account = from; base.toAccount = to; base.fee = Math.round((parseFloat(document.getElementById("rfee").value) || 0) * 100) / 100; }
     else { base.where = document.getElementById("rwhere").value.trim(); base.account = document.getElementById("racct").value; }
-    state.recurring.push(base); saveRec(); render(); toast("Template saved");
+    commit("Template saved", function () { state.recurring.push(base); });
   }
   function logTemplate(id) {
     var r = state.recurring.filter(function (x) { return x.id === id; })[0]; if (!r) return;
-    if (r.type === "transfer") state.tx.push({ id: uid(), type: "transfer", amount: r.amount, fee: r.fee || 0, account: r.account, toAccount: r.toAccount, desc: r.desc, date: today(), time: nowTime(), created: Date.now() });
-    else state.tx.push({ id: uid(), type: r.type, amount: r.amount, where: r.where || "", account: r.account || defAcct(), desc: r.desc, date: today(), time: nowTime(), created: Date.now() });
-    saveTx(); toast((r.desc || r.where || "Entry") + " logged"); if (state.tab === "track" || state.tab === "overview") render();
+    commit((r.desc || r.where || "Entry") + " logged", function () {
+      if (r.type === "transfer") state.tx.push({ id: uid(), type: "transfer", amount: r.amount, fee: r.fee || 0, account: r.account, toAccount: r.toAccount, desc: r.desc, date: today(), time: nowTime(), created: Date.now() });
+      else state.tx.push({ id: uid(), type: r.type, amount: r.amount, where: r.where || "", account: r.account || defAcct(), desc: r.desc, date: today(), time: nowTime(), created: Date.now() });
+    });
   }
 
   // ---------- SETTINGS ----------
