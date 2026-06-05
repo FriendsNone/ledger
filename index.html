@@ -146,7 +146,7 @@
   .body .t { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
   .body .t.num { font-family: 'JetBrains Mono', monospace; }
   .body .s { font-size: 12px; color: var(--ink-faint); margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px; overflow-wrap: anywhere; }
-  .end { flex: none; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .end { flex: none; margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
   .end .v { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -.02em; font-size: 15px; font-weight: 600; white-space: nowrap; }
   .act { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); border-radius: 7px; padding: 6px 11px; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: .15s; white-space: nowrap; }
   .act:hover { border-color: var(--ink-soft); }
@@ -214,10 +214,8 @@
   .badge.overdue { background: var(--expense-soft); color: var(--expense); }
   .badge.due { background: var(--amber-soft); color: var(--amber); }
   .badge.next { background: var(--paper-2); color: var(--ink-soft); }
-  .person-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 16px 0 2px; }
-  .person-h:first-child { margin-top: 0; }
-  .person-h .pn { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; }
-  .person-h .pnet { font-size: 13px; font-weight: 600; }
+  .day-date.pn { text-transform: none; font-size: 12px; letter-spacing: .01em; color: var(--ink-soft); }
+  .pnet { font-size: 12px; font-weight: 600; }
 
   .legend { display: flex; gap: 16px; font-size: 12px; color: var(--ink-soft); margin-bottom: 10px; flex-wrap: wrap; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
@@ -251,6 +249,7 @@
     .card-b { padding: 13px 14px 15px; } .card-h { padding: 13px 14px 0; }
     nav.tabs button { padding: 8px 11px; font-size: 13px; }
     .lrow { padding: 9px 2px; gap: 5px 9px; }
+    .lrow.wide-acts .end { flex: 1 0 100%; margin-top: 3px; }
     .stats { grid-template-columns: 1fr 1fr; }
     .filters input { width: 100px; }
     .bd-row { grid-template-columns: 76px 1fr auto; gap: 8px; }
@@ -478,7 +477,7 @@
   function dotEl(c) { return '<span class="dot" style="background:' + c + '"></span>'; }
   function ringEl() { return '<span class="dot ring"></span>'; }
   function lrow(p) {
-    return '<div class="lrow' + (p.settled ? " is-settled" : "") + '">' +
+    return '<div class="lrow' + (p.settled ? " is-settled" : "") + (p.wideActs ? " wide-acts" : "") + '">' +
       '<span class="lead">' + (p.lead || "") + '</span>' +
       '<div class="body"><div class="t' + (p.tnum ? " num" : "") + '">' + p.t + '</div>' + (p.sub ? '<div class="s">' + p.sub + '</div>' : "") + '</div>' +
       '<div class="end">' + (p.val ? '<span class="v ' + (p.valCls || "") + '">' + p.val + '</span>' : "") + (p.acts || "") + '</div></div>';
@@ -767,8 +766,13 @@
     else if (!pool.length) listBody = '<div class="empty">No loans match “' + esc(state.lendQ) + '”.</div>';
     else if (state.lendView === "person") {
       var groups = {}; pool.forEach(function (l) { (groups[l.person] = groups[l.person] || []).push(l); });
-      listBody = Object.keys(groups).map(function (p) { var pnet = 0; groups[p].forEach(function (l) { if (!l.settled) pnet += (l.kind === "lent" ? l.amount : -l.amount); }); return { p: p, net: pnet, loans: groups[p].slice().sort(function (a, b) { return (a.settled - b.settled) || (a.date < b.date ? 1 : -1); }) }; }).sort(function (a, b) { return Math.abs(b.net) - Math.abs(a.net) || a.p.localeCompare(b.p); }).map(function (g) { var nl = g.net > 0 ? '<span class="pos">owes you ' + raw(g.net) + '</span>' : g.net < 0 ? '<span class="neg">you owe ' + raw(g.net) + '</span>' : '<span class="neu">settled up</span>'; return '<div class="person-h"><span class="pn">' + esc(g.p) + '</span><span class="pnet">' + nl + '</span></div>' + g.loans.map(function (l) { return loanRow(l, false); }).join(""); }).join("");
-    } else listBody = pool.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }).map(function (l) { return loanRow(l, true); }).join("");
+      listBody = '<div class="list">' + Object.keys(groups).map(function (p) { var pnet = 0; groups[p].forEach(function (l) { if (!l.settled) pnet += (l.kind === "lent" ? l.amount : -l.amount); }); return { p: p, net: pnet, loans: groups[p].slice().sort(function (a, b) { return (a.settled - b.settled) || (a.date < b.date ? 1 : -1); }) }; }).sort(function (a, b) { return Math.abs(b.net) - Math.abs(a.net) || a.p.localeCompare(b.p); }).map(function (g) { var nl = g.net > 0 ? '<span class="pos">owes you ' + raw(g.net) + '</span>' : g.net < 0 ? '<span class="neg">you owe ' + raw(g.net) + '</span>' : '<span class="neu">settled up</span>'; return '<div class="day-div"><span class="day-date pn">' + esc(g.p) + '</span><span class="pnet">' + nl + '</span></div>' + g.loans.map(function (l) { return loanRow(l, false, false); }).join(""); }).join("") + '</div>';
+    } else {
+      var sorted = pool.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+      var lastD = null, h = "";
+      sorted.forEach(function (l) { if (l.date !== lastD) { lastD = l.date; h += '<div class="day-div"><span class="day-date">' + relDay(l.date) + '</span></div>'; } h += loanRow(l, true, true); });
+      listBody = '<div class="list">' + h + '</div>';
+    }
 
     var sidebar = card("Record a loan", "Money moves in/out of an account too", state.accounts.length ?
       '<div class="seg"><button data-lk="lent-out" class="' + (state.lendKind === "lent-out" ? "on" : "") + '">You lent</button><button data-lk="borrowed" class="' + (state.lendKind === "borrowed" ? "on" : "") + '">You borrowed</button></div>' +
@@ -795,9 +799,10 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-unsettle]"), function (b) { b.onclick = function () { var l = byId(b.getAttribute("data-unsettle")); if (l) commit("Settle undone", function () { l.settled = false; delete l.settledDate; delete l.settledTime; delete l.settledAccount; delete l.settledAmount; delete l.settledCreated; }); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-loandel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-loandel"); commit("Loan deleted", function () { state.loans = state.loans.filter(function (l) { return l.id !== id; }); }); }; });
   }
-  function loanRow(l, showPerson) {
+  function loanRow(l, showPerson, hideDate) {
     var t = showPerson ? esc(l.person) : (l.kind === "lent" ? "Lent out" : "Borrowed");
-    var sub = '<span>' + esc(acctName(l.account)) + ' · ' + dtLabel(l.date, l.time) + (l.note ? " · " + esc(l.note) : "") + '</span>';
+    var dt = hideDate ? fmtTime(l.time) : dtLabel(l.date, l.time);
+    var sub = '<span>' + metaLine([esc(acctName(l.account)), dt, (l.note ? esc(l.note) : "")]) + '</span>';
     if (showPerson) sub += (l.kind === "lent" ? '<span class="badge lent">lent out</span>' : '<span class="badge borrowed">borrowed</span>');
     var settledAmt = l.settledAmount != null ? l.settledAmount : l.amount;
     var gain = l.kind === "lent" ? settledAmt - l.amount : l.amount - settledAmt;
@@ -805,7 +810,7 @@
     else sub += dueBadge(l);
     if (l.fee) sub += '<span class="badge next">fee ' + raw(l.fee) + '</span>';
     var acts = '<button class="mini" data-loanedit="' + l.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button>' + (l.settled ? '<button class="act" data-unsettle="' + l.id + '">Undo</button>' : '<button class="act primary" data-settle="' + l.id + '">Settle</button>') + '<button class="del" data-loandel="' + l.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
-    return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled });
+    return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled, wideActs: true });
   }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
   function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { flagInvalid(pe); return; } var v = readAmt("lamt"); if (v === null) return; var fee = Math.round((parseFloat(document.getElementById("lfee").value) || 0) * 100) / 100; commit("Loan recorded", function () { state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: v, account: document.getElementById("lacct").value, fee: fee, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); }); }
@@ -898,7 +903,7 @@
       var baseY = padT + plotH, grid = '<line x1="0" y1="' + baseY + '" x2="' + W + '" y2="' + baseY + '" style="stroke:var(--line-strong);stroke-width:1"/><line x1="0" y1="' + (padT + plotH / 2) + '" x2="' + W + '" y2="' + (padT + plotH / 2) + '" style="stroke:var(--line);stroke-width:1;stroke-dasharray:3 4"/>';
       chartBody = '<div class="legend"><span><i style="background:var(--income)"></i>Income</span><span><i style="background:var(--expense)"></i>Expenses</span></div><div style="overflow-x:auto;margin:0 -2px"><svg viewBox="0 0 ' + W + ' ' + H + '" style="display:block;width:100%;min-width:' + Math.max(320, n * 44) + 'px;height:auto">' + grid + bars + '</svg></div>';
     } else chartBody = '<div class="empty">No income or expenses to chart yet.</div>';
-    main += card("Income vs. expenses", "Grouped by your selection · fees &amp; loan gains/losses counted", chartBody, groupSel);
+    main += card("Income vs. expenses", "Grouped by your selection · fees &amp; loan gains/losses counted", groupSel + chartBody);
 
     if (allPlaces.length) {
       var placesBody = places.map(function (e) { var pct = placeMax ? Math.round(e[1] / placeMax * 100) : 0; return '<div class="bd-row"><div class="cat">' + esc(e[0]) + '</div><div class="bar"><span style="width:' + pct + '%"></span></div><div class="amt num neg">' + fmt(e[1]) + '</div></div>'; }).join("");
