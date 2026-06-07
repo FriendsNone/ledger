@@ -102,6 +102,7 @@
 
   label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin: 0 0 5px 2px; }
   .field { margin-bottom: 12px; min-width: 0; }
+  .opt { font-weight: 400; color: var(--ink-faint); }
   input, select.inp { width: 100%; min-width: 0; font-family: inherit; font-size: 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 9px; padding: 10px 12px; transition: border-color .15s, box-shadow .15s; }
   input:focus, select.inp:focus { outline: 0; border-color: var(--ink-soft); box-shadow: 0 0 0 3px rgba(120,110,90,.14); }
   .amount-wrap { position: relative; }
@@ -126,7 +127,7 @@
 
   .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
   .filters > input { flex: 1 1 140px; }
-  .filters > select { flex: 0 1 auto; }
+  .filters > select { flex: 0 1 auto; width: auto; }
   .filters select, .filters input { font-family: inherit; font-size: 13px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 9px; cursor: pointer; }
   .filters input { cursor: text; width: 120px; }
 
@@ -181,7 +182,8 @@
   .nag-msg { flex: 1; min-width: 150px; }
   .nag-acts { display: flex; align-items: center; gap: 4px; }
   .nag .btn-sm { width: auto; }
-  .nag-x { border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; font-size: 18px; line-height: 1; padding: 3px 8px; border-radius: 7px; }
+  .nag-x { border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; flex: none; }
+  .nag-x:hover { background: rgba(0,0,0,.06); color: var(--ink); }
   .nag-x:hover { background: rgba(120,90,20,.12); color: var(--ink); }
   #backupNag:empty { display: none; }
 
@@ -237,7 +239,7 @@
   .toast.show { opacity: 1; translate: -50% 0; pointer-events: auto; }
   .toast-undo { background: var(--accent-ink); color: var(--accent); border: 0; font: inherit; font-weight: 700; padding: 4px 14px; border-radius: 999px; cursor: pointer; }
   .toast-undo:hover { opacity: .85; }
-  .toast-x { background: transparent; border: 0; color: var(--accent-ink); opacity: .6; font-size: 17px; line-height: 1; cursor: pointer; padding: 0 2px; }
+  .toast-x { background: transparent; border: 0; color: var(--accent-ink); opacity: .6; cursor: pointer; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; flex: none; }
   .toast-x:hover { opacity: 1; }
 
   @media (max-width: 480px) {
@@ -286,7 +288,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <datalist id="whereList"></datalist>
 <datalist id="personList"></datalist>
-<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false"><symbol id="ph-pencil-simple" viewBox="0 0 256 256"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"/></symbol><symbol id="ph-trash" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"/></symbol><symbol id="ph-arrow-up-right" viewBox="0 0 256 256"><path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z"/></symbol><symbol id="ph-gear" viewBox="0 0 256 256"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></symbol><symbol id="ph-arrows-left-right" viewBox="0 0 256 256"><path d="M213.66,181.66l-32,32a8,8,0,0,1-11.32-11.32L188.69,184H48a8,8,0,0,1,0-16H188.69l-18.35-18.34a8,8,0,0,1,11.32-11.32l32,32A8,8,0,0,1,213.66,181.66Zm-139.32-64a8,8,0,0,0,11.32-11.32L67.31,88H208a8,8,0,0,0,0-16H67.31L85.66,53.66A8,8,0,0,0,74.34,42.34l-32,32a8,8,0,0,0,0,11.32Z"/></symbol><symbol id="ph-caret-down" viewBox="0 0 256 256"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></symbol><symbol id="ph-plus" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></symbol><symbol id="ph-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol><symbol id="ph-magnifying-glass" viewBox="0 0 256 256"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></symbol><symbol id="ph-sun" viewBox="0 0 256 256"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></symbol><symbol id="ph-moon" viewBox="0 0 256 256"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></symbol><symbol id="ph-monitor" viewBox="0 0 256 256"><path d="M208,40H48A24,24,0,0,0,24,64V176a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V64A24,24,0,0,0,208,40Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V64a8,8,0,0,1,8-8H208a8,8,0,0,1,8,8Zm-48,48a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,224Z"/></symbol><symbol id="ph-download-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></symbol><symbol id="ph-upload-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/></symbol><symbol id="ph-warning" viewBox="0 0 256 256"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false"><symbol id="ph-pencil-simple" viewBox="0 0 256 256"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"/></symbol><symbol id="ph-trash" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"/></symbol><symbol id="ph-arrow-up-right" viewBox="0 0 256 256"><path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z"/></symbol><symbol id="ph-gear" viewBox="0 0 256 256"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></symbol><symbol id="ph-caret-down" viewBox="0 0 256 256"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></symbol><symbol id="ph-plus" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></symbol><symbol id="ph-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol><symbol id="ph-sun" viewBox="0 0 256 256"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></symbol><symbol id="ph-moon" viewBox="0 0 256 256"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></symbol><symbol id="ph-monitor" viewBox="0 0 256 256"><path d="M208,40H48A24,24,0,0,0,24,64V176a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V64A24,24,0,0,0,208,40Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V64a8,8,0,0,1,8-8H208a8,8,0,0,1,8,8Zm-48,48a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,224Z"/></symbol><symbol id="ph-download-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></symbol><symbol id="ph-upload-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/></symbol><symbol id="ph-warning" viewBox="0 0 256 256"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></symbol></svg>
 <div id="modal"></div>
 <input type="file" id="fileJSON" accept="application/json,.json" style="display:none">
 <input type="file" id="fileCSV" accept=".csv,text/csv" style="display:none">
@@ -450,7 +452,7 @@
   function monthPills() { var t = periodTotals(true); return '<div class="pills"><div class="pill"><div class="label">Income · this month</div><div class="v num pos">' + fmt(t.inc) + '</div></div><div class="pill"><div class="label">Expenses · this month</div><div class="v num neg">' + fmt(t.exp) + '</div></div></div>'; }
   function colsBlock(sidebar, main) { return '<div class="cols"><div class="stack">' + sidebar + '</div><div class="stack">' + main + '</div></div>'; }
   function layout(hero, sidebar, main) { return hero + colsBlock(sidebar, main); }
-  function card(title, sub, body, headExtra, opts) {
+  function card(title, sub, body, opts) {
     opts = opts || {};
     var coll = opts.collapsible !== false;
     var key = opts.key || (state.tab + ":" + title);
@@ -545,7 +547,7 @@
       var newBtn = '<button class="btn ' + (chips ? "sec" : "") + '" id="goTrack" style="font-size:16px;padding:14px' + (chips ? ";margin-top:12px" : "") + '"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>New entry</button>';
       firstCard = card("Quick log", chips ? "Tap a shortcut, or add something new" : "Record an entry, or save a template for one-tap logging", (chips || "") + newBtn);
     }
-    var sidebar = firstCard + (state.accounts.length ? card("Accounts", state.accounts.length + " total", snap, null, { collapsible: true, key: "ov-accounts" }) : "");
+    var sidebar = firstCard + (state.accounts.length ? card("Accounts", state.accounts.length + " total", snap, { collapsible: true, key: "ov-accounts" }) : "");
 
     var up = [];
     state.recurring.forEach(function (r) { if (r.dueDay) up.push({ kind: "recurring", iso: iso(nextDue(r.dueDay)), r: r }); });
@@ -597,11 +599,11 @@
     var remaining = visible.length - shown.length;
     var listBody = !visible.length ? '<div class="empty"><div class="big">Nothing here yet</div>' + (state.accounts.length ? "Add your first entry on the left to get started." : "Add an account, then start logging.") + '</div>'
       : '<div class="list">' + groupedRows(shown, false, state.fType === "all" && !q) + '</div>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more · ' + remaining + ' left</button></div>' : "");
-    var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select></div>';
+    var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select class="inp" id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select></div>';
 
     var chips = shortcutChips();
     var quickCard = chips ? card("Quick log", "Tap to record a saved shortcut", chips) : "";
-    var sidebar = quickCard + card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge(), null, { collapsible: true, key: "track-add" });
+    var sidebar = quickCard + card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge(), { collapsible: true, key: "track-add" });
     var main = card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listExtra + listBody);
 
     app.innerHTML = layout(heroBlock("Net worth", fmt(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()), sidebar, main);
@@ -610,12 +612,12 @@
   function formHTML() {
     var isT = state.formType === "transfer";
     var fields = isT
-      ? '<div class="field"><label>From account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
+      ? '<div class="field"><label>From account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
       : '<div class="field"><label>Account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>Where</label><input id="where" type="text" maxlength="40" list="whereList" placeholder="' + (state.formType === "income" ? "where it came from" : "where it went") + '"></div>';
     return '<div class="seg three"><button data-t="expense" class="' + (state.formType === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (state.formType === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       fields +
-      '<div class="field"><label>Note <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="desc" type="text" maxlength="60" placeholder="anything to remember"></div>' +
+      '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="desc" type="text" maxlength="60" placeholder="anything to remember"></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="date" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="time" type="time" value="' + nowTime() + '"></div></div>' +
       '<button class="btn" id="add">' + icon('plus') + (isT ? "Record transfer" : "Add " + state.formType) + '</button>';
   }
@@ -684,12 +686,12 @@
       if (ty === "transfer") {
         out += '<div class="field"><label>From account</label><select class="inp" id="eAcct">' + acctOptions(d.account) + '</select></div>' +
           '<div class="field"><label>To account</label><select class="inp" id="eAcct2">' + acctOptions(d.toAccount || (state.accounts[1] ? state.accounts[1].id : d.account)) + '</select></div>' +
-          '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eFee" type="number" step="0.01" min="0" value="' + (d.fee || 0) + '"></div></div>';
+          '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eFee" type="number" step="0.01" min="0" value="' + (d.fee || 0) + '"></div></div>';
       } else {
         out += '<div class="field"><label>Where</label><input id="eWhere" type="text" maxlength="40" value="' + esc(d.where) + '" placeholder="' + (ty === "income" ? "where it came from" : "where it went") + '"></div>' +
           '<div class="field"><label>Account</label><select class="inp" id="eAcct">' + acctOptions(d.account) + '</select></div>';
       }
-      out += '<div class="field"><label>Note <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="eDesc" type="text" maxlength="60" value="' + esc(d.desc) + '"></div>' +
+      out += '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="eDesc" type="text" maxlength="60" value="' + esc(d.desc) + '"></div>' +
         '<div class="two"><div class="field"><label>Date</label><input id="eDate" type="date" value="' + d.date + '"></div><div class="field"><label>Time</label><input id="eTime" type="time" value="' + d.time + '"></div></div>';
       return out;
     }
@@ -729,7 +731,7 @@
     var nw = netWorth();
     var rows = !state.accounts.length ? '<div class="empty"><div class="big">No accounts yet</div>Add your first account on the left — a wallet, bank, or cash.</div>'
       : state.accounts.map(function (a) { var bal = acctBal(a.id), count = state.tx.filter(function (t) { return t.account === a.id || t.toAccount === a.id; }).length; return lrow({ lead: dotEl(a.color), t: esc(a.name), sub: '<span>starting ' + fmt(a.opening || 0) + ' · ' + count + ' txn' + (count === 1 ? "" : "s") + '</span>', val: fmt(bal), valCls: bal >= 0 ? "pos" : "neg", acts: '<button class="mini" data-edit="' + a.id + '" aria-label="Edit account" title="Rename / balance"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-acctdel="' + a.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>' }); }).join("");
-    var sidebar = card("Add account", "A wallet, bank, or cash", '<div class="field"><label>Name</label><input id="aname" type="text" maxlength="24" placeholder="name this account"></div><div class="field"><label>Balance right now</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="aopen" type="number" step="0.01" placeholder="0.00"></div></div><div class="hint">What\'s in this account today — your starting point for tracking.</div><button class="btn" id="aadd">' + icon('plus') + 'Add account</button>', null, { collapsible: true, key: "acct-add" });
+    var sidebar = card("Add account", "A wallet, bank, or cash", '<div class="field"><label>Name</label><input id="aname" type="text" maxlength="24" placeholder="name this account"></div><div class="field"><label>Balance right now</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="aopen" type="number" step="0.01" placeholder="0.00"></div></div><div class="hint">What\'s in this account today — your starting point for tracking.</div><button class="btn" id="aadd">' + icon('plus') + 'Add account</button>', { collapsible: true, key: "acct-add" });
     app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">every account balance, summed</div>', monthPills()), sidebar, card("Your accounts", "Balances update live with every entry", rows));
     bind("aadd", "click", addAccount);
     Array.prototype.forEach.call(document.querySelectorAll("[data-acctdel]"), function (b) { b.onclick = function () { delAccount(b.getAttribute("data-acctdel")); }; });
@@ -779,14 +781,14 @@
       '<div class="field"><label>Person</label><input id="lperson" type="text" maxlength="24" list="personList" placeholder="who?"></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lamt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       '<div class="field"><label>' + (state.lendKind === "lent-out" ? "From account" : "Into account") + '</label><select class="inp" id="lacct">' + acctOptions(defAcct()) + '</select></div>' +
-      '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>' +
+      '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>' +
       '<div class="hint">A cost you paid' + (state.lendKind === "lent-out" ? " to send this" : " to receive this") + ' (e.g. a transfer fee). Counts as your expense; doesn’t change what’s owed.</div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="ldate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="ltime" type="time" value="' + nowTime() + '"></div></div>' +
-      '<div class="field"><label>Due <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="ldue" type="date"></div>' +
-      '<div class="field"><label>Note <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="lnote" type="text" maxlength="40" placeholder="what for?"></div>' +
+      '<div class="field"><label>Due <span class="opt">(optional)</span></label><input id="ldue" type="date"></div>' +
+      '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="lnote" type="text" maxlength="40" placeholder="what for?"></div>' +
       '<button class="btn" id="ladd">' + icon('plus') + 'Record</button>'
-      : accountNudge(), null, { collapsible: true, key: "lend-add" });
-    var extra = '<div class="filters"><input id="lendQ" type="text" placeholder="Search…" value="' + esc(state.lendQ) + '"><select id="lview"><option value="person"' + sel(state.lendView, "person") + '>By person</option><option value="date"' + sel(state.lendView, "date") + '>By date</option></select></div>';
+      : accountNudge(), { collapsible: true, key: "lend-add" });
+    var extra = '<div class="filters"><input id="lendQ" type="text" placeholder="Search…" value="' + esc(state.lendQ) + '"><select class="inp" id="lview"><option value="person"' + sel(state.lendView, "person") + '>By person</option><option value="date"' + sel(state.lendView, "date") + '>By date</option></select></div>';
 
     app.innerHTML = layout(heroBlock("Net position" + (lt.over ? " · " + lt.over + " overdue" : ""), fmt(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>', '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmt(lt.owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmt(lt.owe) + '</div></div></div>'), sidebar, card("Loans", "Tap “Settle” when paid back", extra + listBody));
 
@@ -842,9 +844,9 @@
     var body = '<div class="field"><label>Person</label><input id="eLPerson" type="text" maxlength="24" value="' + esc(l.person) + '"></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
       '<div class="field"><label>' + (lent ? "From account" : "Into account") + '</label><select class="inp" id="eLAcct">' + acctOptions(l.account) + '</select></div>' +
-      '<div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLFee" type="number" step="0.01" min="0" value="' + (l.fee || 0) + '"></div></div>' +
+      '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLFee" type="number" step="0.01" min="0" value="' + (l.fee || 0) + '"></div></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="eLDate" type="date" value="' + l.date + '"></div><div class="field"><label>Time</label><input id="eLTime" type="time" value="' + (l.time || "") + '"></div></div>' +
-      '<div class="field"><label>Due <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="eLDue" type="date" value="' + (l.due || "") + '"></div>' +
+      '<div class="field"><label>Due <span class="opt">(optional)</span></label><input id="eLDue" type="date" value="' + (l.due || "") + '"></div>' +
       '<div class="field"><label>Note</label><input id="eLNote" type="text" maxlength="40" value="' + esc(l.note || "") + '"></div>';
     openModal("Edit loan", body, "Save", function () {
       var p = document.getElementById("eLPerson").value.trim(); if (!p) { flagInvalid(document.getElementById("eLPerson")); return false; }
@@ -885,10 +887,10 @@
       stat("Total income", fmt(totInc), "pos") +
       stat("Total expenses", fmt(totExp), "neg") +
       stat("Biggest expense", biggest ? fmt(biggest.amount) : "—", "neg") +
-      (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") + '</div>', null, { collapsible: true, key: "trends-stats" });
+      (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") + '</div>', { collapsible: true, key: "trends-stats" });
 
     var main = "";
-    var groupSel = '<div class="filters"><select id="trendGroup"><option value="weekly"' + sel(g, "weekly") + '>Weekly</option><option value="monthly"' + sel(g, "monthly") + '>Monthly</option><option value="yearly"' + sel(g, "yearly") + '>Yearly</option><option value="all"' + sel(g, "all") + '>All-time</option></select></div>';
+    var groupSel = '<div class="filters"><select class="inp" id="trendGroup"><option value="weekly"' + sel(g, "weekly") + '>Weekly</option><option value="monthly"' + sel(g, "monthly") + '>Monthly</option><option value="yearly"' + sel(g, "yearly") + '>Yearly</option><option value="all"' + sel(g, "all") + '>All-time</option></select></div>';
     var chartBody;
     if (data.length) {
       var maxV = Math.max.apply(null, data.map(function (d) { return Math.max(d.inc, d.exp); })) || 1;
@@ -923,30 +925,39 @@
   function renderRecurring() {
     var isT = state.recType === "transfer";
     var mOut = 0, mIn = 0, dated = 0, shortc = 0; state.recurring.forEach(function (r) { if (r.dueDay) { dated++; if (r.type === "expense") mOut += r.amount; else if (r.type === "income") mIn += r.amount; } else shortc++; });
-    var list = !state.recurring.length ? '<div class="empty"><div class="big">No templates yet</div>Save what you log often. Add an <b>expected day</b> for recurring bills, or leave it blank to make a quick <b>shortcut</b>.</div>'
-      : state.recurring.map(function (r) {
-        var badge = r.dueDay ? nextDueLabel(r.dueDay) : '<span class="badge shortcut">shortcut</span>';
-        var acts = '<button class="act primary" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
-        if (r.type === "transfer") {
-          var subT = '<span>' + esc(acctName(r.account)) + ' → ' + esc(acctName(r.toAccount)) + (r.fee ? " · fee " + raw(r.fee) : "") + '</span>' + badge;
-          return lrow({ lead: dotEl("var(--ink-faint)"), t: r.desc ? esc(r.desc) : "Transfer", sub: subT, val: "⇄ " + raw(r.amount), valCls: "neu", acts: acts });
-        }
-        var cls = r.type === "income" ? "pos" : "neg", sign = r.type === "income" ? "+" : "−", color = r.type === "income" ? "var(--income)" : "var(--expense)";
-        var subE = '<span>' + (r.where ? esc(r.where) + " · " : "") + esc(acctName(r.account)) + '</span>' + badge;
-        return lrow({ lead: dotEl(color), t: r.desc ? esc(r.desc) : (r.where || (r.type === "income" ? "Income" : "Expense")), sub: subE, val: sign + raw(r.amount), valCls: cls, acts: acts });
-      }).join("");
+    var tmplRow = function (r) {
+      var badge = r.dueDay ? nextDueLabel(r.dueDay) : "";
+      var acts = '<button class="act primary" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
+      if (r.type === "transfer") {
+        var subT = '<span>' + esc(acctName(r.account)) + ' → ' + esc(acctName(r.toAccount)) + (r.fee ? " · fee " + raw(r.fee) : "") + '</span>' + badge;
+        return lrow({ lead: dotEl("var(--ink-faint)"), t: r.desc ? esc(r.desc) : "Transfer", sub: subT, val: "⇄ " + raw(r.amount), valCls: "neu", acts: acts });
+      }
+      var cls = r.type === "income" ? "pos" : "neg", sign = r.type === "income" ? "+" : "−", color = r.type === "income" ? "var(--income)" : "var(--expense)";
+      var subE = '<span>' + (r.where ? esc(r.where) + " · " : "") + esc(acctName(r.account)) + '</span>' + badge;
+      return lrow({ lead: dotEl(color), t: r.desc ? esc(r.desc) : (r.where || (r.type === "income" ? "Income" : "Expense")), sub: subE, val: sign + raw(r.amount), valCls: cls, acts: acts });
+    };
+    var list;
+    if (!state.recurring.length) list = '<div class="empty"><div class="big">No templates yet</div>Save what you log often. Add an <b>expected day</b> for recurring bills, or leave it blank to make a quick <b>shortcut</b>.</div>';
+    else {
+      var recs = state.recurring.filter(function (r) { return r.dueDay; }).sort(function (a, b) { return a.dueDay - b.dueDay; });
+      var shos = state.recurring.filter(function (r) { return !r.dueDay; });
+      var parts = "";
+      if (recs.length) parts += '<div class="day-div"><span class="day-date">Recurring</span></div>' + recs.map(tmplRow).join("");
+      if (shos.length) parts += '<div class="day-div"><span class="day-date">Shortcuts</span></div>' + shos.map(tmplRow).join("");
+      list = '<div class="list">' + parts + '</div>';
+    }
     var formFields = isT
-      ? '<div class="field"><label>From account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="racct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span style="font-weight:400;color:var(--ink-faint)">(opt)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="rfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>'
+      ? '<div class="field"><label>From account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="racct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(opt)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="rfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>'
       : '<div class="field"><label>Where</label><input id="rwhere" type="text" maxlength="40" list="whereList" placeholder="' + (state.recType === "income" ? "where it comes from" : "what it\'s for") + '"></div><div class="field"><label>Account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div>';
     var sidebar = card("New template", "Reusable one-tap entry", state.accounts.length ?
       '<div class="seg three"><button data-rt="expense" class="' + (state.recType === "expense" ? "on" : "") + '">Expense</button><button data-rt="income" class="' + (state.recType === "income" ? "on" : "") + '">Income</button><button data-rt="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="ramt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       formFields +
-      '<div class="field"><label>Label <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="rdesc" type="text" maxlength="40" placeholder="name this template"></div>' +
-      '<div class="field"><label>Expected day of month <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input id="rday" type="number" min="1" max="31" placeholder="leave blank for a shortcut"></div>' +
+      '<div class="field"><label>Label <span class="opt">(optional)</span></label><input id="rdesc" type="text" maxlength="40" placeholder="name this template"></div>' +
+      '<div class="field"><label>Expected day of month <span class="opt">(optional)</span></label><input id="rday" type="number" min="1" max="31" placeholder="leave blank for a shortcut"></div>' +
       '<div class="hint">With a day → recurring (shows in Upcoming &amp; the monthly total). Blank → a one-tap shortcut.</div>' +
       '<button class="btn" id="radd">' + icon('plus') + 'Save template</button>'
-      : accountNudge(), null, { collapsible: true, key: "rec-add" });
+      : accountNudge(), { collapsible: true, key: "rec-add" });
 
     app.innerHTML = layout(heroBlock("Per month · recurring out", fmt(mOut), "neg", '<div class="csub">' + dated + ' recurring · ' + shortc + ' shortcut' + (shortc === 1 ? "" : "s") + '</div>', '<div class="pills"><div class="pill"><div class="label">Recurring in</div><div class="v num pos">' + fmt(mIn) + '</div></div></div>'), sidebar, card("Your templates", "Tap “Log” to record one today", list));
 
