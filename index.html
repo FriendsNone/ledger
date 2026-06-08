@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
 <!-- Ledger — warm, utilitarian money tracker · v7 (custom settle + edit) -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,11 +19,11 @@
 <style>
   :root {
     --paper: #f4f1ea; --paper-2: #ebe6db; --card: #fbfaf6;
-    --ink: #221f1a; --ink-soft: #6b6457; --ink-faint: #9b9484;
+    --ink: #221f1a; --ink-soft: #6b6457; --ink-faint: #736b5a;
     --line: #ddd6c7; --line-strong: #cfc6b3;
     --income: #2f6b4f; --income-soft: #e4efe7;
-    --expense: #b1492f; --expense-soft: #f5e4dd;
-    --amber: #b07d12; --amber-soft: #f6ecd5;
+    --expense: #a8442b; --expense-soft: #f5e4dd;
+    --amber: #8a6410; --amber-soft: #f6ecd5;
     --accent: #1a1814; --accent-ink: #f4f1ea;
     --rule: rgba(168,158,138,.10);
     --shadow: 0 1px 2px rgba(40,34,22,.05), 0 8px 24px rgba(40,34,22,.06);
@@ -28,7 +31,7 @@
   }
   [data-theme="dark"] {
     --paper: #17150f; --paper-2: #221f18; --card: #1f1c15;
-    --ink: #ece6d8; --ink-soft: #a89f8a; --ink-faint: #6f6857;
+    --ink: #ece6d8; --ink-soft: #a89f8a; --ink-faint: #8f876f;
     --line: #2e2a20; --line-strong: #403a2d;
     --income: #6cc18f; --income-soft: #1d2f23;
     --expense: #e08566; --expense-soft: #361f17;
@@ -258,7 +261,9 @@
     .pill .label { font-size: 10px; }
   }
 </style>
+</head>
 
+<body>
 <div class="wrap">
   <header>
     <div class="brand">
@@ -279,11 +284,12 @@
     <button data-tab="trends">Trends</button>
   </nav>
 
-  <div id="backupNag"></div>
+  <main>
+    <div id="backupNag"></div>
+    <div id="app"><div class="loading">Opening your ledger…</div></div>
+  </main>
 
-  <div id="app"><div class="loading">Opening your ledger…</div></div>
-
-  <div class="foot">Saved automatically &amp; privately to you. &nbsp;·&nbsp; <button id="footSettings">Settings &amp; backup</button></div>
+  <footer class="foot">Saved automatically &amp; privately to you. &nbsp;·&nbsp; <button id="footSettings">Settings &amp; backup</button></footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <datalist id="whereList"></datalist>
@@ -353,7 +359,8 @@
   function p2(n) { return ("0" + n).slice(-2); }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
-  function toast(msg) { toastEl.innerHTML = '<span>' + esc(msg) + '</span><button class="toast-x" id="toastClose2" aria-label="Dismiss" title="Dismiss">' + icon('x') + '</button>'; toastEl.classList.add("show"); clearTimeout(toastT); var c = document.getElementById("toastClose2"); if (c) c.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); }; toastT = setTimeout(function () { toastEl.classList.remove("show"); }, 2600); }
+  function armToast(ms) { clearTimeout(toastT); var left = ms, t0 = Date.now(); function done() { toastEl.classList.remove("show"); } function pause() { if (!toastEl.classList.contains("show")) return; clearTimeout(toastT); left -= Date.now() - t0; } function resume() { if (!toastEl.classList.contains("show")) return; t0 = Date.now(); clearTimeout(toastT); toastT = setTimeout(done, Math.max(left, 1500)); } toastEl.onmouseenter = pause; toastEl.onmouseleave = resume; toastEl.onfocusin = pause; toastEl.onfocusout = function (e) { if (e.relatedTarget && toastEl.contains(e.relatedTarget)) return; resume(); }; toastT = setTimeout(done, ms); }
+  function toast(msg) { toastEl.innerHTML = '<span>' + esc(msg) + '</span><button class="toast-x" id="toastClose2" aria-label="Dismiss" title="Dismiss">' + icon('x') + '</button>'; toastEl.classList.add("show"); clearTimeout(toastT); var c = document.getElementById("toastClose2"); if (c) c.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); }; armToast(2600); }
   function snapState() { return JSON.stringify({ tx: state.tx, loans: state.loans, recurring: state.recurring, accounts: state.accounts, cur: state.cur }); }
   function undoTo(snap) { var o = JSON.parse(snap); state.tx = o.tx; state.loans = o.loans; state.recurring = o.recurring; state.accounts = o.accounts; state.cur = o.cur; saveAll(); saveSet(); render(); toast("Undone"); }
   function commit(label, fn) { var snap = snapState(); fn(); saveAll(); render(); toastUndo(label, snap); }
@@ -362,7 +369,7 @@
     toastEl.classList.add("show"); clearTimeout(toastT);
     var u = document.getElementById("toastUndo"); if (u) u.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); undoTo(snap); };
     var c = document.getElementById("toastClose"); if (c) c.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); };
-    toastT = setTimeout(function () { toastEl.classList.remove("show"); }, 6000);
+    armToast(6000);
   }
   function rebuildMap() { amap = {}; state.accounts.forEach(function (a) { amap[a.id] = a; }); }
   function acctName(id) { return amap[id] ? amap[id].name : "—"; }
@@ -385,6 +392,7 @@
   function icon(name) { return '<svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-' + name + '"></use></svg>'; }
   function flagInvalid(el) { if (!el) return; el.classList.add("invalid"); try { el.focus(); } catch (e) {} el.addEventListener("input", function h() { el.classList.remove("invalid"); el.removeEventListener("input", h); }); }
   function readAmt(id, allowZero) { var el = document.getElementById(id); if (!el) return null; var v = parseFloat(el.value); if (!isFinite(v) || v < 0 || v > 1e12 || (!allowZero && v <= 0)) { flagInvalid(el); return null; } return Math.round(v * 100) / 100; }
+  function readFee(id) { var el = document.getElementById(id); if (!el) return 0; var raw = (el.value || "").trim(); if (raw === "") return 0; var v = parseFloat(raw); if (!isFinite(v) || v < 0 || v > 1e12) { flagInvalid(el); return null; } return Math.round(v * 100) / 100; }
   function uniqSorted(arr) { var seen = {}, out = []; arr.forEach(function (v) { v = (v || "").trim(); var k = v.toLowerCase(); if (v && !seen[k]) { seen[k] = 1; out.push(v); } }); return out.sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; }); }
   function fillSuggest() {
     var w = document.getElementById("whereList"), p = document.getElementById("personList");
@@ -461,7 +469,7 @@
     var h = coll
       ? '<div class="card-h ch" data-collapse="' + esc(key) + '" role="button" tabindex="0" aria-expanded="' + (isColl ? "false" : "true") + '">' + titleBlock + '<span class="chev">' + icon("caret-down") + '</span></div>'
       : '<div class="card-h">' + titleBlock + '</div>';
-    return '<div class="card' + (coll ? " collapsible" : "") + (isColl ? " collapsed" : "") + '">' + h + '<div class="cwrap"><div class="card-b">' + body + '</div></div></div>';
+    return '<div class="card' + (coll ? " collapsible" : "") + (isColl ? " collapsed" : "") + '">' + h + '<div class="cwrap"' + (isColl ? " inert" : "") + '><div class="card-b">' + body + '</div></div></div>';
   }
   function accountNudge() { return '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>'; }
   function wireNudge() { var g = document.getElementById("goAcct"); if (g) g.onclick = function () { state.tab = "accounts"; render(); }; }
@@ -502,7 +510,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-collapse]"), function (el) {
       var toggle = function () {
         var key = el.getAttribute("data-collapse"), c = el.closest(".card"), now = !c.classList.contains("collapsed");
-        c.classList.toggle("collapsed", now); el.setAttribute("aria-expanded", now ? "false" : "true"); state.collapsed[key] = now; saveSet();
+        c.classList.toggle("collapsed", now); el.setAttribute("aria-expanded", now ? "false" : "true"); var cw = c.querySelector(".cwrap"); if (cw) { if (now) cw.setAttribute("inert", ""); else cw.removeAttribute("inert"); } state.collapsed[key] = now; saveSet();
       };
       el.onclick = toggle;
       if (el.tagName !== "BUTTON") el.onkeydown = function (e) { if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") { e.preventDefault(); toggle(); } };
@@ -544,7 +552,7 @@
     if (!state.accounts.length) {
       firstCard = card("Get started", "Add an account, or restore a backup", '<div style="display:flex;flex-direction:column;gap:10px"><button class="btn" id="goAcct2" style="font-size:16px;padding:14px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>Add your first account</button><button class="btn sec" id="impBackup" style="font-size:16px;padding:14px">Import a backup</button></div>');
     } else {
-      var newBtn = '<button class="btn ' + (chips ? "sec" : "") + '" id="goTrack" style="font-size:16px;padding:14px' + (chips ? ";margin-top:12px" : "") + '"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>New entry</button>';
+      var newBtn = '<button class="btn" id="goTrack" style="font-size:16px;padding:14px' + (chips ? ";margin-top:12px" : "") + '"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>New entry</button>';
       firstCard = card("Quick log", chips ? "Tap a shortcut, or add something new" : "Record an entry, or save a template for one-tap logging", (chips || "") + newBtn);
     }
     var sidebar = firstCard + (state.accounts.length ? card("Accounts", state.accounts.length + " total", snap, { collapsible: true, key: "ov-accounts" }) : "");
@@ -673,7 +681,7 @@
     if (state.formType === "transfer") {
       var from = document.getElementById("acct").value, to = document.getElementById("acct2").value;
       if (from === to) { toast("Pick two different accounts"); return; }
-      var fee = Math.round((parseFloat(document.getElementById("fee").value) || 0) * 100) / 100;
+      var fee = readFee("fee"); if (fee === null) return;
       commit("Transfer recorded", function () { state.tx.push({ id: uid(), type: "transfer", amount: v, fee: fee, account: from, toAccount: to, desc: document.getElementById("desc").value.trim(), date: date, time: time, created: Date.now() }); }); return;
     }
     commit("Entry added", function () { state.tx.push({ id: uid(), type: state.formType, amount: v, where: document.getElementById("where").value.trim(), account: document.getElementById("acct").value, desc: document.getElementById("desc").value.trim(), date: date, time: time, created: Date.now() }); });
@@ -710,10 +718,11 @@
     openModal("Edit entry", body, "Save", function () {
       readInto();
       var v = readAmt("eAmt"); if (v === null) return false;
+      var eFeeV = 0; if (d.type === "transfer") { eFeeV = readFee("eFee"); if (eFeeV === null) return false; }
       if (d.type === "transfer" && d.account === d.toAccount) { toast("Pick two different accounts"); return false; }
       commit("Entry edited", function () {
         t.type = d.type; t.amount = v; t.desc = (d.desc || "").trim(); t.date = d.date || t.date; t.time = d.time || "";
-        if (d.type === "transfer") { t.account = d.account; t.toAccount = d.toAccount; t.fee = Math.round((parseFloat(d.fee) || 0) * 100) / 100; delete t.where; }
+        if (d.type === "transfer") { t.account = d.account; t.toAccount = d.toAccount; t.fee = eFeeV; delete t.where; }
         else { t.account = d.account; t.where = (d.where || "").trim(); delete t.toAccount; delete t.fee; }
       });
     });
@@ -815,7 +824,7 @@
     return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled, wideActs: true });
   }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
-  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { flagInvalid(pe); return; } var v = readAmt("lamt"); if (v === null) return; var fee = Math.round((parseFloat(document.getElementById("lfee").value) || 0) * 100) / 100; commit("Loan recorded", function () { state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: v, account: document.getElementById("lacct").value, fee: fee, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); }); }
+  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { flagInvalid(pe); return; } var v = readAmt("lamt"); if (v === null) return; var fee = readFee("lfee"); if (fee === null) return; commit("Loan recorded", function () { state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: v, account: document.getElementById("lacct").value, fee: fee, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); }); }
   function settleLoan(id) {
     var l = byId(id); if (!l) return;
     var lent = l.kind === "lent";
@@ -851,7 +860,8 @@
     openModal("Edit loan", body, "Save", function () {
       var p = document.getElementById("eLPerson").value.trim(); if (!p) { flagInvalid(document.getElementById("eLPerson")); return false; }
       var v = readAmt("eLAmt"); if (v === null) return false;
-      commit("Loan edited", function () { l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.fee = Math.round((parseFloat(document.getElementById("eLFee").value) || 0) * 100) / 100; l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim(); });
+      var elFee = readFee("eLFee"); if (elFee === null) return false;
+      commit("Loan edited", function () { l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.fee = elFee; l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim(); });
     });
   }
 
@@ -970,7 +980,7 @@
     var v = readAmt("ramt"); if (v === null) return;
     var day = parseInt(document.getElementById("rday").value, 10); day = (day >= 1 && day <= 31) ? day : 0;
     var base = { id: uid(), type: state.recType, amount: v, desc: document.getElementById("rdesc").value.trim(), dueDay: day };
-    if (state.recType === "transfer") { var from = document.getElementById("racct").value, to = document.getElementById("racct2").value; if (from === to) { toast("Pick two different accounts"); return; } base.account = from; base.toAccount = to; base.fee = Math.round((parseFloat(document.getElementById("rfee").value) || 0) * 100) / 100; }
+    if (state.recType === "transfer") { var from = document.getElementById("racct").value, to = document.getElementById("racct2").value; if (from === to) { toast("Pick two different accounts"); return; } base.account = from; base.toAccount = to; var rfee = readFee("rfee"); if (rfee === null) return; base.fee = rfee; }
     else { base.where = document.getElementById("rwhere").value.trim(); base.account = document.getElementById("racct").value; }
     commit("Template saved", function () { state.recurring.push(base); });
   }
@@ -1107,3 +1117,5 @@
 })();
 </script>
 <script>if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }</script>
+</body>
+</html>
