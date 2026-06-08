@@ -24,7 +24,7 @@
     --income: #2f6b4f; --income-soft: #e4efe7;
     --expense: #a8442b; --expense-soft: #f5e4dd;
     --amber: #8a6410; --amber-soft: #f6ecd5;
-    --accent: #1a1814; --accent-ink: #f4f1ea;
+    --accent: #1a1814; --accent-ink: #f4f1ea; --on-fill: #fff;
     --rule: rgba(168,158,138,.10);
     --shadow: 0 1px 2px rgba(40,34,22,.05), 0 8px 24px rgba(40,34,22,.06);
     --radius: 14px;
@@ -36,7 +36,7 @@
     --income: #6cc18f; --income-soft: #1d2f23;
     --expense: #e08566; --expense-soft: #361f17;
     --amber: #d9aa46; --amber-soft: #2e2613;
-    --accent: #ece6d8; --accent-ink: #17150f;
+    --accent: #ece6d8; --accent-ink: #17150f; --on-fill: #17150f;
     --rule: rgba(120,112,92,.10);
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
   }
@@ -99,8 +99,8 @@
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; background: var(--paper-2); padding: 4px; border-radius: 10px; margin-bottom: 14px; }
   .seg.three { grid-template-columns: 1fr 1fr 1fr; }
   .seg button { border: 0; background: transparent; padding: 9px 4px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); transition: .15s; }
-  .seg button.on[data-t="expense"], .seg button.on[data-rt="expense"], .seg button.on[data-et="expense"], .seg button.on[data-lk="lent-out"] { background: var(--expense); color: #fff; }
-  .seg button.on[data-t="income"], .seg button.on[data-rt="income"], .seg button.on[data-et="income"], .seg button.on[data-lk="borrowed"] { background: var(--income); color: #fff; }
+  .seg button.on[data-t="expense"], .seg button.on[data-rt="expense"], .seg button.on[data-et="expense"], .seg button.on[data-lk="lent-out"] { background: var(--expense); color: var(--on-fill); }
+  .seg button.on[data-t="income"], .seg button.on[data-rt="income"], .seg button.on[data-et="income"], .seg button.on[data-lk="borrowed"] { background: var(--income); color: var(--on-fill); }
   .seg button.on[data-t="transfer"], .seg button.on[data-rt="transfer"], .seg button.on[data-et="transfer"], .seg button.on[data-theme-set] { background: var(--accent); color: var(--accent-ink); }
 
   label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin: 0 0 5px 2px; }
@@ -316,7 +316,7 @@
     lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false
   };
   var amap = {}, lastTab = null;
-  var app = document.getElementById("app"), toastEl = document.getElementById("toast"), toastT, toastFocusing = false;
+  var app = document.getElementById("app"), toastEl = document.getElementById("toast"), toastT, toastFocusing = false, toastReturnSel = null;
 
   // ---------- storage (Claude artifact + standalone browser) ----------
   var store = (function () {
@@ -360,16 +360,17 @@
   function p2(n) { return ("0" + n).slice(-2); }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
-  function armToast(ms) { clearTimeout(toastT); var left = ms, t0 = Date.now(); function done() { toastEl.classList.remove("show"); } function pause() { if (toastFocusing || !toastEl.classList.contains("show")) return; clearTimeout(toastT); left -= Date.now() - t0; } function resume() { if (!toastEl.classList.contains("show")) return; t0 = Date.now(); clearTimeout(toastT); toastT = setTimeout(done, Math.max(left, 1500)); } toastEl.onmouseenter = pause; toastEl.onmouseleave = resume; toastEl.onfocusin = pause; toastEl.onfocusout = function (e) { if (e.relatedTarget && toastEl.contains(e.relatedTarget)) return; resume(); }; toastEl.onkeydown = function (e) { if (e.key === "Escape") { clearTimeout(toastT); toastEl.classList.remove("show"); } }; toastT = setTimeout(done, ms); }
-  function toast(msg) { toastEl.innerHTML = '<span>' + esc(msg) + '</span><button class="toast-x" id="toastClose2" aria-label="Dismiss" title="Dismiss">' + icon('x') + '</button>'; toastEl.classList.add("show"); clearTimeout(toastT); var c = document.getElementById("toastClose2"); if (c) c.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); }; armToast(2600); }
+  function hideToast(restore) { var inside = toastEl.contains(document.activeElement); clearTimeout(toastT); toastEl.classList.remove("show"); if (restore !== false && inside && toastReturnSel) { var el = null; try { el = document.querySelector(toastReturnSel); } catch (e) {} if (el) { try { el.focus(); } catch (e2) {} } } toastReturnSel = null; }
+  function armToast(ms) { clearTimeout(toastT); var left = ms, t0 = Date.now(); function done() { hideToast(); } function pause() { if (toastFocusing || !toastEl.classList.contains("show")) return; clearTimeout(toastT); left -= Date.now() - t0; } function resume() { if (!toastEl.classList.contains("show")) return; t0 = Date.now(); clearTimeout(toastT); toastT = setTimeout(done, Math.max(left, 1500)); } toastEl.onmouseenter = pause; toastEl.onmouseleave = resume; toastEl.onfocusin = pause; toastEl.onfocusout = function (e) { if (e.relatedTarget && toastEl.contains(e.relatedTarget)) return; resume(); }; toastEl.onkeydown = function (e) { if (e.key === "Escape") { hideToast(); } }; toastT = setTimeout(done, ms); }
+  function toast(msg) { toastEl.innerHTML = '<span>' + esc(msg) + '</span><button class="toast-x" id="toastClose2" aria-label="Dismiss" title="Dismiss">' + icon('x') + '</button>'; toastEl.classList.add("show"); clearTimeout(toastT); toastReturnSel = null; var c = document.getElementById("toastClose2"); if (c) c.onclick = function () { hideToast(false); }; armToast(2600); }
   function snapState() { return JSON.stringify({ tx: state.tx, loans: state.loans, recurring: state.recurring, accounts: state.accounts, cur: state.cur }); }
   function undoTo(snap) { var o = JSON.parse(snap); state.tx = o.tx; state.loans = o.loans; state.recurring = o.recurring; state.accounts = o.accounts; state.cur = o.cur; saveAll(); saveSet(); render(); toast("Undone"); }
-  function commit(label, fn) { var snap = snapState(); fn(); saveAll(); render(); toastUndo(label, snap); }
+  function commit(label, fn) { var ae = document.activeElement; toastReturnSel = (ae && ae.id) ? ("#" + (window.CSS && CSS.escape ? CSS.escape(ae.id) : ae.id)) : null; var snap = snapState(); fn(); saveAll(); render(); toastUndo(label, snap); }
   function toastUndo(label, snap) {
     toastEl.innerHTML = '<span>' + label + '</span><button class="toast-undo" id="toastUndo">Undo</button><button class="toast-x" id="toastClose" aria-label="Dismiss" title="Dismiss"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-x"></use></svg></button>';
     toastEl.classList.add("show"); clearTimeout(toastT);
-    var u = document.getElementById("toastUndo"); if (u) u.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); undoTo(snap); };
-    var c = document.getElementById("toastClose"); if (c) c.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); };
+    var u = document.getElementById("toastUndo"); if (u) u.onclick = function () { hideToast(false); undoTo(snap); };
+    var c = document.getElementById("toastClose"); if (c) c.onclick = function () { hideToast(); };
     armToast(6000);
     toastFocusing = true;
     setTimeout(function () { try { if (toastEl.classList.contains("show") && u) u.focus(); } catch (e) {} toastFocusing = false; }, 80);
@@ -1027,7 +1028,7 @@
     var dataCard = card("Backup &amp; data", "Your only copy lives here unless you back it up",
       '<div class="data-btns"><button class="btn" id="dlJSON">' + icon("download-simple") + 'Download backup (.json)</button><button class="btn sec" id="upJSON">' + icon("upload-simple") + 'Restore from backup</button><button class="btn sec" id="exCSV">' + icon("download-simple") + 'Export CSV</button><button class="btn sec" id="imCSV">' + icon("upload-simple") + 'Import CSV</button></div>' +
       '<div class="hint" style="margin-top:10px;margin-bottom:0">Backup is a full, lossless restore — use it to move between devices. CSV opens in a spreadsheet; import expects a file exported here.</div>');
-    var danger = card("Danger zone", "", '<button class="btn" id="clearAll" style="background:var(--expense);color:#fff">' + icon('trash') + 'Clear all data</button><div class="hint" style="margin-top:10px;margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
+    var danger = card("Danger zone", "", '<button class="btn" id="clearAll" style="background:var(--expense);color:var(--on-fill)">' + icon('trash') + 'Clear all data</button><div class="hint" style="margin-top:10px;margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
 
     app.innerHTML = layout(hero, sidebar, appearance + currency + dataCard + danger);
 
