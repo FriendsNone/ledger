@@ -142,7 +142,8 @@
 
   .lrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
   .lrow:last-child { border-bottom: 0; }
-  .lrow.is-settled { opacity: .55; }
+  .lrow.is-settled .lead { opacity: .5; }
+  .lrow.is-settled .t { color: var(--ink-soft); }
   .lead { flex: none; display: flex; align-items: center; }
   .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
   .dot.ring { background: transparent !important; border: 2px solid var(--ink-faint); width: 10px; height: 10px; }
@@ -215,7 +216,7 @@
   @media (prefers-reduced-motion: reduce) { .nag, .view-enter > .hero, .view-enter > .cols, .modal-bg, .modal, .chev, .cwrap { animation: none !important; transition: none !important; } }
   .badge.lent { background: var(--expense-soft); color: var(--expense); }
   .badge.borrowed { background: var(--income-soft); color: var(--income); }
-  .badge.settled, .badge.shortcut { background: var(--paper-2); color: var(--ink-faint); }
+  .badge.settled, .badge.shortcut { background: var(--paper-2); color: var(--ink-soft); }
   .badge.overdue { background: var(--expense-soft); color: var(--expense); }
   .badge.due { background: var(--amber-soft); color: var(--amber); }
   .badge.next { background: var(--paper-2); color: var(--ink-soft); }
@@ -226,7 +227,7 @@
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
   .statcol { display: flex; flex-direction: column; gap: 10px; }
   .stat { background: var(--paper-2); border-radius: 10px; padding: 11px 13px; }
-  .stat .l { font-size: 11px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .08em; }
+  .stat .l { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .08em; }
   .stat .v { font-size: 18px; font-weight: 600; margin-top: 3px; }
   .stat .v.sm { font-size: 14px; }
 
@@ -315,7 +316,7 @@
     lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false
   };
   var amap = {}, lastTab = null;
-  var app = document.getElementById("app"), toastEl = document.getElementById("toast"), toastT;
+  var app = document.getElementById("app"), toastEl = document.getElementById("toast"), toastT, toastFocusing = false;
 
   // ---------- storage (Claude artifact + standalone browser) ----------
   var store = (function () {
@@ -359,7 +360,7 @@
   function p2(n) { return ("0" + n).slice(-2); }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
-  function armToast(ms) { clearTimeout(toastT); var left = ms, t0 = Date.now(); function done() { toastEl.classList.remove("show"); } function pause() { if (!toastEl.classList.contains("show")) return; clearTimeout(toastT); left -= Date.now() - t0; } function resume() { if (!toastEl.classList.contains("show")) return; t0 = Date.now(); clearTimeout(toastT); toastT = setTimeout(done, Math.max(left, 1500)); } toastEl.onmouseenter = pause; toastEl.onmouseleave = resume; toastEl.onfocusin = pause; toastEl.onfocusout = function (e) { if (e.relatedTarget && toastEl.contains(e.relatedTarget)) return; resume(); }; toastT = setTimeout(done, ms); }
+  function armToast(ms) { clearTimeout(toastT); var left = ms, t0 = Date.now(); function done() { toastEl.classList.remove("show"); } function pause() { if (toastFocusing || !toastEl.classList.contains("show")) return; clearTimeout(toastT); left -= Date.now() - t0; } function resume() { if (!toastEl.classList.contains("show")) return; t0 = Date.now(); clearTimeout(toastT); toastT = setTimeout(done, Math.max(left, 1500)); } toastEl.onmouseenter = pause; toastEl.onmouseleave = resume; toastEl.onfocusin = pause; toastEl.onfocusout = function (e) { if (e.relatedTarget && toastEl.contains(e.relatedTarget)) return; resume(); }; toastEl.onkeydown = function (e) { if (e.key === "Escape") { clearTimeout(toastT); toastEl.classList.remove("show"); } }; toastT = setTimeout(done, ms); }
   function toast(msg) { toastEl.innerHTML = '<span>' + esc(msg) + '</span><button class="toast-x" id="toastClose2" aria-label="Dismiss" title="Dismiss">' + icon('x') + '</button>'; toastEl.classList.add("show"); clearTimeout(toastT); var c = document.getElementById("toastClose2"); if (c) c.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); }; armToast(2600); }
   function snapState() { return JSON.stringify({ tx: state.tx, loans: state.loans, recurring: state.recurring, accounts: state.accounts, cur: state.cur }); }
   function undoTo(snap) { var o = JSON.parse(snap); state.tx = o.tx; state.loans = o.loans; state.recurring = o.recurring; state.accounts = o.accounts; state.cur = o.cur; saveAll(); saveSet(); render(); toast("Undone"); }
@@ -370,6 +371,8 @@
     var u = document.getElementById("toastUndo"); if (u) u.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); undoTo(snap); };
     var c = document.getElementById("toastClose"); if (c) c.onclick = function () { clearTimeout(toastT); toastEl.classList.remove("show"); };
     armToast(6000);
+    toastFocusing = true;
+    setTimeout(function () { try { if (toastEl.classList.contains("show") && u) u.focus(); } catch (e) {} toastFocusing = false; }, 80);
   }
   function rebuildMap() { amap = {}; state.accounts.forEach(function (a) { amap[a.id] = a; }); }
   function acctName(id) { return amap[id] ? amap[id].name : "—"; }
@@ -494,6 +497,17 @@
   }
 
   // ---------- render dispatch ----------
+  function labelControls() {
+    Array.prototype.forEach.call(document.querySelectorAll(".field"), function (f) {
+      var lab = f.querySelector("label"), ctl = f.querySelector("input, select, textarea");
+      if (lab && ctl && !ctl.getAttribute("aria-label") && !ctl.getAttribute("aria-labelledby")) {
+        var t = (lab.textContent || "").replace(/\s+/g, " ").trim();
+        if (t) ctl.setAttribute("aria-label", t);
+      }
+    });
+    var fl = { fQ: "Search entries", fType: "Filter by type", lendQ: "Search loans", lview: "Group loans", trendGroup: "Group trends by", curSel: "Currency" };
+    Object.keys(fl).forEach(function (id) { var el = document.getElementById(id); if (el && !el.getAttribute("aria-label")) el.setAttribute("aria-label", fl[id]); });
+  }
   function render() {
     rebuildMap();
     Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.classList.toggle("on", b.getAttribute("data-tab") === state.tab); });
@@ -505,6 +519,7 @@
     wireNudge(); wireCollapse(); renderBackupNag(); fillSuggest();
     Array.prototype.forEach.call(document.querySelectorAll("[data-jump]"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-jump"); render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll('input[type="number"]'), function (i) { if (!i.getAttribute("inputmode")) i.setAttribute("inputmode", "decimal"); });
+    labelControls();
   }
   function wireCollapse() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-collapse]"), function (el) {
@@ -1099,6 +1114,7 @@
     document.getElementById("mCancel").onclick = closeModal;
     document.getElementById("mClose").onclick = closeModal;
     m.querySelector(".modal-bg").onclick = function (e) { if (e.target === this) closeModal(); };
+    labelControls();
     document.getElementById("mOk").onclick = function () { if (modalConfirm && modalConfirm() === false) return; closeModal(); };
     var f = m.querySelector(".modal-b input, .modal-b select, .modal-b textarea") || document.getElementById("mOk");
     if (f) setTimeout(function () { try { f.focus(); } catch (e) {} }, 30);
