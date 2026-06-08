@@ -255,7 +255,7 @@
     .card-b { padding: 13px 14px 15px; } .card-h { padding: 13px 14px 0; }
     nav.tabs button { padding: 8px 11px; font-size: 13px; }
     .lrow { padding: 9px 2px; gap: 5px 9px; }
-    .lrow.wide-acts .end { flex: 1 0 100%; margin-top: 3px; }
+    .lrow.has-acts .end { flex: 1 0 100%; margin-top: 3px; }
     .stats { grid-template-columns: 1fr 1fr; }
     .filters input { width: 100px; }
     .bd-row { grid-template-columns: 76px 1fr auto; gap: 8px; }
@@ -491,7 +491,7 @@
   function dotEl(c) { return '<span class="dot" style="background:' + c + '"></span>'; }
   function ringEl() { return '<span class="dot ring"></span>'; }
   function lrow(p) {
-    return '<div class="lrow' + (p.settled ? " is-settled" : "") + (p.wideActs ? " wide-acts" : "") + '">' +
+    return '<div class="lrow' + (p.settled ? " is-settled" : "") + (p.acts ? " has-acts" : "") + '">' +
       '<span class="lead">' + (p.lead || "") + '</span>' +
       '<div class="body"><div class="t' + (p.tnum ? " num" : "") + '">' + p.t + '</div>' + (p.sub ? '<div class="s">' + p.sub + '</div>' : "") + '</div>' +
       '<div class="end">' + (p.val ? '<span class="v ' + (p.valCls || "") + '">' + p.val + '</span>' : "") + (p.acts || "") + '</div></div>';
@@ -562,7 +562,7 @@
   function renderOverview() {
     var nw = netWorth();
     var snap = !state.accounts.length ? '<div class="empty"><div class="big">No accounts</div>Add one to begin.</div>'
-      : state.accounts.map(function (a) { var b = acctBal(a.id); return '<div class="snap-row"><span class="dot" style="background:' + a.color + '"></span><span class="nm">' + esc(a.name) + '</span><span class="bl num ' + (b >= 0 ? "pos" : "neg") + '">' + fmt(b) + '</span></div>'; }).join("");
+      : state.accounts.map(function (a) { var b = acctBal(a.id); return lrow({ lead: dotEl(a.color), t: esc(a.name), val: fmt(b), valCls: b >= 0 ? "pos" : "neg" }); }).join("");
     var chips = shortcutChips();
     var firstCard;
     if (!state.accounts.length) {
@@ -582,17 +582,17 @@
         var rl = relLabel(u.iso), tb = '<span class="badge ' + rl.c + '">' + rl.t + '</span>';
         if (u.kind === "recurring") {
           var r = u.r, isT = r.type === "transfer", cls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ", color = r.type === "income" ? "var(--income)" : r.type === "expense" ? "var(--expense)" : "var(--ink-faint)", name = r.desc || r.where || (isT ? "Transfer" : r.type);
-          return lrow({ lead: dotEl(color), t: esc(name), sub: tb + '<span>recurring · ' + esc(acctName(r.account)) + '</span>', val: sign + raw(r.amount), valCls: cls, acts: '<button class="act primary" data-log="' + r.id + '">Log</button>' });
+          return lrow({ lead: dotEl(color), t: esc(name), sub: tb + '<span>recurring · ' + esc(acctName(r.account)) + '</span>', val: sign + raw(r.amount), valCls: cls, acts: '<button class="act" data-log="' + r.id + '">Log</button>' });
         }
         var l = u.l, lcls = l.kind === "lent" ? "pos" : "neg", lsign = l.kind === "lent" ? "+" : "−", lcolor = l.kind === "lent" ? "var(--income)" : "var(--expense)";
-        return lrow({ lead: dotEl(lcolor), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: tb + '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: lsign + raw(l.amount), valCls: lcls, acts: '<button class="act primary" data-settle="' + l.id + '">Settle</button>' });
+        return lrow({ lead: dotEl(lcolor), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: tb + '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: lsign + raw(l.amount), valCls: lcls, acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
       }).join("");
     var upcoming = card("Upcoming", "Bills, subscriptions &amp; loan due dates", upBody);
 
     var noDue = state.loans.filter(function (l) { return !l.settled && !l.due; });
     var reminders = !noDue.length ? "" : card("Reminders", "Open loans with no due date", noDue.map(function (l) {
       var lcls = l.kind === "lent" ? "pos" : "neg", lsign = l.kind === "lent" ? "+" : "−", lcolor = l.kind === "lent" ? "var(--income)" : "var(--expense)";
-      return lrow({ lead: dotEl(lcolor), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: lsign + raw(l.amount), valCls: lcls, acts: '<button class="act primary" data-settle="' + l.id + '">Settle</button>' });
+      return lrow({ lead: dotEl(lcolor), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: lsign + raw(l.amount), valCls: lcls, acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
     }).join(""));
 
     var weekAgo = new Date(today() + "T00:00:00"); weekAgo.setDate(weekAgo.getDate() - 6); var waStr = weekAgo.getFullYear() + "-" + ("0" + (weekAgo.getMonth() + 1)).slice(-2) + "-" + ("0" + weekAgo.getDate()).slice(-2);
@@ -836,8 +836,8 @@
     if (l.settled) { sub += '<span class="badge settled">settled</span>'; if (Math.abs(gain) >= 0.005) sub += '<span class="badge ' + (gain > 0 ? "gain" : "loss") + '">' + (gain > 0 ? "+" : "−") + raw(Math.abs(gain)) + '</span>'; }
     else sub += dueBadge(l);
     if (l.fee) sub += '<span class="badge next">fee ' + raw(l.fee) + '</span>';
-    var acts = '<button class="mini" data-loanedit="' + l.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button>' + (l.settled ? '<button class="act" data-unsettle="' + l.id + '">Undo</button>' : '<button class="act primary" data-settle="' + l.id + '">Settle</button>') + '<button class="del" data-loandel="' + l.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
-    return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled, wideActs: true });
+    var acts = (l.settled ? '<button class="act" data-unsettle="' + l.id + '">Undo</button>' : '<button class="act" data-settle="' + l.id + '">Settle</button>') + '<button class="mini" data-loanedit="' + l.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-loandel="' + l.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
+    return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled });
   }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
   function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { flagInvalid(pe); return; } var v = readAmt("lamt"); if (v === null) return; var fee = readFee("lfee"); if (fee === null) return; commit("Loan recorded", function () { state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: v, account: document.getElementById("lacct").value, fee: fee, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); }); }
@@ -953,7 +953,7 @@
     var mOut = 0, mIn = 0, dated = 0, shortc = 0; state.recurring.forEach(function (r) { if (r.dueDay) { dated++; if (r.type === "expense") mOut += r.amount; else if (r.type === "income") mIn += r.amount; } else shortc++; });
     var tmplRow = function (r) {
       var badge = r.dueDay ? nextDueLabel(r.dueDay) : "";
-      var acts = '<button class="act primary" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
+      var acts = '<button class="act" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
       if (r.type === "transfer") {
         var subT = '<span>' + esc(acctName(r.account)) + ' → ' + esc(acctName(r.toAccount)) + (r.fee ? " · fee " + raw(r.fee) : "") + '</span>' + badge;
         return lrow({ lead: dotEl("var(--ink-faint)"), t: r.desc ? esc(r.desc) : "Transfer", sub: subT, val: "⇄ " + raw(r.amount), valCls: "neu", acts: acts });
