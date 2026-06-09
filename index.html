@@ -558,11 +558,11 @@
   // ---------- OVERVIEW ----------
   function dim(y, m) { return new Date(y, m + 1, 0).getDate(); }
   function nextDue(day) { var now = new Date(), y = now.getFullYear(), m = now.getMonth(); var t = new Date(y, m, Math.min(day, dim(y, m))); if (t < new Date(y, m, now.getDate())) { m++; if (m > 11) { m = 0; y++; } t = new Date(y, m, Math.min(day, dim(y, m))); } return t; }
-  function relLabel(isoStr) { var diff = Math.round((new Date(isoStr + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000); if (diff < 0) return { t: Math.abs(diff) + "d overdue", c: "overdue" }; if (diff === 0) return { t: "today", c: "due" }; if (diff === 1) return { t: "tomorrow", c: "due" }; if (diff <= 5) return { t: "in " + diff + "d", c: "due" }; return { t: fmtDate(isoStr), c: "next" }; }
+  function relLabel(isoStr) { var diff = Math.round((new Date(isoStr + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000); if (diff < 0) return { t: Math.abs(diff) + "d overdue", c: "overdue" }; if (diff === 0) return { t: "today", c: "due" }; if (diff === 1) return { t: "tomorrow", c: "due" }; if (diff <= 5) return { t: "in " + diff + "d", c: "due" }; if (diff <= 13) return { t: "in " + diff + "d", c: "next" }; return { t: "in " + Math.round(diff / 7) + " wks", c: "next" }; }
   function renderOverview() {
     var nw = netWorth();
     var snap = !state.accounts.length ? '<div class="empty"><div class="big">No accounts</div>Add one to begin.</div>'
-      : state.accounts.map(function (a) { var b = acctBal(a.id); return lrow({ lead: dotEl(a.color), t: esc(a.name), val: fmt(b), valCls: b >= 0 ? "pos" : "neg" }); }).join("");
+      : state.accounts.map(function (a) { var b = acctBal(a.id); return lrow({ lead: dotEl(a.color), t: esc(a.name), val: fmt(b), valCls: b >= 0 ? "" : "neg" }); }).join("");
     var chips = shortcutChips();
     var firstCard;
     if (!state.accounts.length) {
@@ -579,20 +579,19 @@
     up.sort(function (a, b) { return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0; });
     var upBody = !up.length ? '<div class="empty">Nothing scheduled. Add an expected day to a template, or a due date to a loan, and it\'ll show here.</div>'
       : up.slice(0, 8).map(function (u) {
-        var rl = relLabel(u.iso), tb = '<span class="badge ' + rl.c + '">' + rl.t + '</span>';
+        var rl = relLabel(u.iso), tb = '<span class="badge ' + rl.c + '" title="' + fmtDate(u.iso) + '">' + rl.t + '</span>';
         if (u.kind === "recurring") {
           var r = u.r, isT = r.type === "transfer", cls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ", color = r.type === "income" ? "var(--income)" : r.type === "expense" ? "var(--expense)" : "var(--ink-faint)", name = r.desc || r.where || (isT ? "Transfer" : r.type);
           return lrow({ lead: dotEl(color), t: esc(name), sub: tb + '<span>recurring · ' + esc(acctName(r.account)) + '</span>', val: sign + raw(r.amount), valCls: cls, acts: '<button class="act" data-log="' + r.id + '">Log</button>' });
         }
-        var l = u.l, lcls = l.kind === "lent" ? "pos" : "neg", lsign = l.kind === "lent" ? "+" : "−", lcolor = l.kind === "lent" ? "var(--income)" : "var(--expense)";
-        return lrow({ lead: dotEl(lcolor), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: tb + '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: lsign + raw(l.amount), valCls: lcls, acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
+        var l = u.l;
+        return lrow({ lead: dotEl("var(--ink-faint)"), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: tb + '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: raw(l.amount), valCls: "", acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
       }).join("");
     var upcoming = card("Upcoming", "Bills, subscriptions &amp; loan due dates", upBody);
 
     var noDue = state.loans.filter(function (l) { return !l.settled && !l.due; });
     var reminders = !noDue.length ? "" : card("Reminders", "Open loans with no due date", noDue.map(function (l) {
-      var lcls = l.kind === "lent" ? "pos" : "neg", lsign = l.kind === "lent" ? "+" : "−", lcolor = l.kind === "lent" ? "var(--income)" : "var(--expense)";
-      return lrow({ lead: dotEl(lcolor), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: lsign + raw(l.amount), valCls: lcls, acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
+      return lrow({ lead: dotEl("var(--ink-faint)"), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: raw(l.amount), valCls: "", acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
     }).join(""));
 
     var weekAgo = new Date(today() + "T00:00:00"); weekAgo.setDate(weekAgo.getDate() - 6); var waStr = weekAgo.getFullYear() + "-" + ("0" + (weekAgo.getMonth() + 1)).slice(-2) + "-" + ("0" + weekAgo.getDate()).slice(-2);
@@ -626,24 +625,24 @@
     var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select class="inp" id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select></div>';
 
     var chips = shortcutChips();
-    var quickCard = chips ? card("Quick log", "Tap to record a saved shortcut", chips) : "";
+    var quickCard = chips ? card("Quick log", "Saved shortcuts — one tap to log", chips) : "";
     var sidebar = quickCard + card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge(), { collapsible: true, key: "track-add" });
     var main = card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listExtra + listBody);
 
-    app.innerHTML = layout(heroBlock("Net worth", fmt(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()), sidebar, main);
+    app.innerHTML = layout(heroBlock("Net worth", fmt(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, main);
     wireTrack();
   }
   function formHTML() {
     var isT = state.formType === "transfer";
     var fields = isT
       ? '<div class="field"><label>From account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
-      : '<div class="field"><label>Account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>Where</label><input id="where" type="text" maxlength="40" list="whereList" placeholder="' + (state.formType === "income" ? "where it came from" : "where it went") + '"></div>';
+      : '<div class="field"><label>Account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>Where</label><input id="where" type="text" maxlength="40" list="whereList" placeholder="' + (state.formType === "income" ? "where from?" : "where did it go?") + '"></div>';
     return '<div class="seg three"><button data-t="expense" class="' + (state.formType === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (state.formType === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       fields +
       '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="desc" type="text" maxlength="60" placeholder="anything to remember"></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="date" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="time" type="time" value="' + nowTime() + '"></div></div>' +
-      '<button class="btn" id="add">' + icon('plus') + (isT ? "Record transfer" : "Add " + state.formType) + '</button>';
+      '<button class="btn" id="add">' + icon('plus') + (isT ? "Add transfer" : "Add " + state.formType) + '</button>';
   }
   function entryRow(e, ro) {
     var rt = fmtTime(e.time);
@@ -661,7 +660,7 @@
     else if (e.kind === "borrow") { label = "Borrowed from " + e.person; sg = "+"; cl = "pos"; }
     else if (e.loanKind === "lent") { label = "Repaid by " + e.person; sg = "+"; cl = "pos"; }
     else { label = "Paid back " + e.person; sg = "−"; cl = "neg"; }
-    var sub3 = '<span>' + metaLine([esc(acctName(e.account)), rt]) + '</span>' + (e.fee ? '<span class="badge next">fee ' + raw(e.fee) + '</span>' : "") + '<span class="badge next">lending</span>';
+    var sub3 = '<span>' + metaLine([esc(acctName(e.account)), rt]) + '</span>' + (e.fee ? '<span class="badge next">fee ' + raw(e.fee) + '</span>' : "") + '<span class="badge next">loan</span>';
     return lrow({ lead: ringEl(), t: esc(label), sub: sub3, val: sg + raw(e.amount), valCls: cl, acts: ro ? "" : '<button class="mini" data-jump="lending" aria-label="Manage in Lending" title="Manage in Lending"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-arrow-up-right"></use></svg></button>' });
   }
   function dayNetMap() { var m = {}; flowEvents().forEach(function (f) { m[f.date] = (m[f.date] || 0) + (f.inc || 0) - (f.exp || 0); }); return m; }
@@ -712,7 +711,7 @@
           '<div class="field"><label>To account</label><select class="inp" id="eAcct2">' + acctOptions(d.toAccount || (state.accounts[1] ? state.accounts[1].id : d.account)) + '</select></div>' +
           '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eFee" type="number" step="0.01" min="0" value="' + (d.fee || 0) + '"></div></div>';
       } else {
-        out += '<div class="field"><label>Where</label><input id="eWhere" type="text" maxlength="40" value="' + esc(d.where) + '" placeholder="' + (ty === "income" ? "where it came from" : "where it went") + '"></div>' +
+        out += '<div class="field"><label>Where</label><input id="eWhere" type="text" maxlength="40" value="' + esc(d.where) + '" placeholder="' + (ty === "income" ? "where from?" : "where did it go?") + '"></div>' +
           '<div class="field"><label>Account</label><select class="inp" id="eAcct">' + acctOptions(d.account) + '</select></div>';
       }
       out += '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="eDesc" type="text" maxlength="60" value="' + esc(d.desc) + '"></div>' +
@@ -755,9 +754,9 @@
   function renderAccounts() {
     var nw = netWorth();
     var rows = !state.accounts.length ? '<div class="empty"><div class="big">No accounts yet</div>Add your first account on the left — a wallet, bank, or cash.</div>'
-      : state.accounts.map(function (a) { var bal = acctBal(a.id), count = state.tx.filter(function (t) { return t.account === a.id || t.toAccount === a.id; }).length; return lrow({ lead: dotEl(a.color), t: esc(a.name), sub: '<span>starting ' + fmt(a.opening || 0) + ' · ' + count + ' txn' + (count === 1 ? "" : "s") + '</span>', val: fmt(bal), valCls: bal >= 0 ? "pos" : "neg", acts: '<button class="mini" data-edit="' + a.id + '" aria-label="Edit account" title="Rename / balance"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-acctdel="' + a.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>' }); }).join("");
+      : state.accounts.map(function (a) { var bal = acctBal(a.id), count = state.tx.filter(function (t) { return t.account === a.id || t.toAccount === a.id; }).length; return lrow({ lead: dotEl(a.color), t: esc(a.name), sub: '<span>starting ' + fmt(a.opening || 0) + ' · ' + count + ' txn' + (count === 1 ? "" : "s") + '</span>', val: fmt(bal), valCls: bal >= 0 ? "" : "neg", acts: '<button class="mini" data-edit="' + a.id + '" aria-label="Edit account" title="Rename / balance"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-acctdel="' + a.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>' }); }).join("");
     var sidebar = card("Add account", "A wallet, bank, or cash", '<div class="field"><label>Name</label><input id="aname" type="text" maxlength="24" placeholder="name this account"></div><div class="field"><label>Balance right now</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="aopen" type="number" step="0.01" placeholder="0.00"></div></div><div class="hint">What\'s in this account today — your starting point for tracking.</div><button class="btn" id="aadd">' + icon('plus') + 'Add account</button>', { collapsible: true, key: "acct-add" });
-    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">every account balance, summed</div>', monthPills()), sidebar, card("Your accounts", "Balances update live with every entry", rows));
+    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, card("Accounts", "Balances update live with every entry", rows));
     bind("aadd", "click", addAccount);
     Array.prototype.forEach.call(document.querySelectorAll("[data-acctdel]"), function (b) { b.onclick = function () { delAccount(b.getAttribute("data-acctdel")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-edit]"), function (b) { b.onclick = function () { editAccount(b.getAttribute("data-edit")); }; });
@@ -783,7 +782,7 @@
 
   // ---------- LENDING ----------
   function isOverdue(l) { return !l.settled && l.due && l.due < today(); }
-  function dueBadge(l) { if (l.settled || !l.due) return ""; var diff = Math.round((new Date(l.due + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000); if (diff < 0) return '<span class="badge overdue">overdue ' + fmtDate(l.due) + '</span>'; if (diff <= 5) return '<span class="badge due">due ' + fmtDate(l.due) + '</span>'; return '<span class="badge next">due ' + fmtDate(l.due) + '</span>'; }
+  function dueBadge(l) { if (l.settled || !l.due) return ""; var rl = relLabel(l.due); return '<span class="badge ' + rl.c + '" title="due ' + fmtDate(l.due) + '">' + rl.t + '</span>'; }
   function renderLending() {
     var lt = lendTotals(), net = lt.owed - lt.owe;
     var q = state.lendQ.trim().toLowerCase();
@@ -801,21 +800,21 @@
       listBody = '<div class="list">' + h + '</div>';
     }
 
-    var sidebar = card("Record a loan", "Money moves in/out of an account too", state.accounts.length ?
+    var sidebar = card("Add loan", "Money you've lent or borrowed", state.accounts.length ?
       '<div class="seg"><button data-lk="lent-out" class="' + (state.lendKind === "lent-out" ? "on" : "") + '">You lent</button><button data-lk="borrowed" class="' + (state.lendKind === "borrowed" ? "on" : "") + '">You borrowed</button></div>' +
       '<div class="field"><label>Person</label><input id="lperson" type="text" maxlength="24" list="personList" placeholder="who?"></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lamt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
-      '<div class="field"><label>' + (state.lendKind === "lent-out" ? "From account" : "Into account") + '</label><select class="inp" id="lacct">' + acctOptions(defAcct()) + '</select></div>' +
+      '<div class="field"><label>' + (state.lendKind === "lent-out" ? "From account" : "To account") + '</label><select class="inp" id="lacct">' + acctOptions(defAcct()) + '</select></div>' +
       '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>' +
       '<div class="hint">A cost you paid' + (state.lendKind === "lent-out" ? " to send this" : " to receive this") + ' (e.g. a transfer fee). Counts as your expense; doesn’t change what’s owed.</div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="ldate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="ltime" type="time" value="' + nowTime() + '"></div></div>' +
       '<div class="field"><label>Due <span class="opt">(optional)</span></label><input id="ldue" type="date"></div>' +
       '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="lnote" type="text" maxlength="40" placeholder="what for?"></div>' +
-      '<button class="btn" id="ladd">' + icon('plus') + 'Record</button>'
+      '<button class="btn" id="ladd">' + icon('plus') + 'Add loan</button>'
       : accountNudge(), { collapsible: true, key: "lend-add" });
     var extra = '<div class="filters"><input id="lendQ" type="text" placeholder="Search…" value="' + esc(state.lendQ) + '"><select class="inp" id="lview"><option value="person"' + sel(state.lendView, "person") + '>By person</option><option value="date"' + sel(state.lendView, "date") + '>By date</option></select></div>';
 
-    app.innerHTML = layout(heroBlock("Net position" + (lt.over ? " · " + lt.over + " overdue" : ""), fmt(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>', '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmt(lt.owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmt(lt.owe) + '</div></div></div>'), sidebar, card("Loans", "Tap “Settle” when paid back", extra + listBody));
+    app.innerHTML = layout(heroBlock("Net position" + (lt.over ? " · " + lt.over + " overdue" : ""), fmt(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>', '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmt(lt.owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmt(lt.owe) + '</div></div></div>'), sidebar, card("Loans", "What you've lent and borrowed", extra + listBody));
 
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.lendKind = b.getAttribute("data-lk"); render(); }; });
     bind("lview", "change", function (el) { state.lendView = el.value; render(); });
@@ -837,7 +836,7 @@
     else sub += dueBadge(l);
     if (l.fee) sub += '<span class="badge next">fee ' + raw(l.fee) + '</span>';
     var acts = (l.settled ? '<button class="act" data-unsettle="' + l.id + '">Undo</button>' : '<button class="act" data-settle="' + l.id + '">Settle</button>') + '<button class="mini" data-loanedit="' + l.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-loandel="' + l.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
-    return lrow({ lead: dotEl(l.kind === "lent" ? "var(--income)" : "var(--expense)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : (l.kind === "lent" ? "pos" : "neg"), acts: acts, settled: l.settled });
+    return lrow({ lead: dotEl("var(--ink-faint)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : "", acts: acts, settled: l.settled });
   }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
   function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { flagInvalid(pe); return; } var v = readAmt("lamt"); if (v === null) return; var fee = readFee("lfee"); if (fee === null) return; commit("Loan recorded", function () { state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: v, account: document.getElementById("lacct").value, fee: fee, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); }); }
@@ -846,7 +845,7 @@
     var lent = l.kind === "lent";
     var body =
       '<div class="field"><label>' + (lent ? "Amount received" : "Amount paid back") + '</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="sAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
-      '<div class="field"><label>' + (lent ? "Into account" : "From account") + '</label><select class="inp" id="sAcct">' + acctOptions(l.account) + '</select></div>' +
+      '<div class="field"><label>' + (lent ? "To account" : "From account") + '</label><select class="inp" id="sAcct">' + acctOptions(l.account) + '</select></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="sDate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="sTime" type="time" value="' + nowTime() + '"></div></div>' +
       '<div class="hint" id="sHint"></div>';
     openModal(lent ? "Mark repaid to you" : "Mark paid back", body, "Settle", function () {
@@ -868,7 +867,7 @@
     var lent = l.kind === "lent";
     var body = '<div class="field"><label>Person</label><input id="eLPerson" type="text" maxlength="24" value="' + esc(l.person) + '"></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
-      '<div class="field"><label>' + (lent ? "From account" : "Into account") + '</label><select class="inp" id="eLAcct">' + acctOptions(l.account) + '</select></div>' +
+      '<div class="field"><label>' + (lent ? "From account" : "To account") + '</label><select class="inp" id="eLAcct">' + acctOptions(l.account) + '</select></div>' +
       '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLFee" type="number" step="0.01" min="0" value="' + (l.fee || 0) + '"></div></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="eLDate" type="date" value="' + l.date + '"></div><div class="field"><label>Time</label><input id="eLTime" type="time" value="' + (l.time || "") + '"></div></div>' +
       '<div class="field"><label>Due <span class="opt">(optional)</span></label><input id="eLDue" type="date" value="' + (l.due || "") + '"></div>' +
@@ -938,16 +937,16 @@
       if (allPlaces.length > 6) placesBody += '<div class="more"><button class="btn sec btn-sm" id="placesToggle">' + (state.placesAll ? "Show top 6" : "Show all " + allPlaces.length) + '</button></div>';
       main += card("Top places", "Most spent, all time", placesBody);
     }
-    if (accts.length) main += card("Across accounts", "Where your money sits now", accts.map(function (a) { var pct = Math.round(Math.abs(a.bal) / acctMax * 100); return '<div class="bd-row"><div class="cat">' + esc(a.name) + '</div><div class="bar"><span style="width:' + pct + '%;background:' + (a.bal >= 0 ? a.color : "var(--expense)") + '"></span></div><div class="amt num ' + (a.bal >= 0 ? "pos" : "neg") + '">' + fmt(a.bal) + '</div></div>'; }).join(""));
+    if (accts.length) main += card("Across accounts", "Where your money sits now", accts.map(function (a) { var pct = Math.round(Math.abs(a.bal) / acctMax * 100); return '<div class="bd-row"><div class="cat">' + esc(a.name) + '</div><div class="bar"><span style="width:' + pct + '%;background:' + (a.bal >= 0 ? a.color : "var(--expense)") + '"></span></div><div class="amt num ' + (a.bal >= 0 ? "" : "neg") + '">' + fmt(a.bal) + '</div></div>'; }).join(""));
 
-    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">across ' + state.accounts.length + ' account' + (state.accounts.length === 1 ? "" : "s") + '</div>', monthPills()), sidebar, main);
+    app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, main);
     bind("trendGroup", "change", function (el) { state.trendGroup = el.value; render(); });
     bind("placesToggle", "click", function () { state.placesAll = !state.placesAll; render(); });
   }
   function stat(l, v, cls) { return '<div class="stat"><div class="l">' + l + '</div><div class="v num ' + (cls || "") + '">' + v + '</div></div>'; }
 
   // ---------- TEMPLATES (recurring + shortcuts) ----------
-  function nextDueLabel(day) { var t = nextDue(day), now = new Date(), diff = Math.round((t - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000), ds = t.toLocaleDateString(undefined, { month: "short", day: "numeric" }); return '<span class="badge ' + (diff <= 3 ? "due" : "next") + '">next ' + ds + '</span>'; }
+  function nextDueLabel(day) { var t = nextDue(day), rl = relLabel(iso(t)); return '<span class="badge ' + rl.c + '" title="next ' + t.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + '">' + rl.t + '</span>'; }
   function renderRecurring() {
     var isT = state.recType === "transfer";
     var mOut = 0, mIn = 0, dated = 0, shortc = 0; state.recurring.forEach(function (r) { if (r.dueDay) { dated++; if (r.type === "expense") mOut += r.amount; else if (r.type === "income") mIn += r.amount; } else shortc++; });
@@ -974,18 +973,18 @@
     }
     var formFields = isT
       ? '<div class="field"><label>From account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="racct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(opt)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="rfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>'
-      : '<div class="field"><label>Where</label><input id="rwhere" type="text" maxlength="40" list="whereList" placeholder="' + (state.recType === "income" ? "where it comes from" : "what it\'s for") + '"></div><div class="field"><label>Account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div>';
-    var sidebar = card("New template", "Reusable one-tap entry", state.accounts.length ?
+      : '<div class="field"><label>Where</label><input id="rwhere" type="text" maxlength="40" list="whereList" placeholder="' + (state.recType === "income" ? "where from?" : "where does it go?") + '"></div><div class="field"><label>Account</label><select class="inp" id="racct">' + acctOptions(defAcct()) + '</select></div>';
+    var sidebar = card("Add template", "Reusable one-tap entry", state.accounts.length ?
       '<div class="seg three"><button data-rt="expense" class="' + (state.recType === "expense" ? "on" : "") + '">Expense</button><button data-rt="income" class="' + (state.recType === "income" ? "on" : "") + '">Income</button><button data-rt="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="ramt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       formFields +
       '<div class="field"><label>Label <span class="opt">(optional)</span></label><input id="rdesc" type="text" maxlength="40" placeholder="name this template"></div>' +
       '<div class="field"><label>Expected day of month <span class="opt">(optional)</span></label><input id="rday" type="number" min="1" max="31" placeholder="leave blank for a shortcut"></div>' +
       '<div class="hint">With a day → recurring (shows in Upcoming &amp; the monthly total). Blank → a one-tap shortcut.</div>' +
-      '<button class="btn" id="radd">' + icon('plus') + 'Save template</button>'
+      '<button class="btn" id="radd">' + icon('plus') + 'Add template</button>'
       : accountNudge(), { collapsible: true, key: "rec-add" });
 
-    app.innerHTML = layout(heroBlock("Per month · recurring out", fmt(mOut), "neg", '<div class="csub">' + dated + ' recurring · ' + shortc + ' shortcut' + (shortc === 1 ? "" : "s") + '</div>', '<div class="pills"><div class="pill"><div class="label">Recurring in</div><div class="v num pos">' + fmt(mIn) + '</div></div></div>'), sidebar, card("Your templates", "Tap “Log” to record one today", list));
+    app.innerHTML = layout(heroBlock("Per month · recurring out", fmt(mOut), "neg", '<div class="csub">' + dated + ' recurring · ' + shortc + ' shortcut' + (shortc === 1 ? "" : "s") + '</div>', '<div class="pills"><div class="pill"><div class="label">Recurring in</div><div class="v num pos">' + fmt(mIn) + '</div></div></div>'), sidebar, card("Templates", "Reusable entries — one tap to log", list));
 
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.recType = b.getAttribute("data-rt"); render(); }; });
     bind("radd", "click", addTemplate);
@@ -1011,7 +1010,7 @@
   // ---------- SETTINGS ----------
   function renderSettings() {
     var hero = '<div class="hero"><div><div class="label">Ledger</div><div style="font-family:\'Fraunces\',serif;font-size:34px;font-weight:600;line-height:1">Settings</div><div class="csub">Preferences, data &amp; backup</div></div></div>';
-    var sidebar = card("Your data", "Stored privately on this device",
+    var sidebar = card("Data", "Stored privately on this device",
       '<div class="snap-row"><span class="nm">Accounts</span><span class="bl num">' + state.accounts.length + '</span></div>' +
       '<div class="snap-row"><span class="nm">Transactions</span><span class="bl num">' + state.tx.length + '</span></div>' +
       '<div class="snap-row"><span class="nm">Loans</span><span class="bl num">' + state.loans.length + '</span></div>' +
