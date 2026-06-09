@@ -585,13 +585,13 @@
           return lrow({ lead: dotEl(color), t: esc(name), sub: tb + '<span>recurring · ' + esc(acctName(r.account)) + '</span>', val: sign + raw(r.amount), valCls: cls, acts: '<button class="act" data-log="' + r.id + '">Log</button>' });
         }
         var l = u.l;
-        return lrow({ lead: dotEl("var(--ink-faint)"), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: tb + '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: raw(l.amount), valCls: "", acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
+        return lrow({ lead: ringEl(), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: tb + '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: raw(l.amount), valCls: "", acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
       }).join("");
     var upcoming = card("Upcoming", "Bills, subscriptions &amp; loan due dates", upBody);
 
     var noDue = state.loans.filter(function (l) { return !l.settled && !l.due; });
     var reminders = !noDue.length ? "" : card("Reminders", "Open loans with no due date", noDue.map(function (l) {
-      return lrow({ lead: dotEl("var(--ink-faint)"), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: raw(l.amount), valCls: "", acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
+      return lrow({ lead: ringEl(), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: raw(l.amount), valCls: "", acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
     }).join(""));
 
     var weekAgo = new Date(today() + "T00:00:00"); weekAgo.setDate(weekAgo.getDate() - 6); var waStr = weekAgo.getFullYear() + "-" + ("0" + (weekAgo.getMonth() + 1)).slice(-2) + "-" + ("0" + weekAgo.getDate()).slice(-2);
@@ -836,7 +836,7 @@
     else sub += dueBadge(l);
     if (l.fee) sub += '<span class="badge next">fee ' + raw(l.fee) + '</span>';
     var acts = (l.settled ? '<button class="act" data-unsettle="' + l.id + '">Undo</button>' : '<button class="act" data-settle="' + l.id + '">Settle</button>') + '<button class="mini" data-loanedit="' + l.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-loandel="' + l.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
-    return lrow({ lead: dotEl("var(--ink-faint)"), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : "", acts: acts, settled: l.settled });
+    return lrow({ lead: l.settled ? dotEl("var(--ink-faint)") : ringEl(), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : "", acts: acts, settled: l.settled });
   }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
   function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { flagInvalid(pe); return; } var v = readAmt("lamt"); if (v === null) return; var fee = readFee("lfee"); if (fee === null) return; commit("Loan recorded", function () { state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: v, account: document.getElementById("lacct").value, fee: fee, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); }); }
