@@ -636,19 +636,19 @@
     var isT = state.formType === "transfer";
     var fields = isT
       ? '<div class="field"><label>From account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
-      : '<div class="field"><label>Account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>Where</label><input id="where" type="text" maxlength="40" list="whereList" placeholder="' + (state.formType === "income" ? "where from?" : "where did it go?") + '"></div>';
+      : '<div class="field"><label>Where</label><input id="where" type="text" maxlength="40" list="whereList" placeholder="' + (state.formType === "income" ? "where from?" : "where did it go?") + '"></div><div class="field"><label>Account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div>';
     return '<div class="seg three"><button data-t="expense" class="' + (state.formType === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (state.formType === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       fields +
-      '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="desc" type="text" maxlength="60" placeholder="anything to remember"></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="date" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="time" type="time" value="' + nowTime() + '"></div></div>' +
+      '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="desc" type="text" maxlength="60" placeholder="anything to remember"></div>' +
       '<button class="btn" id="add">' + icon('plus') + (isT ? "Add transfer" : "Add " + state.formType) + '</button>';
   }
   function entryRow(e, ro) {
     var rt = fmtTime(e.time);
     if (e.kind === "transfer") {
-      var sub = '<span>' + metaLine([esc(acctName(e.account)) + ' → ' + esc(acctName(e.toAccount)), rt]) + '</span>' + (e.fee ? '<span class="badge next">fee ' + raw(e.fee) + '</span>' : "");
-      return lrow({ lead: dotEl("var(--ink-faint)"), t: esc(e.note || "Transfer"), sub: sub, val: "⇄ " + raw(e.amount), valCls: "neu", acts: ro ? "" : '<button class="mini" data-edit-tx="' + e.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-id="' + e.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>' });
+      var sub = '<span>' + metaLine([(e.note ? esc(e.note) : ""), rt]) + '</span>' + (e.fee ? '<span class="badge next">fee ' + raw(e.fee) + '</span>' : "");
+      return lrow({ lead: dotEl("var(--ink-faint)"), t: esc(acctName(e.account)) + ' → ' + esc(acctName(e.toAccount)), sub: sub, val: "⇄ " + raw(e.amount), valCls: "neu", acts: ro ? "" : '<button class="mini" data-edit-tx="' + e.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-id="' + e.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>' });
     }
     if (e.kind === "income" || e.kind === "expense") {
       var sign = e.kind === "income" ? "+" : "−", cls = e.kind === "income" ? "pos" : "neg";
@@ -714,8 +714,8 @@
         out += '<div class="field"><label>Where</label><input id="eWhere" type="text" maxlength="40" value="' + esc(d.where) + '" placeholder="' + (ty === "income" ? "where from?" : "where did it go?") + '"></div>' +
           '<div class="field"><label>Account</label><select class="inp" id="eAcct">' + acctOptions(d.account) + '</select></div>';
       }
-      out += '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="eDesc" type="text" maxlength="60" value="' + esc(d.desc) + '"></div>' +
-        '<div class="two"><div class="field"><label>Date</label><input id="eDate" type="date" value="' + d.date + '"></div><div class="field"><label>Time</label><input id="eTime" type="time" value="' + d.time + '"></div></div>';
+      out += '<div class="two"><div class="field"><label>Date</label><input id="eDate" type="date" value="' + d.date + '"></div><div class="field"><label>Time</label><input id="eTime" type="time" value="' + d.time + '"></div></div>' +
+        '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="eDesc" type="text" maxlength="60" value="' + esc(d.desc) + '"></div>';
       return out;
     }
     function readInto() {
