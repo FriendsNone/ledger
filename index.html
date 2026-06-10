@@ -561,7 +561,7 @@
   function relLabel(isoStr) { var diff = Math.round((new Date(isoStr + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000); if (diff < 0) return { t: Math.abs(diff) + "d overdue", c: "overdue" }; if (diff === 0) return { t: "today", c: "due" }; if (diff === 1) return { t: "tomorrow", c: "due" }; if (diff <= 5) return { t: "in " + diff + "d", c: "due" }; if (diff <= 13) return { t: "in " + diff + "d", c: "next" }; return { t: "in " + Math.round(diff / 7) + " wks", c: "next" }; }
   function renderOverview() {
     var nw = netWorth();
-    var snap = !state.accounts.length ? '<div class="empty"><div class="big">No accounts</div>Add one to begin.</div>'
+    var snap = !state.accounts.length ? '<div class="empty">No accounts yet.</div>'
       : state.accounts.map(function (a) { var b = acctBal(a.id); return lrow({ lead: dotEl(a.color), t: esc(a.name), val: fmt(b), valCls: b >= 0 ? "" : "neg" }); }).join("");
     var chips = shortcutChips();
     var firstCard;
@@ -577,7 +577,7 @@
     state.recurring.forEach(function (r) { if (r.dueDay) up.push({ kind: "recurring", iso: iso(nextDue(r.dueDay)), r: r }); });
     state.loans.forEach(function (l) { if (!l.settled && l.due) up.push({ kind: "loan", iso: l.due, l: l }); });
     up.sort(function (a, b) { return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0; });
-    var upBody = !up.length ? '<div class="empty">Nothing scheduled. Add an expected day to a template, or a due date to a loan, and it\'ll show here.</div>'
+    var upBody = !up.length ? '<div class="empty">Nothing scheduled.</div>'
       : up.slice(0, 8).map(function (u) {
         var rl = relLabel(u.iso), tb = '<span class="badge ' + rl.c + '" title="' + fmtDate(u.iso) + '">' + rl.t + '</span>';
         if (u.kind === "recurring") {
@@ -596,7 +596,7 @@
 
     var weekAgo = new Date(today() + "T00:00:00"); weekAgo.setDate(weekAgo.getDate() - 6); var waStr = weekAgo.getFullYear() + "-" + ("0" + (weekAgo.getMonth() + 1)).slice(-2) + "-" + ("0" + weekAgo.getDate()).slice(-2);
     var entsAll = entries().filter(function (e) { return e.date >= waStr; }), ents = entsAll.slice(0, 40);
-    var recentBody = !ents.length ? '<div class="empty">Nothing in the last week yet.</div>' : '<div class="list">' + groupedRows(ents, true, false) + '</div>' + (entsAll.length > ents.length ? '<div class="more"><button class="btn sec btn-sm" data-jump="track">See all in Track</button></div>' : "");
+    var recentBody = !ents.length ? '<div class="empty">Nothing in the last 7 days.</div>' : '<div class="list">' + groupedRows(ents, true, false) + '</div>' + (entsAll.length > ents.length ? '<div class="more"><button class="btn sec btn-sm" data-jump="track">See all in Track</button></div>' : "");
     var recent = card("Recent activity", "Past 7 days", recentBody);
 
     app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, upcoming + reminders + recent);
@@ -620,7 +620,7 @@
     });
     var shown = visible.slice(0, state.trackShow);
     var remaining = visible.length - shown.length;
-    var listBody = !visible.length ? '<div class="empty"><div class="big">Nothing here yet</div>' + (state.accounts.length ? "Add your first entry on the left to get started." : "Add an account, then start logging.") + '</div>'
+    var listBody = !visible.length ? '<div class="empty"><div class="big">No entries yet</div>' + (state.accounts.length ? "Add an income, expense, or transfer to get started." : "Add an account first, then start logging.") + '</div>'
       : '<div class="list">' + groupedRows(shown, false, state.fType === "all" && !q) + '</div>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more · ' + remaining + ' left</button></div>' : "");
     var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select class="inp" id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select></div>';
 
@@ -753,7 +753,7 @@
   // ---------- ACCOUNTS ----------
   function renderAccounts() {
     var nw = netWorth();
-    var rows = !state.accounts.length ? '<div class="empty"><div class="big">No accounts yet</div>Add your first account on the left — a wallet, bank, or cash.</div>'
+    var rows = !state.accounts.length ? '<div class="empty"><div class="big">No accounts yet</div>Add your first account — a wallet, bank, or cash.</div>'
       : state.accounts.map(function (a) { var bal = acctBal(a.id), count = state.tx.filter(function (t) { return t.account === a.id || t.toAccount === a.id; }).length; return lrow({ lead: dotEl(a.color), t: esc(a.name), sub: '<span>starting ' + fmt(a.opening || 0) + ' · ' + count + ' txn' + (count === 1 ? "" : "s") + '</span>', val: fmt(bal), valCls: bal >= 0 ? "" : "neg", acts: '<button class="mini" data-edit="' + a.id + '" aria-label="Edit account" title="Rename / balance"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-acctdel="' + a.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>' }); }).join("");
     var sidebar = card("Add account", "A wallet, bank, or cash", '<div class="field"><label>Name</label><input id="aname" type="text" maxlength="24" placeholder="name this account"></div><div class="field"><label>Balance right now</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="aopen" type="number" step="0.01" placeholder="0.00"></div></div><div class="hint">What\'s in this account today — your starting point for tracking.</div><button class="btn" id="aadd">' + icon('plus') + 'Add account</button>', { collapsible: true, key: "acct-add" });
     app.innerHTML = layout(heroBlock("Net worth", fmt(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, card("Accounts", "Balances update live with every entry", rows));
@@ -788,7 +788,7 @@
     var q = state.lendQ.trim().toLowerCase();
     var pool = state.loans.filter(function (l) { if (!q) return true; return ((l.person || "") + " " + (l.note || "")).toLowerCase().indexOf(q) >= 0; });
     var listBody;
-    if (!state.loans.length) listBody = '<div class="empty"><div class="big">No loans tracked</div>Record money you lent out or borrowed, and settle it when it\'s paid back.</div>';
+    if (!state.loans.length) listBody = '<div class="empty"><div class="big">No loans yet</div>Track money you\'ve lent out or borrowed, and settle it when it\'s paid back.</div>';
     else if (!pool.length) listBody = '<div class="empty">No loans match “' + esc(state.lendQ) + '”.</div>';
     else if (state.lendView === "person") {
       var groups = {}; pool.forEach(function (l) { (groups[l.person] = groups[l.person] || []).push(l); });
@@ -946,13 +946,61 @@
   function stat(l, v, cls) { return '<div class="stat"><div class="l">' + l + '</div><div class="v num ' + (cls || "") + '">' + v + '</div></div>'; }
 
   // ---------- TEMPLATES (recurring + shortcuts) ----------
+  function editTemplate(id) {
+    var r = state.recurring.filter(function (x) { return x.id === id; })[0]; if (!r) return;
+    var d = { type: r.type, amount: r.amount, where: r.where || "", account: r.account, toAccount: r.toAccount, fee: r.fee || 0, desc: r.desc || "", dueDay: r.dueDay || "" };
+    function fieldsFor(ty) {
+      var out = '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="etAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + d.amount + '"></div></div>';
+      if (ty === "transfer") {
+        out += '<div class="field"><label>From account</label><select class="inp" id="etAcct">' + acctOptions(d.account) + '</select></div>' +
+          '<div class="field"><label>To account</label><select class="inp" id="etAcct2">' + acctOptions(d.toAccount || (state.accounts[1] ? state.accounts[1].id : d.account)) + '</select></div>' +
+          '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="etFee" type="number" step="0.01" min="0" value="' + (d.fee || 0) + '"></div></div>';
+      } else {
+        out += '<div class="field"><label>Where</label><input id="etWhere" type="text" maxlength="40" value="' + esc(d.where) + '" placeholder="' + (ty === "income" ? "where from?" : "where does it go?") + '"></div>' +
+          '<div class="field"><label>Account</label><select class="inp" id="etAcct">' + acctOptions(d.account) + '</select></div>';
+      }
+      out += '<div class="field"><label>Label <span class="opt">(optional)</span></label><input id="etDesc" type="text" maxlength="40" value="' + esc(d.desc) + '" placeholder="name this template"></div>' +
+        '<div class="field"><label>Expected day of month <span class="opt">(optional)</span></label><input id="etDay" type="number" min="1" max="31" value="' + (d.dueDay || "") + '" placeholder="leave blank for a shortcut"></div>';
+      return out;
+    }
+    function readInto() {
+      var g = function (i) { return document.getElementById(i); };
+      if (g("etAmt")) d.amount = g("etAmt").value;
+      if (g("etDesc")) d.desc = g("etDesc").value;
+      if (g("etDay")) d.dueDay = g("etDay").value;
+      if (g("etWhere")) d.where = g("etWhere").value;
+      if (g("etAcct")) d.account = g("etAcct").value;
+      if (g("etAcct2")) d.toAccount = g("etAcct2").value;
+      if (g("etFee")) d.fee = g("etFee").value;
+    }
+    var body = '<div class="seg three" id="etSeg"><button data-ett="expense" class="' + (d.type === "expense" ? "on" : "") + '">Expense</button><button data-ett="income" class="' + (d.type === "income" ? "on" : "") + '">Income</button><button data-ett="transfer" class="' + (d.type === "transfer" ? "on" : "") + '">Transfer</button></div><div id="etFields">' + fieldsFor(d.type) + '</div>';
+    openModal("Edit template", body, "Save", function () {
+      readInto();
+      var v = readAmt("etAmt"); if (v === null) return false;
+      var etFeeV = 0; if (d.type === "transfer") { etFeeV = readFee("etFee"); if (etFeeV === null) return false; }
+      if (d.type === "transfer" && d.account === d.toAccount) { toast("Pick two different accounts"); return false; }
+      var day = parseInt(d.dueDay, 10); day = (day >= 1 && day <= 31) ? day : 0;
+      commit("Template edited", function () {
+        r.type = d.type; r.amount = v; r.desc = (d.desc || "").trim(); r.dueDay = day;
+        if (d.type === "transfer") { r.account = d.account; r.toAccount = d.toAccount; r.fee = etFeeV; delete r.where; }
+        else { r.account = d.account; r.where = (d.where || "").trim(); delete r.toAccount; delete r.fee; }
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#etSeg button"), function (b) {
+      b.onclick = function () {
+        readInto(); d.type = b.getAttribute("data-ett");
+        document.getElementById("etFields").innerHTML = fieldsFor(d.type);
+        Array.prototype.forEach.call(document.querySelectorAll("#etSeg button"), function (x) { x.classList.toggle("on", x.getAttribute("data-ett") === d.type); });
+      };
+    });
+  }
   function nextDueLabel(day) { var t = nextDue(day), rl = relLabel(iso(t)); return '<span class="badge ' + rl.c + '" title="next ' + t.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + '">' + rl.t + '</span>'; }
   function renderRecurring() {
     var isT = state.recType === "transfer";
     var mOut = 0, mIn = 0, dated = 0, shortc = 0; state.recurring.forEach(function (r) { if (r.dueDay) { dated++; if (r.type === "expense") mOut += r.amount; else if (r.type === "income") mIn += r.amount; } else shortc++; });
     var tmplRow = function (r) {
       var badge = r.dueDay ? nextDueLabel(r.dueDay) : "";
-      var acts = '<button class="act" data-log="' + r.id + '">Log</button><button class="del" data-recdel="' + r.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
+      var acts = '<button class="act" data-log="' + r.id + '">Log</button><button class="mini" data-tmpledit="' + r.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-recdel="' + r.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
       if (r.type === "transfer") {
         var subT = '<span>' + esc(acctName(r.account)) + ' → ' + esc(acctName(r.toAccount)) + (r.fee ? " · fee " + raw(r.fee) : "") + '</span>' + badge;
         return lrow({ lead: dotEl("var(--ink-faint)"), t: r.desc ? esc(r.desc) : "Transfer", sub: subT, val: "⇄ " + raw(r.amount), valCls: "neu", acts: acts });
@@ -962,7 +1010,7 @@
       return lrow({ lead: dotEl(color), t: r.desc ? esc(r.desc) : (r.where || (r.type === "income" ? "Income" : "Expense")), sub: subE, val: sign + raw(r.amount), valCls: cls, acts: acts });
     };
     var list;
-    if (!state.recurring.length) list = '<div class="empty"><div class="big">No templates yet</div>Save what you log often. Add an <b>expected day</b> for recurring bills, or leave it blank to make a quick <b>shortcut</b>.</div>';
+    if (!state.recurring.length) list = '<div class="empty"><div class="big">No templates yet</div>Save entries you log often. Add an expected day for recurring bills, or leave it blank for a quick shortcut.</div>';
     else {
       var recs = state.recurring.filter(function (r) { return r.dueDay; }).sort(function (a, b) { return a.dueDay - b.dueDay; });
       var shos = state.recurring.filter(function (r) { return !r.dueDay; });
@@ -990,6 +1038,7 @@
     bind("radd", "click", addTemplate);
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-recdel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-recdel"); commit("Template deleted", function () { state.recurring = state.recurring.filter(function (r) { return r.id !== id; }); }); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-tmpledit]"), function (b) { b.onclick = function () { editTemplate(b.getAttribute("data-tmpledit")); }; });
   }
   function addTemplate() {
     var v = readAmt("ramt"); if (v === null) return;
