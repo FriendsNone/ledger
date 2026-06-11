@@ -875,7 +875,7 @@
     var body = '<div class="field"><label>Person</label><input id="eLPerson" type="text" maxlength="24" value="' + esc(l.person) + '"></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
       '<div class="field"><label>' + (lent ? "From account" : "To account") + '</label><select class="inp" id="eLAcct">' + acctOptions(l.account, true) + '</select></div>' +
-      '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLFee" type="number" step="0.01" min="0" value="' + (l.fee || 0) + '"></div></div>' +
+      '<div id="eLFeeWrap">' + '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLFee" type="number" step="0.01" min="0" value="' + (l.fee || 0) + '"></div></div>' + '</div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="eLDate" type="date" value="' + l.date + '"></div><div class="field"><label>Time</label><input id="eLTime" type="time" value="' + (l.time || "") + '"></div></div>' +
       '<div class="field"><label>Due <span class="opt">(optional)</span></label><input id="eLDue" type="date" value="' + (l.due || "") + '"></div>' +
       '<div class="field"><label>Note</label><input id="eLNote" type="text" maxlength="40" value="' + esc(l.note || "") + '"></div>';
@@ -885,6 +885,7 @@
       var elFee = readFee("eLFee"); if (elFee === null) return false;
       commit("Loan edited", function () { l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.fee = (l.account ? elFee : 0); l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim(); });
     });
+    var eLAcctSel = document.getElementById("eLAcct"); if (eLAcctSel) { var updELFee = function () { var w = document.getElementById("eLFeeWrap"); if (w) w.style.display = eLAcctSel.value ? "" : "none"; }; eLAcctSel.onchange = updELFee; updELFee(); }
   }
 
   // ---------- TRENDS ----------
@@ -1087,10 +1088,12 @@
       '<div class="hint" style="margin-top:10px;margin-bottom:0">Backup is a full, lossless restore — use it to move between devices. CSV opens in a spreadsheet; import expects a file exported here.</div>');
     var danger = card("Danger zone", "", '<button class="btn" id="clearAll" style="background:var(--expense);color:var(--on-fill)">' + icon('trash') + 'Clear all data</button><div class="hint" style="margin-top:10px;margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
 
-    app.innerHTML = layout(hero, sidebar, appearance + privacy + currency + dataCard + danger);
+    var viewCard = card("View", "Expand collapsed cards and clear searches, sorts, and filters", '<button class="btn sec" id="resetUI">Reset view</button>');
+    app.innerHTML = layout(hero, sidebar, appearance + privacy + currency + viewCard + dataCard + danger);
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) { b.onclick = function () { state.theme = b.getAttribute("data-theme-set"); applyTheme(); saveSet(); render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-priv-set]"), function (b) { b.onclick = function () { var v = b.getAttribute("data-priv-set"); state.priv = v; if (v !== "off") state.privLast = v; saveSet(); setPrivBtn(); render(); }; });
+    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.lendKind = "lent-out"; state.lendView = "person"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.lendQ = ""; state.trendGroup = "monthly"; state.placesAll = false; saveSet(); render(); toast("View reset"); });
     bind("curSel", "change", function (el) { if (el.value === "__custom") { var c = document.getElementById("curCustom"); c.focus(); return; } state.cur = el.value; saveSet(); render(); });
     bind("curCustom", "input", function (el) { var sel = document.getElementById("curSel"); if (sel && el.value.trim()) sel.value = "__custom"; });
     var cc = document.getElementById("curCustom"); if (cc) cc.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); var v = cc.value.trim(); if (v) { state.cur = v; saveSet(); render(); toast("Currency set to " + v); } } };
