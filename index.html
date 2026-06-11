@@ -383,7 +383,7 @@
   function rebuildMap() { amap = {}; state.accounts.forEach(function (a) { amap[a.id] = a; }); }
   function acctName(id) { return amap[id] ? amap[id].name : "—"; }
   function acctColor(id) { return amap[id] ? amap[id].color : "var(--ink-faint)"; }
-  function acctOptions(s) { return state.accounts.map(function (a) { return '<option value="' + a.id + '"' + (a.id === s ? " selected" : "") + '>' + esc(a.name) + '</option>'; }).join(""); }
+  function acctOptions(s, none) { return (none ? '<option value=""' + (s ? "" : " selected") + '>None — no account</option>' : "") + state.accounts.map(function (a) { return '<option value="' + a.id + '"' + (a.id === s ? " selected" : "") + '>' + esc(a.name) + '</option>'; }).join(""); }
   function defAcct() { return state.accounts.length ? state.accounts[0].id : null; }
   function fmtDate(d) { return new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
   function fmtTime(t) { if (!t) return ""; var pr = t.split(":"), h = +pr[0], ap = h >= 12 ? "PM" : "AM", hh = h % 12 || 12; return hh + ":" + pr[1] + " " + ap; }
@@ -810,9 +810,9 @@
       '<div class="seg"><button data-lk="lent-out" class="' + (state.lendKind === "lent-out" ? "on" : "") + '">You lent</button><button data-lk="borrowed" class="' + (state.lendKind === "borrowed" ? "on" : "") + '">You borrowed</button></div>' +
       '<div class="field"><label>Person</label><input id="lperson" type="text" maxlength="24" list="personList" placeholder="who?"></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lamt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
-      '<div class="field"><label>' + (state.lendKind === "lent-out" ? "From account" : "To account") + '</label><select class="inp" id="lacct">' + acctOptions(defAcct()) + '</select></div>' +
-      '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>' +
-      '<div class="hint">A cost you paid' + (state.lendKind === "lent-out" ? " to send this" : " to receive this") + ' (e.g. a transfer fee). Counts as your expense; doesn’t change what’s owed.</div>' +
+      '<div class="field"><label>' + (state.lendKind === "lent-out" ? "From account" : "To account") + '</label><select class="inp" id="lacct">' + acctOptions(defAcct(), true) + '</select></div>' +
+      '<div id="lfeeWrap">' + '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>' +
+      '<div class="hint">A cost you paid' + (state.lendKind === "lent-out" ? " to send this" : " to receive this") + ' (e.g. a transfer fee). Counts as your expense; doesn’t change what’s owed.</div>' + '</div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="ldate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="ltime" type="time" value="' + nowTime() + '"></div></div>' +
       '<div class="field"><label>Due <span class="opt">(optional)</span></label><input id="ldue" type="date"></div>' +
       '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="lnote" type="text" maxlength="40" placeholder="what for?"></div>' +
@@ -826,6 +826,7 @@
     bind("lview", "change", function (el) { state.lendView = el.value; render(); });
     var lq = document.getElementById("lendQ"); if (lq) lq.oninput = function () { state.lendQ = lq.value; var s = lq.selectionStart; render(); var n = document.getElementById("lendQ"); if (n) { n.focus(); try { n.setSelectionRange(s, s); } catch (e) {} } };
     bind("ladd", "click", addLoan);
+    var lacctSel = document.getElementById("lacct"); if (lacctSel) { var updLFee = function () { var w = document.getElementById("lfeeWrap"); if (w) w.style.display = lacctSel.value ? "" : "none"; }; lacctSel.onchange = updLFee; updLFee(); }
     Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-loanedit]"), function (b) { b.onclick = function () { editLoan(b.getAttribute("data-loanedit")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-unsettle]"), function (b) { b.onclick = function () { var l = byId(b.getAttribute("data-unsettle")); if (l) commit("Settle undone", function () { l.settled = false; delete l.settledDate; delete l.settledTime; delete l.settledAccount; delete l.settledAmount; delete l.settledCreated; }); }; });
@@ -834,7 +835,7 @@
   function loanRow(l, showPerson, hideDate) {
     var t = showPerson ? esc(l.person) : (l.kind === "lent" ? "Lent out" : "Borrowed");
     var dt = hideDate ? fmtTime(l.time) : dtLabel(l.date, l.time);
-    var sub = '<span>' + metaLine([esc(acctName(l.account)), dt, (l.note ? esc(l.note) : "")]) + '</span>';
+    var sub = '<span>' + metaLine([(l.account ? esc(acctName(l.account)) : ""), dt, (l.note ? esc(l.note) : "")]) + '</span>';
     if (showPerson) sub += (l.kind === "lent" ? '<span class="badge lent">lent out</span>' : '<span class="badge borrowed">borrowed</span>');
     var settledAmt = l.settledAmount != null ? l.settledAmount : l.amount;
     var gain = l.kind === "lent" ? settledAmt - l.amount : l.amount - settledAmt;
@@ -845,13 +846,13 @@
     return lrow({ lead: l.settled ? dotEl("var(--ink-faint)") : ringEl(), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : "", acts: acts, settled: l.settled });
   }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
-  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { flagInvalid(pe); return; } var v = readAmt("lamt"); if (v === null) return; var fee = readFee("lfee"); if (fee === null) return; commit("Loan recorded", function () { state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: v, account: document.getElementById("lacct").value, fee: fee, date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); }); }
+  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { flagInvalid(pe); return; } var v = readAmt("lamt"); if (v === null) return; var fee = readFee("lfee"); if (fee === null) return; commit("Loan recorded", function () { state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: v, account: document.getElementById("lacct").value, fee: (document.getElementById("lacct").value ? fee : 0), date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); }); }
   function settleLoan(id) {
     var l = byId(id); if (!l) return;
     var lent = l.kind === "lent";
     var body =
       '<div class="field"><label>' + (lent ? "Amount received" : "Amount paid back") + '</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="sAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
-      '<div class="field"><label>' + (lent ? "To account" : "From account") + '</label><select class="inp" id="sAcct">' + acctOptions(l.account) + '</select></div>' +
+      '<div class="field"><label>' + (lent ? "To account" : "From account") + '</label><select class="inp" id="sAcct">' + acctOptions(l.account, true) + '</select></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="sDate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="sTime" type="time" value="' + nowTime() + '"></div></div>' +
       '<div class="hint" id="sHint"></div>';
     openModal(lent ? "Mark repaid to you" : "Mark paid back", body, "Settle", function () {
@@ -873,7 +874,7 @@
     var lent = l.kind === "lent";
     var body = '<div class="field"><label>Person</label><input id="eLPerson" type="text" maxlength="24" value="' + esc(l.person) + '"></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
-      '<div class="field"><label>' + (lent ? "From account" : "To account") + '</label><select class="inp" id="eLAcct">' + acctOptions(l.account) + '</select></div>' +
+      '<div class="field"><label>' + (lent ? "From account" : "To account") + '</label><select class="inp" id="eLAcct">' + acctOptions(l.account, true) + '</select></div>' +
       '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLFee" type="number" step="0.01" min="0" value="' + (l.fee || 0) + '"></div></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="eLDate" type="date" value="' + l.date + '"></div><div class="field"><label>Time</label><input id="eLTime" type="time" value="' + (l.time || "") + '"></div></div>' +
       '<div class="field"><label>Due <span class="opt">(optional)</span></label><input id="eLDue" type="date" value="' + (l.due || "") + '"></div>' +
@@ -882,7 +883,7 @@
       var p = document.getElementById("eLPerson").value.trim(); if (!p) { flagInvalid(document.getElementById("eLPerson")); return false; }
       var v = readAmt("eLAmt"); if (v === null) return false;
       var elFee = readFee("eLFee"); if (elFee === null) return false;
-      commit("Loan edited", function () { l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.fee = elFee; l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim(); });
+      commit("Loan edited", function () { l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.fee = (l.account ? elFee : 0); l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim(); });
     });
   }
 
