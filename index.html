@@ -583,6 +583,8 @@
   function dim(y, m) { return new Date(y, m + 1, 0).getDate(); }
   function nextDue(day) { var now = new Date(), y = now.getFullYear(), m = now.getMonth(); var t = new Date(y, m, Math.min(day, dim(y, m))); if (t < new Date(y, m, now.getDate())) { m++; if (m > 11) { m = 0; y++; } t = new Date(y, m, Math.min(day, dim(y, m))); } return t; }
   function relLabel(isoStr) { var diff = Math.round((new Date(isoStr + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000); if (diff < 0) return { t: Math.abs(diff) + "d overdue", c: "overdue" }; if (diff === 0) return { t: "today", c: "due" }; if (diff === 1) return { t: "tomorrow", c: "due" }; if (diff <= 5) return { t: "in " + diff + "d", c: "due" }; if (diff <= 13) return { t: "in " + diff + "d", c: "next" }; return { t: "in " + Math.round(diff / 7) + " wks", c: "next" }; }
+  function tplLogged(id) { var ym = today().slice(0, 7); return state.tx.some(function (t) { return t.tpl === id && (t.date || "").slice(0, 7) === ym; }); }
+  function tplDue(r) { var logged = tplLogged(r.id), now = new Date(), y = now.getFullYear(), m = now.getMonth(); if (logged) { m++; if (m > 11) { m = 0; y++; } } var d = new Date(y, m, Math.min(r.dueDay, dim(y, m))); return { logged: logged, iso: iso(d), d: d }; }
   function renderOverview() {
     var nw = netWorth();
     var snap = !state.accounts.length ? '<div class="empty">No accounts yet.</div>'
@@ -598,7 +600,7 @@
     var sidebar = firstCard + (state.accounts.length ? card("Accounts", state.accounts.length + " total", snap, { collapsible: true, key: "ov-accounts" }) : "");
 
     var up = [];
-    state.recurring.forEach(function (r) { if (r.dueDay) up.push({ kind: "recurring", iso: iso(nextDue(r.dueDay)), r: r }); });
+    state.recurring.forEach(function (r) { if (r.dueDay) { var td = tplDue(r); up.push({ kind: "recurring", iso: td.iso, r: r }); } });
     state.loans.forEach(function (l) { if (!l.settled && l.due) up.push({ kind: "loan", iso: l.due, l: l }); });
     up.sort(function (a, b) { return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0; });
     var upBody = !up.length ? '<div class="empty">Nothing scheduled.</div>'
@@ -1036,11 +1038,12 @@
     });
   }
   function nextDueLabel(day) { var t = nextDue(day), rl = relLabel(iso(t)); return '<span class="badge ' + rl.c + '" title="next ' + t.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + '">' + rl.t + '</span>'; }
+  function tmplBadge(r) { if (!r.dueDay) return ""; var td = tplDue(r); if (td.logged) return '<span class="badge settled" title="logged this month · next ' + td.d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + '">logged</span>'; var rl = relLabel(td.iso); return '<span class="badge ' + rl.c + '" title="' + (rl.c === "overdue" ? "due " : "next ") + td.d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + '">' + rl.t + '</span>'; }
   function renderRecurring() {
     var isT = state.recType === "transfer";
     var mOut = 0, mIn = 0, dated = 0, shortc = 0; state.recurring.forEach(function (r) { if (r.dueDay) { dated++; if (r.type === "expense") mOut += r.amount; else if (r.type === "income") mIn += r.amount; } else shortc++; });
     var tmplRow = function (r) {
-      var badge = r.dueDay ? nextDueLabel(r.dueDay) : "";
+      var badge = tmplBadge(r);
       var acts = '<button class="act" data-log="' + r.id + '">Log</button><button class="mini" data-tmpledit="' + r.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-recdel="' + r.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
       if (r.type === "transfer") {
         var subT = '<span>' + esc(acctName(r.account)) + ' → ' + esc(acctName(r.toAccount)) + (r.fee ? " · fee " + raw(r.fee) : "") + '</span>' + badge;
@@ -1092,8 +1095,8 @@
   function logTemplate(id) {
     var r = state.recurring.filter(function (x) { return x.id === id; })[0]; if (!r) return;
     commit((r.desc || r.where || "Entry") + " logged", function () {
-      if (r.type === "transfer") state.tx.push({ id: uid(), type: "transfer", amount: r.amount, fee: r.fee || 0, account: r.account, toAccount: r.toAccount, desc: r.desc, date: today(), time: nowTime(), created: Date.now() });
-      else state.tx.push({ id: uid(), type: r.type, amount: r.amount, where: r.where || "", account: r.account || defAcct(), desc: r.desc, date: today(), time: nowTime(), created: Date.now() });
+      if (r.type === "transfer") state.tx.push({ id: uid(), tpl: r.id, type: "transfer", amount: r.amount, fee: r.fee || 0, account: r.account, toAccount: r.toAccount, desc: r.desc, date: today(), time: nowTime(), created: Date.now() });
+      else state.tx.push({ id: uid(), tpl: r.id, type: r.type, amount: r.amount, where: r.where || "", account: r.account || defAcct(), desc: r.desc, date: today(), time: nowTime(), created: Date.now() });
     });
   }
 
