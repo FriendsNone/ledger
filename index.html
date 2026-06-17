@@ -123,10 +123,10 @@
   .fab .ic { width: 26px; height: 26px; }
   .fab:active { transform: scale(.94); }
   @media (max-width: 780px) {
-    .fab { display: flex; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
-    nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0; border-radius: 0; border-top: 1px solid var(--line); padding: 5px 8px calc(5px + env(safe-area-inset-bottom, 0px)); scrollbar-width: none; }
+    .fab { display: flex; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+    nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0; border-radius: 0; border-top: 1px solid var(--line); padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); scrollbar-width: none; touch-action: pan-x; }
     nav.tabs::-webkit-scrollbar { display: none; }
-    body { padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+    body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
   }
   .btn:hover { opacity: .92; } .btn:active { transform: scale(.985); }
   .btn.sec { background: var(--paper-2); color: var(--ink); }
@@ -259,13 +259,13 @@
   .toast-x:hover { opacity: 1; }
 
   @media (max-width: 480px) {
-    body { padding: 18px 12px calc(66px + env(safe-area-inset-bottom, 0px)); background-image: none; }
+    body { padding: 18px 12px calc(72px + env(safe-area-inset-bottom, 0px)); background-image: none; }
     .brand h1 { font-size: 22px; } .brand p { display: none; }
     .mark { width: 32px; height: 32px; font-size: 18px; }
     .hero { padding: 16px; flex-direction: column; align-items: stretch; gap: 14px; } .hero .balance { font-size: 32px; }
     .pills { gap: 16px; } .pill .v { font-size: 16px; }
     .card-b { padding: 13px 14px 15px; } .card-h { padding: 13px 14px 0; }
-    nav.tabs button { padding: 8px 11px; font-size: 13px; }
+    nav.tabs button { padding: 10px 13px; font-size: 13px; }
     .lrow { padding: 9px 2px; gap: 5px 9px; }
     .lrow.has-acts .end { flex: 1 0 100%; margin-top: 3px; }
     .stats { grid-template-columns: 1fr 1fr; }
@@ -527,7 +527,9 @@
   function render() {
     rebuildMap();
     Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.classList.toggle("on", b.getAttribute("data-tab") === state.tab); });
-    var actTab = document.querySelector("#tabs button.on"); if (actTab && actTab.scrollIntoView) { try { actTab.scrollIntoView({ block: "nearest", inline: "center" }); } catch (e) {} }
+    var actTab = document.querySelector("#tabs button.on"), navEl = document.getElementById("tabs");
+    if (actTab && navEl && actTab.scrollIntoView) { var ar = actTab.getBoundingClientRect(), nr = navEl.getBoundingClientRect(); if (ar.left < nr.left + 1 || ar.right > nr.right - 1) { try { actTab.scrollIntoView({ block: "nearest", inline: "nearest" }); } catch (e) {} } }
+    updateNavFade();
     ({ overview: renderOverview, track: renderTrack, accounts: renderAccounts, lending: renderLending, trends: renderTrends, recurring: renderRecurring, settings: renderSettings }[state.tab] || renderOverview)();
     var gb = document.getElementById("settingsBtn"); if (gb) gb.classList.toggle("on", state.tab === "settings");
     var tabChanged = state.tab !== lastTab;
@@ -1214,6 +1216,9 @@
   function setPrivBtn() { var b = document.getElementById("privBtn"); if (!b) return; var on = state.priv !== "off"; b.classList.toggle("on", on); var u = b.querySelector("use"); if (u) u.setAttribute("href", on ? "#ph-eye-slash" : "#ph-eye"); b.setAttribute("title", on ? "Show amounts" : "Hide amounts"); b.setAttribute("aria-label", on ? "Show amounts" : "Hide amounts"); }
   document.getElementById("privBtn").onclick = function () { if (state.priv === "off") state.priv = state.privLast || "partial"; else { state.privLast = state.priv; state.priv = "off"; } saveSet(); setPrivBtn(); render(); };
   document.getElementById("fabAdd").onclick = openQuickAdd;
+  function updateNavFade() { var n = document.getElementById("tabs"); if (!n) return; var l = n.scrollLeft > 2, r = n.scrollLeft < (n.scrollWidth - n.clientWidth - 2); var m = "linear-gradient(to right, transparent 0, #000 " + (l ? "18px" : "0px") + ", #000 calc(100% - " + (r ? "18px" : "0px") + "), transparent 100%)"; n.style.webkitMaskImage = m; n.style.maskImage = m; }
+  var navScroll = document.getElementById("tabs"); if (navScroll) navScroll.addEventListener("scroll", updateNavFade, { passive: true });
+  window.addEventListener("resize", updateNavFade);
   document.getElementById("fileJSON").onchange = function () { readFile(this, restoreJSON); };
   document.getElementById("fileCSV").onchange = function () { readFile(this, importCSV); };
   if (window.matchMedia) { try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { if (state.theme === "system") applyTheme(); }); } catch (e) {} }
