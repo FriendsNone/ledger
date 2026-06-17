@@ -119,6 +119,10 @@
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .hint { font-size: 11.5px; color: var(--ink-faint); margin: -7px 0 12px 2px; }
   .btn { width: 100%; border: 0; border-radius: 10px; padding: 12px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 700; color: var(--accent-ink); background: var(--accent); transition: transform .08s, opacity .15s; }
+  .fab { position: fixed; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: 50%; border: 0; cursor: pointer; color: var(--accent-ink); background: var(--accent); display: none; align-items: center; justify-content: center; box-shadow: 0 3px 12px rgba(0,0,0,.2); z-index: 40; }
+  .fab .ic { width: 26px; height: 26px; }
+  .fab:active { transform: scale(.94); }
+  @media (max-width: 780px) { .fab { display: flex; } }
   .btn:hover { opacity: .92; } .btn:active { transform: scale(.985); }
   .btn.sec { background: var(--paper-2); color: var(--ink); }
   .btn-sm { width: auto; padding: 7px 12px; font-size: 13px; border-radius: 8px; }
@@ -296,6 +300,7 @@
 
   <footer class="foot">Saved automatically &amp; privately to you. &nbsp;·&nbsp; <button id="footSettings">Settings &amp; backup</button></footer>
 </div>
+<button id="fabAdd" class="fab" aria-label="Quick add" title="Quick add"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg></button>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <datalist id="whereList"></datalist>
 <datalist id="personList"></datalist>
@@ -638,17 +643,29 @@
     app.innerHTML = layout(heroBlock("Net worth", fmtBig(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, main);
     wireTrack();
   }
-  function formHTML() {
-    var isT = state.formType === "transfer";
+  function entryFields(pfx, type) {
+    var isT = type === "transfer";
     var fields = isT
-      ? '<div class="field"><label>From account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
-      : '<div class="field"><label>Where</label><input id="where" type="text" maxlength="40" list="whereList" placeholder="' + (state.formType === "income" ? "where from?" : "where did it go?") + '"></div><div class="field"><label>Account</label><select class="inp" id="acct">' + acctOptions(defAcct()) + '</select></div>';
-    return '<div class="seg three"><button data-t="expense" class="' + (state.formType === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (state.formType === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
-      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
+      ? '<div class="field"><label>From account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="' + pfx + 'acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
+      : '<div class="field"><label>Where</label><input id="' + pfx + 'where" type="text" maxlength="40" list="whereList" placeholder="' + (type === "income" ? "where from?" : "where did it go?") + '"></div><div class="field"><label>Account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions(defAcct()) + '</select></div>';
+    return '<div class="seg three"><button data-t="expense" class="' + (type === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (type === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
+      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       fields +
-      '<div class="two"><div class="field"><label>Date</label><input id="date" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="time" type="time" value="' + nowTime() + '"></div></div>' +
-      '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="desc" type="text" maxlength="60" placeholder="anything to remember"></div>' +
-      '<button class="btn" id="add">' + icon('plus') + (isT ? "Add transfer" : "Add " + state.formType) + '</button>';
+      '<div class="two"><div class="field"><label>Date</label><input id="' + pfx + 'date" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="' + pfx + 'time" type="time" value="' + nowTime() + '"></div></div>' +
+      '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="' + pfx + 'desc" type="text" maxlength="60" placeholder="anything to remember"></div>';
+  }
+  function formHTML() { return entryFields("", state.formType) + '<button class="btn" id="add">' + icon('plus') + (state.formType === "transfer" ? "Add transfer" : "Add " + state.formType) + '</button>'; }
+  var quickType = "expense";
+  function quickOk() { return addEntry("q", quickType); }
+  function wireQuick() {
+    Array.prototype.forEach.call(document.querySelectorAll("#modal .modal-b .seg button"), function (b) { b.onclick = function () { quickType = b.getAttribute("data-t"); var bd = document.querySelector("#modal .modal-b"); if (bd) bd.innerHTML = entryFields("q", quickType); var ok = document.getElementById("mOk"); if (ok) ok.textContent = quickType === "transfer" ? "Add transfer" : "Add " + quickType; labelControls(); wireQuick(); var a = document.getElementById("qamt"); if (a) { try { a.focus(); } catch (e) {} } }; });
+    var qa = document.getElementById("qamt"); if (qa) qa.onkeydown = function (e) { if (e.key === "Enter") { var ok = document.getElementById("mOk"); if (ok) ok.click(); } };
+  }
+  function openQuickAdd() {
+    if (!state.accounts.length) { toast("Add an account first"); if (state.tab !== "accounts") { state.tab = "accounts"; render(); } return; }
+    quickType = "expense";
+    openModal("Add entry", entryFields("q", quickType), "Add expense", quickOk);
+    wireQuick();
   }
   function entryRow(e, ro) {
     var rt = fmtTime(e.time);
@@ -686,7 +703,7 @@
   }
   function wireTrack() {
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.formType = b.getAttribute("data-t"); render(); }; });
-    var add = document.getElementById("add"); if (add) add.onclick = addEntry;
+    var add = document.getElementById("add"); if (add) add.onclick = function () { addEntry(); };
     var amt = document.getElementById("amt"); if (amt) amt.onkeydown = function (e) { if (e.key === "Enter") addEntry(); };
     bind("fType", "change", function (el) { state.fType = el.value; state.trackShow = 30; render(); });
     var q = document.getElementById("fQ"); if (q) q.oninput = function () { state.fQ = q.value; state.trackShow = 30; var s = q.selectionStart; render(); var nq = document.getElementById("fQ"); if (nq) { nq.focus(); try { nq.setSelectionRange(s, s); } catch (e) {} } };
@@ -696,16 +713,18 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-edit-tx]"), function (b) { b.onclick = function () { editEntry(b.getAttribute("data-edit-tx")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-jump]"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-jump"); render(); }; });
   }
-  function addEntry() {
-    var v = readAmt("amt"); if (v === null) return;
-    var date = (document.getElementById("date").value || today()), time = (document.getElementById("time").value || "");
-    if (state.formType === "transfer") {
-      var from = document.getElementById("acct").value, to = document.getElementById("acct2").value;
-      if (from === to) { toast("Pick two different accounts"); return; }
-      var fee = readFee("fee"); if (fee === null) return;
-      commit("Transfer recorded", function () { state.tx.push({ id: uid(), type: "transfer", amount: v, fee: fee, account: from, toAccount: to, desc: document.getElementById("desc").value.trim(), date: date, time: time, created: Date.now() }); }); return;
+  function addEntry(pfx, type) {
+    pfx = pfx || ""; type = type || state.formType;
+    var v = readAmt(pfx + "amt"); if (v === null) return false;
+    var date = (document.getElementById(pfx + "date").value || today()), time = (document.getElementById(pfx + "time").value || "");
+    if (type === "transfer") {
+      var from = document.getElementById(pfx + "acct").value, to = document.getElementById(pfx + "acct2").value;
+      if (from === to) { toast("Pick two different accounts"); return false; }
+      var fee = readFee(pfx + "fee"); if (fee === null) return false;
+      commit("Transfer recorded", function () { state.tx.push({ id: uid(), type: "transfer", amount: v, fee: fee, account: from, toAccount: to, desc: document.getElementById(pfx + "desc").value.trim(), date: date, time: time, created: Date.now() }); }); return true;
     }
-    commit("Entry added", function () { state.tx.push({ id: uid(), type: state.formType, amount: v, where: document.getElementById("where").value.trim(), account: document.getElementById("acct").value, desc: document.getElementById("desc").value.trim(), date: date, time: time, created: Date.now() }); });
+    commit("Entry added", function () { state.tx.push({ id: uid(), type: type, amount: v, where: document.getElementById(pfx + "where").value.trim(), account: document.getElementById(pfx + "acct").value, desc: document.getElementById(pfx + "desc").value.trim(), date: date, time: time, created: Date.now() }); });
+    return true;
   }
   function editEntry(id) {
     var t = state.tx.filter(function (x) { return x.id === id; })[0]; if (!t) return;
@@ -1188,6 +1207,7 @@
   document.getElementById("footSettings").onclick = function () { if (state.tab !== "settings") state.prevTab = state.tab; state.tab = "settings"; render(); };
   function setPrivBtn() { var b = document.getElementById("privBtn"); if (!b) return; var on = state.priv !== "off"; b.classList.toggle("on", on); var u = b.querySelector("use"); if (u) u.setAttribute("href", on ? "#ph-eye-slash" : "#ph-eye"); b.setAttribute("title", on ? "Show amounts" : "Hide amounts"); b.setAttribute("aria-label", on ? "Show amounts" : "Hide amounts"); }
   document.getElementById("privBtn").onclick = function () { if (state.priv === "off") state.priv = state.privLast || "partial"; else { state.privLast = state.priv; state.priv = "off"; } saveSet(); setPrivBtn(); render(); };
+  document.getElementById("fabAdd").onclick = openQuickAdd;
   document.getElementById("fileJSON").onchange = function () { readFile(this, restoreJSON); };
   document.getElementById("fileCSV").onchange = function () { readFile(this, importCSV); };
   if (window.matchMedia) { try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { if (state.theme === "system") applyTheme(); }); } catch (e) {} }
