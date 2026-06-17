@@ -122,7 +122,12 @@
   .fab { position: fixed; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: 50%; border: 0; cursor: pointer; color: var(--accent-ink); background: var(--accent); display: none; align-items: center; justify-content: center; box-shadow: 0 3px 12px rgba(0,0,0,.2); z-index: 40; }
   .fab .ic { width: 26px; height: 26px; }
   .fab:active { transform: scale(.94); }
-  @media (max-width: 780px) { .fab { display: flex; } }
+  @media (max-width: 780px) {
+    .fab { display: flex; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+    nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0; border-radius: 0; border-top: 1px solid var(--line); padding: 5px 8px calc(5px + env(safe-area-inset-bottom, 0px)); scrollbar-width: none; }
+    nav.tabs::-webkit-scrollbar { display: none; }
+    body { padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+  }
   .btn:hover { opacity: .92; } .btn:active { transform: scale(.985); }
   .btn.sec { background: var(--paper-2); color: var(--ink); }
   .btn-sm { width: auto; padding: 7px 12px; font-size: 13px; border-radius: 8px; }
@@ -254,7 +259,7 @@
   .toast-x:hover { opacity: 1; }
 
   @media (max-width: 480px) {
-    body { padding: 18px 12px 60px; background-image: none; }
+    body { padding: 18px 12px calc(66px + env(safe-area-inset-bottom, 0px)); background-image: none; }
     .brand h1 { font-size: 22px; } .brand p { display: none; }
     .mark { width: 32px; height: 32px; font-size: 18px; }
     .hero { padding: 16px; flex-direction: column; align-items: stretch; gap: 14px; } .hero .balance { font-size: 32px; }
@@ -522,6 +527,7 @@
   function render() {
     rebuildMap();
     Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.classList.toggle("on", b.getAttribute("data-tab") === state.tab); });
+    var actTab = document.querySelector("#tabs button.on"); if (actTab && actTab.scrollIntoView) { try { actTab.scrollIntoView({ block: "nearest", inline: "center" }); } catch (e) {} }
     ({ overview: renderOverview, track: renderTrack, accounts: renderAccounts, lending: renderLending, trends: renderTrends, recurring: renderRecurring, settings: renderSettings }[state.tab] || renderOverview)();
     var gb = document.getElementById("settingsBtn"); if (gb) gb.classList.toggle("on", state.tab === "settings");
     var tabChanged = state.tab !== lastTab;
