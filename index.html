@@ -602,8 +602,9 @@
     var up = [];
     state.recurring.forEach(function (r) { if (r.dueDay) { var td = tplDue(r); up.push({ kind: "recurring", iso: td.iso, r: r }); } });
     state.loans.forEach(function (l) { if (!l.settled && l.due) up.push({ kind: "loan", iso: l.due, l: l }); });
+    up = up.filter(function (u) { return Math.round((new Date(u.iso + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000) <= 13; });
     up.sort(function (a, b) { return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0; });
-    var upBody = !up.length ? '<div class="empty">Nothing scheduled.</div>'
+    var upBody = !up.length ? '<div class="empty">Nothing due soon.</div>'
       : up.slice(0, 8).map(function (u) {
         var rl = relLabel(u.iso), tb = '<span class="badge ' + rl.c + '" title="' + fmtDate(u.iso) + '">' + rl.t + '</span>';
         if (u.kind === "recurring") {
@@ -613,7 +614,7 @@
         var l = u.l;
         return lrow({ lead: ringEl(), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: tb + '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: raw(l.amount), valCls: "", acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
       }).join("");
-    var upcoming = card("Upcoming", "Bills, subscriptions &amp; loan due dates", upBody);
+    var upcoming = card("Upcoming", "Bills, subscriptions &amp; loans due soon", upBody);
 
     var noDue = state.loans.filter(function (l) { return !l.settled && !l.due; });
     var reminders = !noDue.length ? "" : card("Reminders", "Open loans with no due date", noDue.map(function (l) {
