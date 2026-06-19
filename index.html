@@ -134,6 +134,7 @@
   .help-b p { margin: 0 0 9px; } .help-b p:last-child { margin-bottom: 0; }
   .help-b strong { color: var(--ink); font-weight: 600; }
   .help-b ul { margin: 4px 0 0; padding-left: 18px; } .help-b li { margin: 3px 0; }
+  .delta { font-size: 11px; font-weight: 600; color: var(--ink-faint); margin-left: 4px; }
   @media (max-width: 780px) {
     .fab { display: flex; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
     nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0; padding: 8px 0 calc(10px + env(safe-area-inset-bottom, 0px)); border-radius: 0; border-top: 1px solid var(--line); }
@@ -343,7 +344,7 @@
     accounts: [], tx: [], loans: [], recurring: [],
     cur: "$", theme: "system",
     tab: "overview", prevTab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
-    fType: "all", fQ: "", trackShow: 30, lendQ: "", trendGroup: "monthly", placesAll: false,
+    fType: "all", fQ: "", trackShow: 30, lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
     lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false, priv: "off", privLast: "partial"
   };
   var amap = {}, lastTab = null;
@@ -538,7 +539,7 @@
         if (t) ctl.setAttribute("aria-label", t);
       }
     });
-    var fl = { fQ: "Search entries", fType: "Filter by type", lendQ: "Search loans", lview: "Group loans", trendGroup: "Group trends by", curSel: "Currency" };
+    var fl = { fQ: "Search entries", fType: "Filter by type", lendQ: "Search loans", lview: "Group loans", curSel: "Currency" };
     Object.keys(fl).forEach(function (id) { var el = document.getElementById(id); if (el && !el.getAttribute("aria-label")) el.setAttribute("aria-label", fl[id]); });
   }
   function render() {
@@ -946,68 +947,177 @@
 
   // ---------- TRENDS ----------
   function weekStart(dateStr) { var dt = new Date(dateStr + "T00:00:00"); var day = (dt.getDay() + 6) % 7; dt.setDate(dt.getDate() - day); return iso(dt); }
-  function grouped(g) {
-    var map = {};
-    flowEvents().forEach(function (e) { var k = g === "weekly" ? weekStart(e.date) : g === "yearly" ? e.date.slice(0, 4) : e.date.slice(0, 7); if (!map[k]) map[k] = { inc: 0, exp: 0 }; map[k].inc += e.inc; map[k].exp += e.exp; });
-    var keys = Object.keys(map).sort();
-    if (g === "weekly" || g === "monthly") keys = keys.slice(-12);
-    return keys.map(function (k) { return { key: k, inc: map[k].inc, exp: map[k].exp, net: map[k].inc - map[k].exp }; });
+  function addMonthsISO(s, n) { var d = new Date(s + "T00:00:00"); d.setMonth(d.getMonth() + n); return iso(d); }
+  function shiftDaysISO(s, n) { return iso(new Date(new Date(s + "T00:00:00").getTime() + n * 86400000)); }
+  function eventDates() { var ds = []; state.tx.forEach(function (t) { ds.push(t.date); }); state.loans.forEach(function (l) { ds.push(l.date); if (l.settledDate) ds.push(l.settledDate); }); return ds; }
+  function trendRange() {
+    var p = state.trendPeriod || "12m", to = today(), from;
+    if (p === "custom") { from = state.trendFrom || addMonthsISO(to, -12); to = state.trendTo || today(); if (from > to) { var tmp = from; from = to; to = tmp; } return { from: from, to: to }; }
+    if (p === "all") { var ds = eventDates().sort(); return { from: ds.length ? ds[0] : addMonthsISO(to, -12), to: to }; }
+    return { from: addMonthsISO(to, -(p === "3m" ? 3 : p === "6m" ? 6 : 12)), to: to };
   }
+  function granFor(from, to) { var days = (new Date(to + "T00:00:00") - new Date(from + "T00:00:00")) / 86400000; return days <= 120 ? "weekly" : days <= 770 ? "monthly" : "yearly"; }
+  function bucketKey(d, g) { return g === "weekly" ? weekStart(d) : g === "yearly" ? d.slice(0, 4) : d.slice(0, 7); }
+  function bucketKeys(from, to, g) {
+    var keys = [], i, k;
+    if (g === "weekly") { for (k = weekStart(from); k <= to; k = shiftDaysISO(k, 7)) keys.push(k); }
+    else if (g === "yearly") { for (i = +from.slice(0, 4); i <= +to.slice(0, 4); i++) keys.push("" + i); }
+    else { var d = new Date(from.slice(0, 7) + "-01T00:00:00"), end = to.slice(0, 7); while (true) { k = iso(d).slice(0, 7); keys.push(k); if (k >= end) break; d.setMonth(d.getMonth() + 1); } }
+    return keys;
+  }
+  function bucketEnd(key, g, to) {
+    var e;
+    if (g === "weekly") e = shiftDaysISO(key, 6);
+    else if (g === "yearly") e = key + "-12-31";
+    else { var d = new Date(key + "-01T00:00:00"); d.setMonth(d.getMonth() + 1); d.setDate(0); e = iso(d); }
+    return e > to ? to : e;
+  }
+  function scopedGrouped(from, to, g) {
+    var map = {}; flowEvents().forEach(function (e) { if (e.date < from || e.date > to) return; var k = bucketKey(e.date, g); if (!map[k]) map[k] = { inc: 0, exp: 0 }; map[k].inc += e.inc; map[k].exp += e.exp; });
+    return bucketKeys(from, to, g).map(function (k) { var m = map[k] || { inc: 0, exp: 0 }; return { key: k, inc: m.inc, exp: m.exp, net: m.inc - m.exp }; });
+  }
+  function nwDeltas() {
+    var d = [];
+    state.tx.forEach(function (t) { if (t.type === "income") d.push([t.date, t.amount]); else if (t.type === "expense") d.push([t.date, -t.amount]); else if (t.type === "transfer" && t.fee) d.push([t.date, -(t.fee || 0)]); });
+    state.loans.forEach(function (l) {
+      if (l.account) d.push([l.date, l.kind === "lent" ? -(l.amount + (l.fee || 0)) : (l.amount - (l.fee || 0))]);
+      if (l.settled && l.settledAccount) { var sa = l.settledAmount != null ? l.settledAmount : l.amount; d.push([l.settledDate || l.date, l.kind === "lent" ? sa : -sa]); }
+    });
+    return d;
+  }
+  function netWorthSeries(from, to, g) {
+    var openTotal = state.accounts.reduce(function (s, a) { return s + (a.opening || 0); }, 0), deltas = nwDeltas();
+    return bucketKeys(from, to, g).map(function (k) { var b = bucketEnd(k, g, to), nw = openTotal; deltas.forEach(function (x) { if (x[0] <= b) nw += x[1]; }); return { key: k, end: b, nw: nw }; });
+  }
+  function weekdaySpend(from, to) {
+    var w = [0, 0, 0, 0, 0, 0, 0];
+    state.tx.forEach(function (t) { if (t.type !== "expense" || t.date < from || t.date > to) return; w[(new Date(t.date + "T00:00:00").getDay() + 6) % 7] += t.amount; });
+    return w;
+  }
+  function deltaTag(cur, prev) {
+    if (prev == null || prev === 0) return cur ? '<span class="delta">new</span>' : "";
+    var pct = Math.round((cur - prev) / Math.abs(prev) * 100);
+    if (pct === 0) return '<span class="delta">±0%</span>';
+    return '<span class="delta">' + (pct > 0 ? "▲" : "▼") + Math.abs(pct) + '%</span>';
+  }
+  function cmpStat(l, cur, prev, cls) { return '<div class="stat"><div class="l">' + l + ' ' + deltaTag(cur, prev) + '</div><div class="v num ' + (cls || "") + '">' + fmtBig(cur) + '</div></div>'; }
   function renderTrends() {
-    var g = state.trendGroup, data = grouped(g);
-    var byWhere = {}; state.tx.forEach(function (t) { if (t.type === "expense") { var w = (t.where || "").trim() || "(unlabeled)"; byWhere[w] = (byWhere[w] || 0) + t.amount; } });
+    var rng = trendRange(), from = rng.from, to = rng.to, g = granFor(from, to), pid = state.trendPeriod || "12m";
+    var inR = function (d) { return d >= from && d <= to; };
+    var data = scopedGrouped(from, to, g);
+    var hiddenMsg = '<div class="empty">Hidden in privacy mode.</div>';
+
+    var pt = totalsFlow(function (e) { return inR(e.date); }), totInc = pt.inc, totExp = pt.exp, net = totInc - totExp;
+    var prevCmp = null;
+    if (pid !== "all") {
+      var pTo = shiftDaysISO(from, -1), span = Math.round((new Date(to + "T00:00:00") - new Date(from + "T00:00:00")) / 86400000), pFrom = shiftDaysISO(from, -(span + 1));
+      var pv = totalsFlow(function (e) { return e.date >= pFrom && e.date <= pTo; }); prevCmp = { inc: pv.inc, exp: pv.exp };
+    }
+
+    var byWhere = {}, fees = 0, biggest = null, bigInc = null, freq = {}, expCount = 0, txCount = 0, dayTot = {};
+    state.tx.forEach(function (t) {
+      if (!inR(t.date)) return; txCount++;
+      if (t.type === "expense") { var w = (t.where || "").trim() || "(unlabeled)"; byWhere[w] = (byWhere[w] || 0) + t.amount; if (!biggest || t.amount > biggest.amount) biggest = t; var wl = (t.where || "").trim(); if (wl) freq[wl] = (freq[wl] || 0) + 1; expCount++; dayTot[t.date] = (dayTot[t.date] || 0) + t.amount; }
+      else if (t.type === "income") { if (!bigInc || t.amount > bigInc.amount) bigInc = t; }
+      else if (t.type === "transfer") fees += (t.fee || 0);
+    });
     var allPlaces = Object.keys(byWhere).map(function (k) { return [k, byWhere[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
-    var places = state.placesAll ? allPlaces : allPlaces.slice(0, 6);
-    var placeMax = allPlaces.length ? allPlaces[0][1] : 0;
+    var places = state.placesAll ? allPlaces : allPlaces.slice(0, 6), placeMax = allPlaces.length ? allPlaces[0][1] : 0;
+    var topFreq = Object.keys(freq).sort(function (a, b) { return freq[b] - freq[a]; })[0];
+    var busiest = Object.keys(dayTot).sort(function (a, b) { return dayTot[b] - dayTot[a]; })[0];
+    var df = new Date(from + "T00:00:00"), dtt = new Date(to + "T00:00:00");
+    var monthsIn = Math.max(1, (dtt.getFullYear() * 12 + dtt.getMonth()) - (df.getFullYear() * 12 + df.getMonth()) + 1);
+    var avgNet = (totInc - totExp) / monthsIn, savings = totInc > 0 ? Math.round((totInc - totExp) / totInc * 100) : null;
     var accts = state.accounts.map(function (a) { return { name: a.name, color: a.color, bal: acctBal(a.id) }; });
     var acctMax = accts.reduce(function (m, a) { return Math.max(m, Math.abs(a.bal)); }, 0) || 1;
-    var fees = 0, biggest = null, freq = {};
-    state.tx.forEach(function (t) { if (t.type === "expense") { if (!biggest || t.amount > biggest.amount) biggest = t; var w = (t.where || "").trim(); if (w) freq[w] = (freq[w] || 0) + 1; } else if (t.type === "transfer") fees += (t.fee || 0); });
-    var tt = totalsFlow(null), totInc = tt.inc, totExp = tt.exp;
-    var savings = totInc > 0 ? Math.round((totInc - totExp) / totInc * 100) : null;
-    var topFreq = Object.keys(freq).sort(function (a, b) { return freq[b] - freq[a]; })[0];
-    var months = grouped("monthly").length || 1, avgNet = (totInc - totExp) / months;
     var nw = netWorth();
+    var periodLabel = ({ "3m": "Last 3 months", "6m": "Last 6 months", "12m": "Last 12 months", all: "All time", custom: fmtDate(from) + " – " + fmtDate(to) })[pid];
 
-    var sidebar = card("By the numbers", "All-time snapshot", '<div class="statcol">' +
-      stat("Avg net / month", fmtBig(avgNet), avgNet >= 0 ? "pos" : "neg") +
-      stat("Savings rate", savings === null ? "—" : savings + "%", savings !== null && savings >= 0 ? "pos" : "neg") +
-      stat("Transfer fees", fmtBig(fees), "neg") +
+    var statsBody = '<div class="statcol">' +
+      stat("Net / month avg", fmtBig(avgNet), avgNet >= 0 ? "pos" : "neg") +
+      (savings === null ? "" : stat("Savings rate", savings + "%", savings >= 0 ? "pos" : "neg")) +
       stat("Total income", fmtBig(totInc), "pos") +
-      stat("Total expenses", fmtBig(totExp), "neg") +
+      stat("Total spending", fmtBig(totExp), "neg") +
+      stat("Transfer fees", fmtBig(fees), "neg") +
       stat("Biggest expense", biggest ? fmtBig(biggest.amount) : "—", "neg") +
-      (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") + '</div>', { collapsible: true, key: "trends-stats" });
+      (bigInc ? stat("Biggest income", fmtBig(bigInc.amount), "pos") : "") +
+      stat("Transactions", "" + txCount, "") +
+      (busiest ? stat("Busiest day", fmtDate(busiest) + " · " + fmtBig(dayTot[busiest]), "neg") : "") +
+      (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") + '</div>';
+    var sidebar = card("By the numbers", periodLabel, statsBody, { collapsible: true, key: "trends-stats" });
+    if (prevCmp) sidebar += card("Compared with before", "vs the previous " + (pid === "custom" ? "span" : periodLabel.replace("Last ", "")), '<div class="statcol">' + cmpStat("Income", totInc, prevCmp.inc, "pos") + cmpStat("Spending", totExp, prevCmp.exp, "neg") + cmpStat("Net", net, prevCmp.inc - prevCmp.exp, net >= 0 ? "pos" : "neg") + '</div>', { collapsible: true, key: "trends-cmp" });
 
-    var main = "";
-    var groupSel = '<div class="filters"><select class="inp" id="trendGroup"><option value="weekly"' + sel(g, "weekly") + '>Weekly</option><option value="monthly"' + sel(g, "monthly") + '>Monthly</option><option value="yearly"' + sel(g, "yearly") + '>Yearly</option><option value="all"' + sel(g, "all") + '>All-time</option></select></div>';
+    var pOpts = [["3m", "3M"], ["6m", "6M"], ["12m", "12M"], ["all", "All"], ["custom", "Custom"]];
+    var periodSel = '<div class="filters" style="margin-bottom:14px"><label for="trendPeriod" style="align-self:center;color:var(--ink-soft);font-size:13px">Period</label><select class="inp" id="trendPeriod">' + pOpts.map(function (o) { return '<option value="' + o[0] + '"' + sel(pid, o[0]) + '>' + o[1] + '</option>'; }).join("") + '</select>';
+    if (pid === "custom") periodSel += '<input type="date" class="inp" id="trendFrom" value="' + (state.trendFrom || from) + '" max="' + today() + '" aria-label="From date"><span style="align-self:center;color:var(--ink-faint)">–</span><input type="date" class="inp" id="trendTo" value="' + (state.trendTo || to) + '" max="' + today() + '" aria-label="To date">';
+    periodSel += '</div>';
+
     var chartBody;
-    if (data.length) {
+    if (state.priv === "full") chartBody = hiddenMsg;
+    else if (data.length && (totInc || totExp)) {
       var maxV = Math.max.apply(null, data.map(function (d) { return Math.max(d.inc, d.exp); })) || 1;
-      var W = 700, H = 220, padB = 26, padT = 10, n = data.length, slot = W / n, grp = Math.min(slot * 0.62, 54), bw = grp / 2 - 2, plotH = H - padB - padT;
+      var W = 700, H = 220, padB = 26, padT = 10, n = data.length, slot = W / n, grp = Math.min(slot * 0.62, 54), bw = grp / 2 - 2, plotH = H - padB - padT, every = Math.max(1, Math.ceil(n / 8));
       var bars = data.map(function (d, i) {
         var cx = i * slot + slot / 2, ih = d.inc / maxV * plotH, eh = d.exp / maxV * plotH, label, suffix = "";
         if (g === "weekly") label = fmtDate(d.key);
         else if (g === "yearly") label = d.key;
-        else { label = new Date(d.key + "-01T00:00:00").toLocaleDateString(undefined, { month: "short" }); var yr = d.key.slice(2, 4); if (i === 0 || d.key.slice(5, 7) === "01") suffix = " ’" + yr; }
-        return '<rect x="' + (cx - bw - 1) + '" y="' + (padT + plotH - ih) + '" width="' + bw + '" height="' + ih + '" rx="2.5" style="fill:var(--income)"><title>' + label + " income " + fmt(d.inc) + '</title></rect><rect x="' + (cx + 1) + '" y="' + (padT + plotH - eh) + '" width="' + bw + '" height="' + eh + '" rx="2.5" style="fill:var(--expense)"><title>' + label + " expense " + fmt(d.exp) + '</title></rect><text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + label + suffix + '</text>';
+        else { label = new Date(d.key + "-01T00:00:00").toLocaleDateString(undefined, { month: "short" }); if (i === 0 || d.key.slice(5, 7) === "01") suffix = " ’" + d.key.slice(2, 4); }
+        var showLab = (g !== "weekly") || (i % every === 0);
+        return '<rect x="' + (cx - bw - 1) + '" y="' + (padT + plotH - ih) + '" width="' + bw + '" height="' + ih + '" rx="2.5" style="fill:var(--income)"><title>' + label + " income " + fmt(d.inc) + '</title></rect><rect x="' + (cx + 1) + '" y="' + (padT + plotH - eh) + '" width="' + bw + '" height="' + eh + '" rx="2.5" style="fill:var(--expense)"><title>' + label + " expense " + fmt(d.exp) + '</title></rect>' + (showLab ? '<text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + label + suffix + '</text>' : "");
       }).join("");
       var baseY = padT + plotH, grid = '<line x1="0" y1="' + baseY + '" x2="' + W + '" y2="' + baseY + '" style="stroke:var(--line-strong);stroke-width:1"/><line x1="0" y1="' + (padT + plotH / 2) + '" x2="' + W + '" y2="' + (padT + plotH / 2) + '" style="stroke:var(--line);stroke-width:1;stroke-dasharray:3 4"/>';
       chartBody = '<div class="legend"><span><i style="background:var(--income)"></i>Income</span><span><i style="background:var(--expense)"></i>Expenses</span></div><div style="overflow-x:auto;margin:0 -2px"><svg viewBox="0 0 ' + W + ' ' + H + '" style="display:block;width:100%;min-width:' + Math.max(320, n * 44) + 'px;height:auto">' + grid + bars + '</svg></div>';
-    } else chartBody = '<div class="empty">No income or expenses to chart yet.</div>';
-    if (state.priv === "full") chartBody = '<div class="empty">Hidden in privacy mode.</div>';
-    main += card("Income vs. expenses", "Grouped by your selection · fees &amp; loan gains/losses counted", groupSel + chartBody);
+    } else chartBody = '<div class="empty">No income or expenses in this period.</div>';
 
+    var nwBody;
+    if (state.priv !== "off") nwBody = hiddenMsg;
+    else {
+      var series = netWorthSeries(from, to, g);
+      if (series.length < 2) nwBody = '<div class="empty">Not enough history to chart yet.</div>';
+      else {
+        var vals = series.map(function (p) { return p.nw; }), mn = Math.min.apply(null, vals.concat([0])), mx = Math.max.apply(null, vals.concat([0])); if (mx === mn) mx = mn + 1;
+        var LW = 700, LH = 200, lpT = 12, lpB = 24, lpX = 6, m = series.length, lpH = LH - lpT - lpB, lpW = LW - lpX * 2;
+        var xx = function (i) { return lpX + (m === 1 ? lpW / 2 : i / (m - 1) * lpW); }, yy = function (v) { return lpT + (mx - v) / (mx - mn) * lpH; }, zy = yy(0);
+        var pts = series.map(function (p, i) { return xx(i) + "," + yy(p.nw); }).join(" ");
+        var lab = function (i) { var p = series[i]; return g === "weekly" ? fmtDate(p.key) : g === "yearly" ? p.key : new Date(p.key + "-01T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" }); };
+        var ticks = [0, Math.floor((m - 1) / 2), m - 1].filter(function (v, i, a) { return a.indexOf(v) === i; });
+        var xlabels = ticks.map(function (i) { return '<text x="' + xx(i) + '" y="' + (LH - 7) + '" text-anchor="' + (i === 0 ? "start" : i === m - 1 ? "end" : "middle") + '" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + lab(i) + '</text>'; }).join("");
+        var last = series[m - 1];
+        nwBody = '<div style="overflow-x:auto"><svg viewBox="0 0 ' + LW + ' ' + LH + '" style="display:block;width:100%;min-width:320px;height:auto"><line x1="' + lpX + '" y1="' + zy + '" x2="' + (LW - lpX) + '" y2="' + zy + '" style="stroke:var(--line-strong);stroke-width:1"/><polygon points="' + xx(0) + ',' + zy + ' ' + pts + ' ' + xx(m - 1) + ',' + zy + '" style="fill:var(--accent);opacity:.08"/><polyline points="' + pts + '" fill="none" style="stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"/><circle cx="' + xx(m - 1) + '" cy="' + yy(last.nw) + '" r="3.2" style="fill:var(--accent)"><title>' + fmtDate(last.end) + ": " + fmt(last.nw) + '</title></circle>' + xlabels + '</svg></div>';
+      }
+    }
+
+    var wdBody;
+    if (state.priv === "full") wdBody = hiddenMsg;
+    else {
+      var wd = weekdaySpend(from, to), wmax = Math.max.apply(null, wd) || 0, names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      if (!wmax) wdBody = '<div class="empty">No spending in this period.</div>';
+      else {
+        var WW = 700, WH = 170, wpT = 8, wpB = 22, wn = 7, wslot = WW / wn, wbw = Math.min(wslot * 0.6, 60), wpH = WH - wpT - wpB;
+        var wbars = wd.map(function (v, i) { var cx = i * wslot + wslot / 2, h = v / wmax * wpH; return '<rect x="' + (cx - wbw / 2) + '" y="' + (wpT + wpH - h) + '" width="' + wbw + '" height="' + h + '" rx="3" style="fill:var(--expense)"><title>' + names[i] + " " + fmt(v) + '</title></rect><text x="' + cx + '" y="' + (WH - 7) + '" text-anchor="middle" style="fill:var(--ink-faint);font-size:11px;font-family:Hanken Grotesk">' + names[i] + '</text>'; }).join("");
+        var wbase = wpT + wpH;
+        wdBody = '<div style="overflow-x:auto"><svg viewBox="0 0 ' + WW + ' ' + WH + '" style="display:block;width:100%;min-width:320px;height:auto"><line x1="0" y1="' + wbase + '" x2="' + WW + '" y2="' + wbase + '" style="stroke:var(--line-strong);stroke-width:1"/>' + wbars + '</svg></div>';
+      }
+    }
+
+    var main = periodSel;
+    main += card("Net worth over time", "Running total across the period", nwBody);
+    main += card("Income vs. expenses", (g === "weekly" ? "Weekly" : g === "yearly" ? "Yearly" : "Monthly") + " · fees &amp; loan gains/losses counted", chartBody);
+    main += card("Spending by day of week", "When money tends to go out", wdBody);
     if (allPlaces.length) {
       var placesBody = places.map(function (e) { var pct = placeMax ? Math.round(e[1] / placeMax * 100) : 0; return '<div class="bd-row"><div class="cat">' + esc(e[0]) + '</div><div class="bar"><span style="width:' + pct + '%"></span></div><div class="amt num neg">' + fmt(e[1]) + '</div></div>'; }).join("");
       if (allPlaces.length > 6) placesBody += '<div class="more"><button class="btn sec btn-sm" id="placesToggle">' + (state.placesAll ? "Show top 6" : "Show all " + allPlaces.length) + '</button></div>';
-      main += card("Top places", "Most spent, all time", state.priv === "full" ? '<div class="empty">Hidden in privacy mode.</div>' : placesBody);
+      main += card("Top places", "Most spent this period", state.priv === "full" ? hiddenMsg : placesBody);
     }
-    if (accts.length) main += card("Across accounts", "Where your money sits now", state.priv !== "off" ? '<div class="empty">Hidden in privacy mode.</div>' : accts.map(function (a) { var pct = Math.round(Math.abs(a.bal) / acctMax * 100); return '<div class="bd-row"><div class="cat">' + esc(a.name) + '</div><div class="bar"><span style="width:' + pct + '%;background:' + (a.bal >= 0 ? a.color : "var(--expense)") + '"></span></div><div class="amt num ' + (a.bal >= 0 ? "" : "neg") + '">' + fmt(a.bal) + '</div></div>'; }).join(""));
+    if (accts.length) main += card("Across accounts", "Where your money sits now", state.priv !== "off" ? hiddenMsg : accts.map(function (a) { var pct = Math.round(Math.abs(a.bal) / acctMax * 100); return '<div class="bd-row"><div class="cat">' + esc(a.name) + '</div><div class="bar"><span style="width:' + pct + '%;background:' + (a.bal >= 0 ? a.color : "var(--expense)") + '"></span></div><div class="amt num ' + (a.bal >= 0 ? "" : "neg") + '">' + fmt(a.bal) + '</div></div>'; }).join(""));
 
     app.innerHTML = layout(heroBlock("Net worth", fmtBig(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, main);
-    bind("trendGroup", "change", function (el) { state.trendGroup = el.value; render(); });
+    bind("trendPeriod", "change", function (el) { state.trendPeriod = el.value; if (el.value === "custom") { if (!state.trendFrom) state.trendFrom = from; if (!state.trendTo) state.trendTo = to; } render(); });
+    bind("trendFrom", "change", function (el) { state.trendFrom = el.value; render(); });
+    bind("trendTo", "change", function (el) { state.trendTo = el.value; render(); });
     bind("placesToggle", "click", function () { state.placesAll = !state.placesAll; render(); });
   }
+
   function stat(l, v, cls) { return '<div class="stat"><div class="l">' + l + '</div><div class="v num ' + (cls || "") + '">' + v + '</div></div>'; }
 
   // ---------- TEMPLATES (recurring + shortcuts) ----------
@@ -1169,7 +1279,7 @@
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) { b.onclick = function () { state.theme = b.getAttribute("data-theme-set"); applyTheme(); saveSet(); render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-priv-set]"), function (b) { b.onclick = function () { var v = b.getAttribute("data-priv-set"); state.priv = v; if (v !== "off") state.privLast = v; saveSet(); setPrivBtn(); render(); }; });
-    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.lendKind = "lent-out"; state.lendView = "person"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.lendQ = ""; state.trendGroup = "monthly"; state.placesAll = false; saveSet(); render(); toast("View reset"); });
+    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.lendKind = "lent-out"; state.lendView = "person"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
     bind("curSel", "change", function (el) { if (el.value === "__custom") { var c = document.getElementById("curCustom"); c.focus(); return; } state.cur = el.value; saveSet(); render(); });
     bind("curCustom", "input", function (el) { var sel = document.getElementById("curSel"); if (sel && el.value.trim()) sel.value = "__custom"; });
     var cc = document.getElementById("curCustom"); if (cc) cc.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); var v = cc.value.trim(); if (v) { state.cur = v; saveSet(); render(); toast("Currency set to " + v); } } };
