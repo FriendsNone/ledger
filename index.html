@@ -110,6 +110,11 @@
   .seg button.on[data-t="expense"], .seg button.on[data-rt="expense"], .seg button.on[data-et="expense"], .seg button.on[data-lk="lent-out"] { background: var(--expense); color: var(--on-fill); }
   .seg button.on[data-t="income"], .seg button.on[data-rt="income"], .seg button.on[data-et="income"], .seg button.on[data-lk="borrowed"] { background: var(--income); color: var(--on-fill); }
   .seg button.on[data-t="transfer"], .seg button.on[data-rt="transfer"], .seg button.on[data-et="transfer"], .seg button.on[data-theme-set], .seg button.on[data-priv-set] { background: var(--accent); color: var(--accent-ink); }
+  .periodbar { display: flex; gap: 5px; background: var(--paper-2); padding: 4px; border-radius: 10px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+  .periodbar::-webkit-scrollbar { display: none; }
+  .periodbar button { flex: 1 0 auto; border: 0; background: transparent; padding: 8px 14px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; transition: .15s; }
+  .periodbar button.on { background: var(--accent); color: var(--accent-ink); }
+  .periodbar button:not(.on):hover { color: var(--ink); }
   .priv-full .balance.pos, .priv-full .balance.neg, .priv-full .v.pos, .priv-full .v.neg, .priv-full .v.neu { color: var(--ink); }
   .priv-full .badge.gain, .priv-full .badge.loss { background: var(--paper-2); color: var(--ink-soft); }
   .priv-partial .balance.pos, .priv-partial .balance.neg, .priv-partial .pill .v.pos, .priv-partial .pill .v.neg, .priv-partial .stat .v.pos, .priv-partial .stat .v.neg { color: var(--ink); }
@@ -134,7 +139,7 @@
   .help-b p { margin: 0 0 9px; } .help-b p:last-child { margin-bottom: 0; }
   .help-b strong { color: var(--ink); font-weight: 600; }
   .help-b ul { margin: 4px 0 0; padding-left: 18px; } .help-b li { margin: 3px 0; }
-  .delta { font-size: 11px; font-weight: 600; color: var(--ink-faint); margin-left: 4px; }
+  .delta { font-size: 11px; font-weight: 700; color: var(--ink-soft); margin-left: 5px; }
   @media (max-width: 780px) {
     .fab { display: flex; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
     nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0; padding: 8px 0 calc(10px + env(safe-area-inset-bottom, 0px)); border-radius: 0; border-top: 1px solid var(--line); }
@@ -371,7 +376,7 @@
   function set(key, val) { try { store.set(key, JSON.stringify(val)); } catch (e) {} }
   function saveTx() { set(K.tx, state.tx); } function saveAcct() { set(K.acct, state.accounts); }
   function saveLoan() { set(K.loan, state.loans); } function saveRec() { set(K.rec, state.recurring); }
-  function saveSet() { set(K.set, { cur: state.cur, theme: state.theme, lastBackup: state.lastBackup, backupCount: state.backupCount, collapsed: state.collapsed, tab: state.tab, priv: state.priv, privLast: state.privLast }); }
+  function saveSet() { set(K.set, { cur: state.cur, theme: state.theme, lastBackup: state.lastBackup, backupCount: state.backupCount, collapsed: state.collapsed, tab: state.tab, priv: state.priv, privLast: state.privLast, trendPeriod: state.trendPeriod, trendFrom: state.trendFrom, trendTo: state.trendTo }); }
   function saveAll() { saveAcct(); saveTx(); saveLoan(); saveRec(); }
   async function getv(key) { try { var r = await store.get(key); return r && r.value ? JSON.parse(r.value) : null; } catch (e) { return null; } }
   async function load() {
@@ -379,7 +384,7 @@
     var tx = await getv(K.tx); if (Array.isArray(tx)) state.tx = tx;
     var l = await getv(K.loan); if (Array.isArray(l)) state.loans = l;
     var r = await getv(K.rec); if (Array.isArray(r)) state.recurring = r;
-    var s = await getv(K.set); if (s) { if (s.cur) state.cur = s.cur; if (s.theme) state.theme = s.theme; if (s.lastBackup) state.lastBackup = s.lastBackup; if (typeof s.backupCount === "number") state.backupCount = s.backupCount; if (s.collapsed && typeof s.collapsed === "object") state.collapsed = s.collapsed; if (s.tab) { state.tab = s.tab; state.prevTab = s.tab === "settings" ? "overview" : s.tab; } if (s.priv === "off" || s.priv === "partial" || s.priv === "full") state.priv = s.priv; if (s.privLast === "partial" || s.privLast === "full") state.privLast = s.privLast; }
+    var s = await getv(K.set); if (s) { if (s.cur) state.cur = s.cur; if (s.theme) state.theme = s.theme; if (s.lastBackup) state.lastBackup = s.lastBackup; if (typeof s.backupCount === "number") state.backupCount = s.backupCount; if (s.collapsed && typeof s.collapsed === "object") state.collapsed = s.collapsed; if (s.tab) { state.tab = s.tab; state.prevTab = s.tab === "settings" ? "overview" : s.tab; } if (s.priv === "off" || s.priv === "partial" || s.priv === "full") state.priv = s.priv; if (s.privLast === "partial" || s.privLast === "full") state.privLast = s.privLast; if (s.trendPeriod) state.trendPeriod = s.trendPeriod; if (typeof s.trendFrom === "string") state.trendFrom = s.trendFrom; if (typeof s.trendTo === "string") state.trendTo = s.trendTo; }
     applyTheme();
   }
 
@@ -954,7 +959,8 @@
     var p = state.trendPeriod || "12m", to = today(), from;
     if (p === "custom") { from = state.trendFrom || addMonthsISO(to, -12); to = state.trendTo || today(); if (from > to) { var tmp = from; from = to; to = tmp; } return { from: from, to: to }; }
     if (p === "all") { var ds = eventDates().sort(); return { from: ds.length ? ds[0] : addMonthsISO(to, -12), to: to }; }
-    return { from: addMonthsISO(to, -(p === "3m" ? 3 : p === "6m" ? 6 : 12)), to: to };
+    var mo = { "1m": 1, "3m": 3, "6m": 6, "12m": 12 }[p] || 12;
+    return { from: addMonthsISO(to, -mo), to: to };
   }
   function granFor(from, to) { var days = (new Date(to + "T00:00:00") - new Date(from + "T00:00:00")) / 86400000; return days <= 120 ? "weekly" : days <= 770 ? "monthly" : "yearly"; }
   function bucketKey(d, g) { return g === "weekly" ? weekStart(d) : g === "yearly" ? d.slice(0, 4) : d.slice(0, 7); }
@@ -989,6 +995,16 @@
     var openTotal = state.accounts.reduce(function (s, a) { return s + (a.opening || 0); }, 0), deltas = nwDeltas();
     return bucketKeys(from, to, g).map(function (k) { var b = bucketEnd(k, g, to), nw = openTotal; deltas.forEach(function (x) { if (x[0] <= b) nw += x[1]; }); return { key: k, end: b, nw: nw }; });
   }
+  function acctDeltas(id) {
+    var d = [];
+    state.tx.forEach(function (t) { if (t.type === "income" && t.account === id) d.push([t.date, t.amount]); else if (t.type === "expense" && t.account === id) d.push([t.date, -t.amount]); else if (t.type === "transfer") { if (t.account === id) d.push([t.date, -(t.amount + (t.fee || 0))]); if (t.toAccount === id) d.push([t.date, t.amount]); } });
+    state.loans.forEach(function (l) { var sa = l.settledAmount != null ? l.settledAmount : l.amount; if (l.kind === "lent") { if (l.account === id) d.push([l.date, -(l.amount + (l.fee || 0))]); if (l.settled && l.settledAccount === id) d.push([l.settledDate || l.date, sa]); } else { if (l.account === id) d.push([l.date, (l.amount - (l.fee || 0))]); if (l.settled && l.settledAccount === id) d.push([l.settledDate || l.date, -sa]); } });
+    return d;
+  }
+  function acctSeries(id, from, to, g) {
+    var op = amap[id] ? (amap[id].opening || 0) : 0, del = acctDeltas(id);
+    return bucketKeys(from, to, g).map(function (k) { var b = bucketEnd(k, g, to), v = op; del.forEach(function (x) { if (x[0] <= b) v += x[1]; }); return v; });
+  }
   function weekdaySpend(from, to) {
     var w = [0, 0, 0, 0, 0, 0, 0];
     state.tx.forEach(function (t) { if (t.type !== "expense" || t.date < from || t.date > to) return; w[(new Date(t.date + "T00:00:00").getDay() + 6) % 7] += t.amount; });
@@ -1001,11 +1017,17 @@
     return '<span class="delta">' + (pct > 0 ? "▲" : "▼") + Math.abs(pct) + '%</span>';
   }
   function cmpStat(l, cur, prev, cls) { return '<div class="stat"><div class="l">' + l + ' ' + deltaTag(cur, prev) + '</div><div class="v num ' + (cls || "") + '">' + fmtBig(cur) + '</div></div>'; }
+  function axisFmt(n) { var a = Math.abs(n), s = a >= 1000 ? (Math.round(a / 100) / 10) + "k" : "" + Math.round(a); return (n < 0 ? "−" : "") + state.cur + s; }
+  function yGrid(x0, x1, ticks, yFn, showNums) {
+    return ticks.map(function (v) { var y = yFn(v), zero = Math.abs(v) < 0.0001; return '<line x1="' + x0 + '" y1="' + y.toFixed(1) + '" x2="' + x1 + '" y2="' + y.toFixed(1) + '" style="stroke:var(' + (zero ? "--line-strong" : "--line") + ');stroke-width:1' + (zero ? "" : ";stroke-dasharray:3 4") + '"/>' + (showNums ? '<text x="' + (x0 - 6) + '" y="' + (y + 3.4).toFixed(1) + '" text-anchor="end" style="fill:var(--ink-soft);font-size:10px;font-family:Hanken Grotesk">' + axisFmt(v) + '</text>' : ""); }).join("");
+  }
   function renderTrends() {
     var rng = trendRange(), from = rng.from, to = rng.to, g = granFor(from, to), pid = state.trendPeriod || "12m";
     var inR = function (d) { return d >= from && d <= to; };
-    var data = scopedGrouped(from, to, g);
+    var data = scopedGrouped(from, to, g), bkeys = bucketKeys(from, to, g);
     var hiddenMsg = '<div class="empty">Hidden in privacy mode.</div>';
+    function xlab(key) { return g === "weekly" ? fmtDate(key) : g === "yearly" ? key : new Date(key + "-01T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" }); }
+    function xticks(count, xFn, yBottom) { var idx = [0, Math.floor((count - 1) / 2), count - 1].filter(function (v, i, a) { return a.indexOf(v) === i; }); return idx.map(function (i) { return '<text x="' + xFn(i).toFixed(1) + '" y="' + yBottom + '" text-anchor="' + (i === 0 ? "start" : i === count - 1 ? "end" : "middle") + '" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + xlab(bkeys[i]) + '</text>'; }).join(""); }
 
     var pt = totalsFlow(function (e) { return inR(e.date); }), totInc = pt.inc, totExp = pt.exp, net = totInc - totExp;
     var prevCmp = null;
@@ -1028,10 +1050,10 @@
     var df = new Date(from + "T00:00:00"), dtt = new Date(to + "T00:00:00");
     var monthsIn = Math.max(1, (dtt.getFullYear() * 12 + dtt.getMonth()) - (df.getFullYear() * 12 + df.getMonth()) + 1);
     var avgNet = (totInc - totExp) / monthsIn, savings = totInc > 0 ? Math.round((totInc - totExp) / totInc * 100) : null;
-    var accts = state.accounts.map(function (a) { return { name: a.name, color: a.color, bal: acctBal(a.id) }; });
-    var acctMax = accts.reduce(function (m, a) { return Math.max(m, Math.abs(a.bal)); }, 0) || 1;
+    var accts = state.accounts.map(function (a) { return { id: a.id, name: a.name, color: a.color, bal: acctBal(a.id) }; });
     var nw = netWorth();
-    var periodLabel = ({ "3m": "Last 3 months", "6m": "Last 6 months", "12m": "Last 12 months", all: "All time", custom: fmtDate(from) + " – " + fmtDate(to) })[pid];
+    var periodLabel = ({ "1m": "Last month", "3m": "Last 3 months", "6m": "Last 6 months", "12m": "Last 12 months", all: "All time", custom: fmtDate(from) + " – " + fmtDate(to) })[pid];
+    var capGran = g === "weekly" ? "Weekly" : g === "yearly" ? "Yearly" : "Monthly";
 
     var statsBody = '<div class="statcol">' +
       stat("Net / month avg", fmtBig(avgNet), avgNet >= 0 ? "pos" : "neg") +
@@ -1047,26 +1069,27 @@
     var sidebar = card("By the numbers", periodLabel, statsBody, { collapsible: true, key: "trends-stats" });
     if (prevCmp) sidebar += card("Compared with before", "vs the previous " + (pid === "custom" ? "span" : periodLabel.replace("Last ", "")), '<div class="statcol">' + cmpStat("Income", totInc, prevCmp.inc, "pos") + cmpStat("Spending", totExp, prevCmp.exp, "neg") + cmpStat("Net", net, prevCmp.inc - prevCmp.exp, net >= 0 ? "pos" : "neg") + '</div>', { collapsible: true, key: "trends-cmp" });
 
-    var pOpts = [["3m", "3M"], ["6m", "6M"], ["12m", "12M"], ["all", "All"], ["custom", "Custom"]];
-    var periodSel = '<div class="filters" style="margin-bottom:14px"><label for="trendPeriod" style="align-self:center;color:var(--ink-soft);font-size:13px">Period</label><select class="inp" id="trendPeriod">' + pOpts.map(function (o) { return '<option value="' + o[0] + '"' + sel(pid, o[0]) + '>' + o[1] + '</option>'; }).join("") + '</select>';
-    if (pid === "custom") periodSel += '<input type="date" class="inp" id="trendFrom" value="' + (state.trendFrom || from) + '" max="' + today() + '" aria-label="From date"><span style="align-self:center;color:var(--ink-faint)">–</span><input type="date" class="inp" id="trendTo" value="' + (state.trendTo || to) + '" max="' + today() + '" aria-label="To date">';
-    periodSel += '</div>';
+    var pOpts = [["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["12m", "12M"], ["all", "All"], ["custom", "Custom"]];
+    var bar = '<div class="periodbar" role="group" aria-label="Time period">' + pOpts.map(function (o) { return '<button type="button" data-tp="' + o[0] + '" class="' + (pid === o[0] ? "on" : "") + '" aria-pressed="' + (pid === o[0] ? "true" : "false") + '">' + o[1] + '</button>'; }).join("") + '</div>';
+    if (pid === "custom") bar += '<div class="filters" style="margin-top:10px"><input type="date" class="inp" id="trendFrom" value="' + (state.trendFrom || from) + '" max="' + today() + '" aria-label="From date"><span style="align-self:center;color:var(--ink-faint)">–</span><input type="date" class="inp" id="trendTo" value="' + (state.trendTo || to) + '" max="' + today() + '" aria-label="To date"></div>';
+    var periodCard = card("Period", fmtDate(from) + " – " + fmtDate(to), bar, { collapsible: false });
 
     var chartBody;
     if (state.priv === "full") chartBody = hiddenMsg;
     else if (data.length && (totInc || totExp)) {
       var maxV = Math.max.apply(null, data.map(function (d) { return Math.max(d.inc, d.exp); })) || 1;
-      var W = 700, H = 220, padB = 26, padT = 10, n = data.length, slot = W / n, grp = Math.min(slot * 0.62, 54), bw = grp / 2 - 2, plotH = H - padB - padT, every = Math.max(1, Math.ceil(n / 8));
+      var W = 700, H = 232, AX = 46, padB = 26, padT = 10, n = data.length, plotW = W - AX, slot = plotW / n, grp = Math.min(slot * 0.62, 54), bw = grp / 2 - 2, plotH = H - padB - padT, every = Math.max(1, Math.ceil(n / 8)), showN = state.priv === "off";
+      var yb = function (v) { return padT + plotH - v / maxV * plotH; };
+      var grid = yGrid(AX, W, [maxV, maxV / 2, 0], yb, showN);
       var bars = data.map(function (d, i) {
-        var cx = i * slot + slot / 2, ih = d.inc / maxV * plotH, eh = d.exp / maxV * plotH, label, suffix = "";
+        var cx = AX + i * slot + slot / 2, ih = d.inc / maxV * plotH, eh = d.exp / maxV * plotH, label, suffix = "";
         if (g === "weekly") label = fmtDate(d.key);
         else if (g === "yearly") label = d.key;
         else { label = new Date(d.key + "-01T00:00:00").toLocaleDateString(undefined, { month: "short" }); if (i === 0 || d.key.slice(5, 7) === "01") suffix = " ’" + d.key.slice(2, 4); }
         var showLab = (g !== "weekly") || (i % every === 0);
-        return '<rect x="' + (cx - bw - 1) + '" y="' + (padT + plotH - ih) + '" width="' + bw + '" height="' + ih + '" rx="2.5" style="fill:var(--income)"><title>' + label + " income " + fmt(d.inc) + '</title></rect><rect x="' + (cx + 1) + '" y="' + (padT + plotH - eh) + '" width="' + bw + '" height="' + eh + '" rx="2.5" style="fill:var(--expense)"><title>' + label + " expense " + fmt(d.exp) + '</title></rect>' + (showLab ? '<text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + label + suffix + '</text>' : "");
+        return '<rect x="' + (cx - bw - 1).toFixed(1) + '" y="' + yb(d.inc).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + ih.toFixed(1) + '" rx="2.5" style="fill:var(--income)"><title>' + label + " income " + fmt(d.inc) + '</title></rect><rect x="' + (cx + 1).toFixed(1) + '" y="' + yb(d.exp).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + eh.toFixed(1) + '" rx="2.5" style="fill:var(--expense)"><title>' + label + " expense " + fmt(d.exp) + '</title></rect>' + (showLab ? '<text x="' + cx.toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + label + suffix + '</text>' : "");
       }).join("");
-      var baseY = padT + plotH, grid = '<line x1="0" y1="' + baseY + '" x2="' + W + '" y2="' + baseY + '" style="stroke:var(--line-strong);stroke-width:1"/><line x1="0" y1="' + (padT + plotH / 2) + '" x2="' + W + '" y2="' + (padT + plotH / 2) + '" style="stroke:var(--line);stroke-width:1;stroke-dasharray:3 4"/>';
-      chartBody = '<div class="legend"><span><i style="background:var(--income)"></i>Income</span><span><i style="background:var(--expense)"></i>Expenses</span></div><div style="overflow-x:auto;margin:0 -2px"><svg viewBox="0 0 ' + W + ' ' + H + '" style="display:block;width:100%;min-width:' + Math.max(320, n * 44) + 'px;height:auto">' + grid + bars + '</svg></div>';
+      chartBody = '<div class="legend"><span><i style="background:var(--income)"></i>Income</span><span><i style="background:var(--expense)"></i>Expenses</span></div><div style="overflow-x:auto;margin:0 -2px"><svg viewBox="0 0 ' + W + ' ' + H + '" style="display:block;width:100%;min-width:' + Math.max(360, n * 44 + AX) + 'px;height:auto">' + grid + bars + '</svg></div>';
     } else chartBody = '<div class="empty">No income or expenses in this period.</div>';
 
     var nwBody;
@@ -1076,14 +1099,13 @@
       if (series.length < 2) nwBody = '<div class="empty">Not enough history to chart yet.</div>';
       else {
         var vals = series.map(function (p) { return p.nw; }), mn = Math.min.apply(null, vals.concat([0])), mx = Math.max.apply(null, vals.concat([0])); if (mx === mn) mx = mn + 1;
-        var LW = 700, LH = 200, lpT = 12, lpB = 24, lpX = 6, m = series.length, lpH = LH - lpT - lpB, lpW = LW - lpX * 2;
-        var xx = function (i) { return lpX + (m === 1 ? lpW / 2 : i / (m - 1) * lpW); }, yy = function (v) { return lpT + (mx - v) / (mx - mn) * lpH; }, zy = yy(0);
-        var pts = series.map(function (p, i) { return xx(i) + "," + yy(p.nw); }).join(" ");
-        var lab = function (i) { var p = series[i]; return g === "weekly" ? fmtDate(p.key) : g === "yearly" ? p.key : new Date(p.key + "-01T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" }); };
-        var ticks = [0, Math.floor((m - 1) / 2), m - 1].filter(function (v, i, a) { return a.indexOf(v) === i; });
-        var xlabels = ticks.map(function (i) { return '<text x="' + xx(i) + '" y="' + (LH - 7) + '" text-anchor="' + (i === 0 ? "start" : i === m - 1 ? "end" : "middle") + '" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + lab(i) + '</text>'; }).join("");
+        var LW = 700, LH = 212, AX2 = 46, lpT = 12, lpB = 24, m = series.length, lpH = LH - lpT - lpB, lpW = LW - AX2;
+        var xx = function (i) { return AX2 + (m === 1 ? lpW / 2 : i / (m - 1) * lpW); }, yy = function (v) { return lpT + (mx - v) / (mx - mn) * lpH; };
+        var ticks = (mn < 0 && mx > 0) ? [mx, 0, mn] : [mx, (mn + mx) / 2, mn];
+        var grid2 = yGrid(AX2, LW, ticks, yy, true), baseY = yy(mn);
+        var pts = series.map(function (p, i) { return xx(i).toFixed(1) + "," + yy(p.nw).toFixed(1); }).join(" ");
         var last = series[m - 1];
-        nwBody = '<div style="overflow-x:auto"><svg viewBox="0 0 ' + LW + ' ' + LH + '" style="display:block;width:100%;min-width:320px;height:auto"><line x1="' + lpX + '" y1="' + zy + '" x2="' + (LW - lpX) + '" y2="' + zy + '" style="stroke:var(--line-strong);stroke-width:1"/><polygon points="' + xx(0) + ',' + zy + ' ' + pts + ' ' + xx(m - 1) + ',' + zy + '" style="fill:var(--accent);opacity:.08"/><polyline points="' + pts + '" fill="none" style="stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"/><circle cx="' + xx(m - 1) + '" cy="' + yy(last.nw) + '" r="3.2" style="fill:var(--accent)"><title>' + fmtDate(last.end) + ": " + fmt(last.nw) + '</title></circle>' + xlabels + '</svg></div>';
+        nwBody = '<div style="overflow-x:auto"><svg viewBox="0 0 ' + LW + ' ' + LH + '" style="display:block;width:100%;min-width:360px;height:auto">' + grid2 + '<polygon points="' + xx(0).toFixed(1) + ',' + baseY.toFixed(1) + ' ' + pts + ' ' + xx(m - 1).toFixed(1) + ',' + baseY.toFixed(1) + '" style="fill:var(--accent);opacity:.08"/><polyline points="' + pts + '" fill="none" style="stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"/><circle cx="' + xx(m - 1).toFixed(1) + '" cy="' + yy(last.nw).toFixed(1) + '" r="3.2" style="fill:var(--accent)"><title>' + fmtDate(last.end) + ": " + fmt(last.nw) + '</title></circle>' + xticks(m, xx, LH - 7) + '</svg></div>';
       }
     }
 
@@ -1093,28 +1115,48 @@
       var wd = weekdaySpend(from, to), wmax = Math.max.apply(null, wd) || 0, names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       if (!wmax) wdBody = '<div class="empty">No spending in this period.</div>';
       else {
-        var WW = 700, WH = 170, wpT = 8, wpB = 22, wn = 7, wslot = WW / wn, wbw = Math.min(wslot * 0.6, 60), wpH = WH - wpT - wpB;
-        var wbars = wd.map(function (v, i) { var cx = i * wslot + wslot / 2, h = v / wmax * wpH; return '<rect x="' + (cx - wbw / 2) + '" y="' + (wpT + wpH - h) + '" width="' + wbw + '" height="' + h + '" rx="3" style="fill:var(--expense)"><title>' + names[i] + " " + fmt(v) + '</title></rect><text x="' + cx + '" y="' + (WH - 7) + '" text-anchor="middle" style="fill:var(--ink-faint);font-size:11px;font-family:Hanken Grotesk">' + names[i] + '</text>'; }).join("");
-        var wbase = wpT + wpH;
-        wdBody = '<div style="overflow-x:auto"><svg viewBox="0 0 ' + WW + ' ' + WH + '" style="display:block;width:100%;min-width:320px;height:auto"><line x1="0" y1="' + wbase + '" x2="' + WW + '" y2="' + wbase + '" style="stroke:var(--line-strong);stroke-width:1"/>' + wbars + '</svg></div>';
+        var WW = 700, WH = 182, AX3 = 46, wpT = 10, wpB = 22, wn = 7, wplotW = WW - AX3, wslot = wplotW / wn, wbw = Math.min(wslot * 0.6, 60), wpH = WH - wpT - wpB, showNW = state.priv === "off";
+        var wy = function (v) { return wpT + wpH - v / wmax * wpH; };
+        var wgrid = yGrid(AX3, WW, [wmax, wmax / 2, 0], wy, showNW);
+        var wbars = wd.map(function (v, i) { var cx = AX3 + i * wslot + wslot / 2, h = v / wmax * wpH; return '<rect x="' + (cx - wbw / 2).toFixed(1) + '" y="' + wy(v).toFixed(1) + '" width="' + wbw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3" style="fill:var(--expense)"><title>' + names[i] + " " + fmt(v) + '</title></rect><text x="' + cx.toFixed(1) + '" y="' + (WH - 7) + '" text-anchor="middle" style="fill:var(--ink-faint);font-size:11px;font-family:Hanken Grotesk">' + names[i] + '</text>'; }).join("");
+        wdBody = '<div style="overflow-x:auto"><svg viewBox="0 0 ' + WW + ' ' + WH + '" style="display:block;width:100%;min-width:360px;height:auto">' + wgrid + wbars + '</svg></div>';
       }
     }
 
-    var main = periodSel;
+    var acctChart;
+    if (state.priv !== "off") acctChart = hiddenMsg;
+    else {
+      var aser = accts.map(function (a) { return { name: a.name, color: a.color, vals: acctSeries(a.id, from, to, g) }; });
+      var m2 = aser.length ? aser[0].vals.length : 0;
+      if (m2 < 2) acctChart = '<div class="empty">Not enough history to chart yet.</div>';
+      else {
+        var allv = []; aser.forEach(function (s) { s.vals.forEach(function (v) { allv.push(v); }); }); allv.push(0);
+        var amn = Math.min.apply(null, allv), amx = Math.max.apply(null, allv); if (amx === amn) amx = amn + 1;
+        var AW = 700, AH = 222, AX4 = 46, apT = 10, apB = 24, apH = AH - apT - apB, apW = AW - AX4;
+        var ax = function (i) { return AX4 + (m2 === 1 ? apW / 2 : i / (m2 - 1) * apW); }, ay = function (v) { return apT + (amx - v) / (amx - amn) * apH; };
+        var aticks = (amn < 0 && amx > 0) ? [amx, 0, amn] : [amx, (amn + amx) / 2, amn];
+        var agrid = yGrid(AX4, AW, aticks, ay, true);
+        var lines = aser.map(function (s) { var pts = s.vals.map(function (v, i) { return ax(i).toFixed(1) + "," + ay(v).toFixed(1); }).join(" "); return '<polyline points="' + pts + '" fill="none" style="stroke:' + s.color + ';stroke-width:2;stroke-linejoin:round;stroke-linecap:round" opacity="0.9"><title>' + esc(s.name) + '</title></polyline>'; }).join("");
+        var legend = '<div class="legend" style="flex-wrap:wrap">' + aser.map(function (s) { return '<span><i style="background:' + s.color + '"></i>' + esc(s.name) + '</span>'; }).join("") + '</div>';
+        acctChart = legend + '<div style="overflow-x:auto"><svg viewBox="0 0 ' + AW + ' ' + AH + '" style="display:block;width:100%;min-width:360px;height:auto">' + agrid + lines + xticks(m2, ax, AH - 7) + '</svg></div>';
+      }
+    }
+
+    var main = periodCard;
     main += card("Net worth over time", "Running total across the period", nwBody);
-    main += card("Income vs. expenses", (g === "weekly" ? "Weekly" : g === "yearly" ? "Yearly" : "Monthly") + " · fees &amp; loan gains/losses counted", chartBody);
+    main += card("Income vs. expenses", capGran + " · fees &amp; loan gains/losses counted", chartBody);
     main += card("Spending by day of week", "When money tends to go out", wdBody);
+    if (accts.length) main += card("Account balances over time", "How each account moved over the period", acctChart);
     if (allPlaces.length) {
       var placesBody = places.map(function (e) { var pct = placeMax ? Math.round(e[1] / placeMax * 100) : 0; return '<div class="bd-row"><div class="cat">' + esc(e[0]) + '</div><div class="bar"><span style="width:' + pct + '%"></span></div><div class="amt num neg">' + fmt(e[1]) + '</div></div>'; }).join("");
       if (allPlaces.length > 6) placesBody += '<div class="more"><button class="btn sec btn-sm" id="placesToggle">' + (state.placesAll ? "Show top 6" : "Show all " + allPlaces.length) + '</button></div>';
       main += card("Top places", "Most spent this period", state.priv === "full" ? hiddenMsg : placesBody);
     }
-    if (accts.length) main += card("Across accounts", "Where your money sits now", state.priv !== "off" ? hiddenMsg : accts.map(function (a) { var pct = Math.round(Math.abs(a.bal) / acctMax * 100); return '<div class="bd-row"><div class="cat">' + esc(a.name) + '</div><div class="bar"><span style="width:' + pct + '%;background:' + (a.bal >= 0 ? a.color : "var(--expense)") + '"></span></div><div class="amt num ' + (a.bal >= 0 ? "" : "neg") + '">' + fmt(a.bal) + '</div></div>'; }).join(""));
 
     app.innerHTML = layout(heroBlock("Net worth", fmtBig(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, main);
-    bind("trendPeriod", "change", function (el) { state.trendPeriod = el.value; if (el.value === "custom") { if (!state.trendFrom) state.trendFrom = from; if (!state.trendTo) state.trendTo = to; } render(); });
-    bind("trendFrom", "change", function (el) { state.trendFrom = el.value; render(); });
-    bind("trendTo", "change", function (el) { state.trendTo = el.value; render(); });
+    Array.prototype.forEach.call(document.querySelectorAll(".periodbar button"), function (b) { b.onclick = function () { var v = b.getAttribute("data-tp"); state.trendPeriod = v; if (v === "custom") { if (!state.trendFrom) state.trendFrom = from; if (!state.trendTo) state.trendTo = to; } saveSet(); render(); }; });
+    bind("trendFrom", "change", function (el) { state.trendFrom = el.value; saveSet(); render(); });
+    bind("trendTo", "change", function (el) { state.trendTo = el.value; saveSet(); render(); });
     bind("placesToggle", "click", function () { state.placesAll = !state.placesAll; render(); });
   }
 
