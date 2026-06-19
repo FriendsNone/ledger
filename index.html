@@ -600,7 +600,6 @@
 
   // ---------- OVERVIEW ----------
   function dim(y, m) { return new Date(y, m + 1, 0).getDate(); }
-  function nextDue(day) { var now = new Date(), y = now.getFullYear(), m = now.getMonth(); var t = new Date(y, m, Math.min(day, dim(y, m))); if (t < new Date(y, m, now.getDate())) { m++; if (m > 11) { m = 0; y++; } t = new Date(y, m, Math.min(day, dim(y, m))); } return t; }
   function relLabel(isoStr) { var diff = Math.round((new Date(isoStr + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000); if (diff < 0) return { t: Math.abs(diff) + "d overdue", c: "overdue" }; if (diff === 0) return { t: "today", c: "due" }; if (diff === 1) return { t: "tomorrow", c: "due" }; if (diff <= 5) return { t: "in " + diff + "d", c: "due" }; if (diff <= 13) return { t: "in " + diff + "d", c: "next" }; return { t: "in " + Math.round(diff / 7) + " wks", c: "next" }; }
   function tplLogged(id) { var ym = today().slice(0, 7); return state.tx.some(function (t) { return t.tpl === id && (t.date || "").slice(0, 7) === ym; }); }
   function tplDue(r) { var logged = tplLogged(r.id), now = new Date(), y = now.getFullYear(), m = now.getMonth(); if (logged) { m++; if (m > 11) { m = 0; y++; } } var d = new Date(y, m, Math.min(r.dueDay, dim(y, m))); return { logged: logged, iso: iso(d), d: d }; }
@@ -653,7 +652,6 @@
     bind("goAcct2", "click", function () { state.tab = "accounts"; render(); });
     bind("impBackup", "click", function () { document.getElementById("fileJSON").click(); });
   }
-  function recentRow(e) { return entryRow(e, true); }
 
   // ---------- TRACK ----------
   function renderTrack() {
@@ -1112,7 +1110,8 @@
     var wdBody;
     if (state.priv === "full") wdBody = hiddenMsg;
     else {
-      var wd = weekdaySpend(from, to), wmax = Math.max.apply(null, wd) || 0, names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      var wd = weekdaySpend(from, to), wmax = Math.max.apply(null, wd) || 0, names = [];
+      for (var wdi = 0; wdi < 7; wdi++) names.push(new Date(2024, 0, 1 + wdi).toLocaleDateString(undefined, { weekday: "short" }));
       if (!wmax) wdBody = '<div class="empty">No spending in this period.</div>';
       else {
         var WW = 700, WH = 182, AX3 = 46, wpT = 10, wpB = 22, wn = 7, wplotW = WW - AX3, wslot = wplotW / wn, wbw = Math.min(wslot * 0.6, 60), wpH = WH - wpT - wpB, showNW = state.priv === "off";
@@ -1212,7 +1211,6 @@
       };
     });
   }
-  function nextDueLabel(day) { var t = nextDue(day), rl = relLabel(iso(t)); return '<span class="badge ' + rl.c + '" title="next ' + t.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + '">' + rl.t + '</span>'; }
   function tmplBadge(r) { if (!r.dueDay) return ""; var td = tplDue(r); if (td.logged) return '<span class="badge settled" title="logged this month · next ' + td.d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + '">logged</span>'; var rl = relLabel(td.iso); return '<span class="badge ' + rl.c + '" title="' + (rl.c === "overdue" ? "due " : "next ") + td.d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + '">' + rl.t + '</span>'; }
   function renderRecurring() {
     var isT = state.recType === "transfer";
