@@ -48,7 +48,7 @@
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
+  html { height: 100%; } body { min-height: 100%; }
   body {
     font-family: 'Hanken Grotesk', sans-serif; background: var(--paper);
     background-image: repeating-linear-gradient(transparent, transparent 31px, var(--rule) 31px, var(--rule) 32px);
@@ -468,7 +468,7 @@
     });
     state.loans.forEach(function (l) {
       if (l.fee) ev.push({ date: l.date, inc: 0, exp: l.fee });
-      if (!l.settled) return;
+      if (!l.settled || !l.account) return;
       var sa = l.settledAmount != null ? l.settledAmount : l.amount;
       var gain = l.kind === "lent" ? sa - l.amount : l.amount - sa;
       if (Math.abs(gain) < 0.005) return;
