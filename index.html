@@ -1052,6 +1052,14 @@
     var nw = netWorth();
     var periodLabel = ({ "1m": "Last month", "3m": "Last 3 months", "6m": "Last 6 months", "12m": "Last 12 months", all: "All time", custom: fmtDate(from) + " – " + fmtDate(to) })[pid];
     var capGran = g === "weekly" ? "Weekly" : g === "yearly" ? "Yearly" : "Monthly";
+    var nowD = new Date(), pjY = nowD.getFullYear(), pjM = nowD.getMonth(), tdy = today(), mEnd = iso(new Date(pjY, pjM + 1, 0)), mStart = iso(new Date(pjY, pjM, 1));
+    var dueLeft = 0, projVar = false;
+    state.recurring.forEach(function (r) { var du = tplDue(r); if (du.logged || du.iso < tdy || du.iso > mEnd) return; if (r.amount == null || r.amount === "" || r.variable) { projVar = true; return; } if (r.type === "income") dueLeft += r.amount; else if (r.type === "expense") dueLeft -= r.amount; else if (r.type === "transfer") dueLeft -= (r.fee || 0); });
+    var projMonthEnd = nw + dueLeft;
+    var spentMonth = 0; state.tx.forEach(function (t) { if (t.type === "expense" && t.date >= mStart && t.date <= tdy) spentMonth += t.amount; });
+    var dom = nowD.getDate(), pace = dom > 0 ? spentMonth / dom * dim(pjY, pjM) : spentMonth;
+    var daysToYE = Math.max(0, (new Date(pjY + "-12-31T00:00:00") - new Date(tdy + "T00:00:00")) / 86400000), projYE = nw + avgNet * (daysToYE / 30.44);
+    var projBody = '<div class="statcol">' + stat("Balance at month-end", fmtBig(projMonthEnd), projMonthEnd >= 0 ? "pos" : "neg") + stat("Spent so far this month", fmtBig(spentMonth), "neg") + stat("Projected full month", fmtBig(pace), "neg") + stat("Net worth at year-end", fmtBig(projYE), projYE >= 0 ? "pos" : "neg") + (projVar ? '<div class="hint" style="margin-top:6px">Variable templates not counted.</div>' : "") + '</div>';
 
     var statsBody = '<div class="statcol">' +
       stat("Net / month avg", fmtBig(avgNet), avgNet >= 0 ? "pos" : "neg") +
@@ -1066,6 +1074,7 @@
       (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") + '</div>';
     var sidebar = card("By the numbers", periodLabel, statsBody, { collapsible: true, key: "trends-stats" });
     if (prevCmp) sidebar += card("Compared with before", "vs the previous " + (pid === "custom" ? "span" : periodLabel.replace("Last ", "")), '<div class="statcol">' + cmpStat("Income", totInc, prevCmp.inc, "pos") + cmpStat("Spending", totExp, prevCmp.exp, "neg") + cmpStat("Net", net, prevCmp.inc - prevCmp.exp, net >= 0 ? "pos" : "neg") + '</div>', { collapsible: true, key: "trends-cmp" });
+    sidebar += card("Looking ahead", "Projected from your recent pace", projBody, { collapsible: true, key: "trends-proj" });
 
     var pOpts = [["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["12m", "12M"], ["all", "All"], ["custom", "Custom"]];
     var bar = '<div class="periodbar" role="group" aria-label="Time period">' + pOpts.map(function (o) { return '<button type="button" data-tp="' + o[0] + '" class="' + (pid === o[0] ? "on" : "") + '" aria-pressed="' + (pid === o[0] ? "true" : "false") + '">' + o[1] + '</button>'; }).join("") + '</div>';
