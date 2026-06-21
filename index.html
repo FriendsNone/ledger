@@ -140,6 +140,16 @@
   .help-b strong { color: var(--ink); font-weight: 600; }
   .help-b ul { margin: 4px 0 0; padding-left: 18px; } .help-b li { margin: 3px 0; }
   .delta { font-size: 11px; font-weight: 700; color: var(--ink-soft); margin-left: 5px; }
+  .goal { padding: 12px 2px; border-bottom: 1px solid var(--line); }
+  .goal:last-child { border-bottom: 0; }
+  .goal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .goal-name { font-weight: 600; color: var(--ink); }
+  .goal-tag { font-size: 11px; font-weight: 600; color: var(--ink-soft); background: var(--paper-2); padding: 1px 7px; border-radius: 999px; margin-left: 6px; white-space: nowrap; }
+  .goal-amt { font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
+  .goal-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; }
+  .goal-status { font-size: 12.5px; color: var(--ink-soft); }
+  .goal-status.pos { color: var(--income); }
+  .goal-acts { display: flex; gap: 4px; flex-shrink: 0; }
   @media (max-width: 780px) {
     .fab { display: flex; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
     nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0; padding: 8px 0 calc(10px + env(safe-area-inset-bottom, 0px)); border-radius: 0; border-top: 1px solid var(--line); }
@@ -341,12 +351,12 @@
 (function () {
   "use strict";
 
-  var K = { tx: "ledger:transactions", acct: "ledger:accounts", loan: "ledger:loans", rec: "ledger:recurring", set: "ledger:settings" };
+  var K = { tx: "ledger:transactions", acct: "ledger:accounts", loan: "ledger:loans", rec: "ledger:recurring", goals: "ledger:goals", set: "ledger:settings" };
   var PALETTE = ["#c4694a", "#3f7d5a", "#4a6fa5", "#9a6cb0", "#b08a2e", "#5a8c8c", "#a0556b", "#6b8c3a"];
   var CURRENCIES = [["$", "USD"], ["€", "EUR"], ["£", "GBP"], ["¥", "JPY"], ["¥", "CNY"], ["₹", "INR"], ["₱", "PHP"], ["₩", "KRW"], ["C$", "CAD"], ["A$", "AUD"], ["NZ$", "NZD"], ["S$", "SGD"], ["HK$", "HKD"], ["CHF", "CHF"], ["kr", "SEK"], ["kr", "NOK"], ["kr", "DKK"], ["zł", "PLN"], ["฿", "THB"], ["Rp", "IDR"], ["RM", "MYR"], ["₫", "VND"], ["R$", "BRL"], ["Mex$", "MXN"], ["R", "ZAR"], ["AED", "AED"], ["₺", "TRY"], ["₽", "RUB"]];
 
   var state = {
-    accounts: [], tx: [], loans: [], recurring: [],
+    accounts: [], tx: [], loans: [], recurring: [], goals: [],
     cur: "$", theme: "system",
     tab: "overview", prevTab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
     fType: "all", fQ: "", trackShow: 30, lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
@@ -374,16 +384,17 @@
     var mem = {}; return { mode: "memory only", get: function (k) { return Promise.resolve(k in mem ? { value: mem[k] } : null); }, set: function (k, v) { mem[k] = v; return Promise.resolve(); }, del: function (k) { delete mem[k]; return Promise.resolve(); } };
   })();
   function set(key, val) { try { store.set(key, JSON.stringify(val)); } catch (e) {} }
-  function saveTx() { set(K.tx, state.tx); } function saveAcct() { set(K.acct, state.accounts); }
+  function saveTx() { set(K.tx, state.tx); } function saveAcct() { set(K.acct, state.accounts); } function saveGoals() { set(K.goals, state.goals); }
   function saveLoan() { set(K.loan, state.loans); } function saveRec() { set(K.rec, state.recurring); }
   function saveSet() { set(K.set, { cur: state.cur, theme: state.theme, lastBackup: state.lastBackup, backupCount: state.backupCount, collapsed: state.collapsed, tab: state.tab, priv: state.priv, privLast: state.privLast, trendPeriod: state.trendPeriod, trendFrom: state.trendFrom, trendTo: state.trendTo }); }
-  function saveAll() { saveAcct(); saveTx(); saveLoan(); saveRec(); }
+  function saveAll() { saveAcct(); saveTx(); saveLoan(); saveRec(); saveGoals(); }
   async function getv(key) { try { var r = await store.get(key); return r && r.value ? JSON.parse(r.value) : null; } catch (e) { return null; } }
   async function load() {
     var a = await getv(K.acct); if (Array.isArray(a)) state.accounts = a;
     var tx = await getv(K.tx); if (Array.isArray(tx)) state.tx = tx;
     var l = await getv(K.loan); if (Array.isArray(l)) state.loans = l;
     var r = await getv(K.rec); if (Array.isArray(r)) state.recurring = r;
+    var gl = await getv(K.goals); if (Array.isArray(gl)) state.goals = gl;
     var s = await getv(K.set); if (s) { if (s.cur) state.cur = s.cur; if (s.theme) state.theme = s.theme; if (s.lastBackup) state.lastBackup = s.lastBackup; if (typeof s.backupCount === "number") state.backupCount = s.backupCount; if (s.collapsed && typeof s.collapsed === "object") state.collapsed = s.collapsed; if (s.tab) { state.tab = s.tab; state.prevTab = s.tab === "settings" ? "overview" : s.tab; } if (s.priv === "off" || s.priv === "partial" || s.priv === "full") state.priv = s.priv; if (s.privLast === "partial" || s.privLast === "full") state.privLast = s.privLast; if (s.trendPeriod) state.trendPeriod = s.trendPeriod; if (typeof s.trendFrom === "string") state.trendFrom = s.trendFrom; if (typeof s.trendTo === "string") state.trendTo = s.trendTo; }
     applyTheme();
   }
@@ -401,8 +412,8 @@
   function hideToast(restore) { var inside = toastEl.contains(document.activeElement); clearTimeout(toastT); toastEl.classList.remove("show"); if (restore !== false && inside && toastReturnSel) { var el = null; try { el = document.querySelector(toastReturnSel); } catch (e) {} if (el) { try { el.focus(); } catch (e2) {} } } toastReturnSel = null; }
   function armToast(ms) { clearTimeout(toastT); var left = ms, t0 = Date.now(); function done() { hideToast(); } function pause() { if (toastFocusing || !toastEl.classList.contains("show")) return; clearTimeout(toastT); left -= Date.now() - t0; } function resume() { if (!toastEl.classList.contains("show")) return; t0 = Date.now(); clearTimeout(toastT); toastT = setTimeout(done, Math.max(left, 1500)); } toastEl.onmouseenter = pause; toastEl.onmouseleave = resume; toastEl.onfocusin = pause; toastEl.onfocusout = function (e) { if (e.relatedTarget && toastEl.contains(e.relatedTarget)) return; resume(); }; toastEl.onkeydown = function (e) { if (e.key === "Escape") { hideToast(); } }; toastT = setTimeout(done, ms); }
   function toast(msg) { toastEl.innerHTML = '<span>' + esc(msg) + '</span><button class="toast-x" id="toastClose2" aria-label="Dismiss" title="Dismiss">' + icon('x') + '</button>'; toastEl.classList.add("show"); clearTimeout(toastT); toastReturnSel = null; var c = document.getElementById("toastClose2"); if (c) c.onclick = function () { hideToast(false); }; armToast(2600); }
-  function snapState() { return JSON.stringify({ tx: state.tx, loans: state.loans, recurring: state.recurring, accounts: state.accounts, cur: state.cur }); }
-  function undoTo(snap) { var o = JSON.parse(snap); state.tx = o.tx; state.loans = o.loans; state.recurring = o.recurring; state.accounts = o.accounts; state.cur = o.cur; saveAll(); saveSet(); render(); toast("Undone"); }
+  function snapState() { return JSON.stringify({ tx: state.tx, loans: state.loans, recurring: state.recurring, accounts: state.accounts, goals: state.goals, cur: state.cur }); }
+  function undoTo(snap) { var o = JSON.parse(snap); state.tx = o.tx; state.loans = o.loans; state.recurring = o.recurring; state.accounts = o.accounts; state.goals = o.goals || []; state.cur = o.cur; saveAll(); saveSet(); render(); toast("Undone"); }
   function commit(label, fn) { var ae = document.activeElement; toastReturnSel = (ae && ae.id) ? ("#" + (window.CSS && CSS.escape ? CSS.escape(ae.id) : ae.id)) : null; var snap = snapState(); fn(); saveAll(); render(); toastUndo(label, snap); }
   function toastUndo(label, snap) {
     toastEl.innerHTML = '<span>' + label + '</span><button class="toast-undo" id="toastUndo">Undo</button><button class="toast-x" id="toastClose" aria-label="Dismiss" title="Dismiss"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-x"></use></svg></button>';
@@ -644,7 +655,11 @@
     var recentBody = !ents.length ? '<div class="empty">Nothing in the last 7 days.</div>' : '<div class="list">' + groupedRows(ents, true, false) + '</div>' + (entsAll.length > ents.length ? '<div class="more"><button class="btn sec btn-sm" data-jump="track">See all in Track</button></div>' : "");
     var recent = card("Recent activity", "Past 7 days", recentBody);
 
-    app.innerHTML = layout(heroBlock("Net worth", fmtBig(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, upcoming + reminders + recent);
+    var topGoal = state.goals.length ? goalPriority(state.goals)[0] : null;
+    var goalCard = topGoal ? card("Goal", topGoal.due ? "Your priority goal" : "Your closest goal", goalRow(topGoal), { collapsible: true, key: "ov-goal" }) : "";
+    app.innerHTML = layout(heroBlock("Net worth", fmtBig(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, goalCard + upcoming + reminders + recent);
+    Array.prototype.forEach.call(document.querySelectorAll("[data-goaledit]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-goaledit"); var g = state.goals.filter(function (x) { return x.id === id; })[0]; if (g) goalModal(g); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-goaldel]"), function (b) { b.onclick = function () { delGoal(b.getAttribute("data-goaldel")); }; });
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
@@ -822,10 +837,15 @@
     var rows = !state.accounts.length ? '<div class="empty"><div class="big">No accounts yet</div>Add your first account — a wallet, bank, or cash.</div>'
       : state.accounts.map(function (a) { var bal = acctBal(a.id), count = state.tx.filter(function (t) { return t.account === a.id || t.toAccount === a.id; }).length; return lrow({ lead: dotEl(a.color), t: esc(a.name), sub: '<span>starting ' + fmtBig(a.opening || 0) + ' · ' + count + ' txn' + (count === 1 ? "" : "s") + '</span>', val: fmtBig(bal), valCls: state.priv !== "off" ? "" : (bal >= 0 ? "" : "neg"), acts: '<button class="mini" data-edit="' + a.id + '" aria-label="Edit account" title="Rename / balance"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-acctdel="' + a.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>' }); }).join("");
     var sidebar = card("Add account", "A wallet, bank, or cash", '<div class="field"><label>Name</label><input id="aname" type="text" maxlength="24" placeholder="name this account"></div><div class="field"><label>Balance right now</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="aopen" type="number" step="0.01" placeholder="0.00"></div></div><div class="hint">What\'s in this account today — your starting point for tracking.</div><button class="btn" id="aadd">' + icon('plus') + 'Add account</button>', { collapsible: true, key: "acct-add" });
-    app.innerHTML = layout(heroBlock("Net worth", fmtBig(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, card("Accounts", "Balances update live with every entry", rows));
+    var goalsList = !state.goals.length ? '<div class="empty">No goals yet. Set a target for an account or your overall net worth.</div>' : goalPriority(state.goals).map(goalRow).join("");
+    var goalsCard = card("Goals", "Savings targets and progress", goalsList + '<div class="more"><button class="btn sec btn-sm" id="goalAdd">' + icon('plus') + 'Add goal</button></div>', { collapsible: true, key: "acct-goals" });
+    app.innerHTML = layout(heroBlock("Net worth", fmtBig(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, card("Accounts", "Balances update live with every entry", rows) + goalsCard);
     bind("aadd", "click", addAccount);
     Array.prototype.forEach.call(document.querySelectorAll("[data-acctdel]"), function (b) { b.onclick = function () { delAccount(b.getAttribute("data-acctdel")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-edit]"), function (b) { b.onclick = function () { editAccount(b.getAttribute("data-edit")); }; });
+    bind("goalAdd", "click", function () { goalModal(null); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-goaledit]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-goaledit"); var g = state.goals.filter(function (x) { return x.id === id; })[0]; if (g) goalModal(g); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-goaldel]"), function (b) { b.onclick = function () { delGoal(b.getAttribute("data-goaldel")); }; });
   }
   function addAccount() { var el = document.getElementById("aname"), name = el.value.trim(); if (!name) { flagInvalid(el); return; } var open = parseFloat(document.getElementById("aopen").value) || 0; commit("Account added", function () { state.accounts.push({ id: uid(), name: name, opening: Math.round(open * 100) / 100, color: PALETTE[state.accounts.length % PALETTE.length] }); }); }
   function editAccount(id) {
@@ -845,6 +865,52 @@
       commit("Account deleted", function () { state.accounts = state.accounts.filter(function (a) { return a.id !== id; }); });
     }, true);
   }
+
+  // ---------- GOALS ----------
+  function acctBalAsOf(id, d) {
+    var b = amap[id] ? (amap[id].opening || 0) : 0;
+    state.tx.forEach(function (t) { if (t.date > d) return; if (t.type === "income" && t.account === id) b += t.amount; else if (t.type === "expense" && t.account === id) b -= t.amount; else if (t.type === "transfer") { if (t.account === id) b -= (t.amount + (t.fee || 0)); if (t.toAccount === id) b += t.amount; } });
+    state.loans.forEach(function (l) { var sa = l.settledAmount != null ? l.settledAmount : l.amount, sd = l.settledDate || l.date; if (l.kind === "lent") { if (l.account === id && l.date <= d) b -= (l.amount + (l.fee || 0)); if (l.settled && l.settledAccount === id && sd <= d) b += sa; } else { if (l.account === id && l.date <= d) b += (l.amount - (l.fee || 0)); if (l.settled && l.settledAccount === id && sd <= d) b -= sa; } });
+    return b;
+  }
+  function nwAsOf(d) { return state.accounts.reduce(function (s, a) { return s + acctBalAsOf(a.id, d); }, 0); }
+  function goalCurrent(g) { return g.account ? acctBal(g.account) : netWorth(); }
+  function goalRate(g) { var d3 = addMonthsISO(today(), -3); var past = g.account ? acctBalAsOf(g.account, d3) : nwAsOf(d3); return (goalCurrent(g) - past) / 3; }
+  function goalReach(g, cur) { var rate = goalRate(g); if (rate <= 0) return { date: null }; var months = (g.target - cur) / rate; if (months <= 0) return { date: null }; var d = new Date(); d.setMonth(d.getMonth() + Math.ceil(months)); return { date: iso(d) }; }
+  function goalStatus(g, cur, reached) {
+    if (reached) return { text: "Reached", cls: "pos" };
+    var r = goalReach(g, cur);
+    if (g.due) { if (!r.date) return { text: "Behind · aim " + fmtDate(g.due), cls: "" }; return r.date <= g.due ? { text: "On track · aim " + fmtDate(g.due), cls: "pos" } : { text: "Behind · ~" + fmtDate(r.date) + " vs aim " + fmtDate(g.due), cls: "" }; }
+    return { text: r.date ? "~" + fmtDate(r.date) + " at this pace" : "Not growing yet", cls: "" };
+  }
+  function goalPriority(goals) {
+    return goals.slice().sort(function (a, b) {
+      var ar = goalCurrent(a) >= a.target ? 1 : 0, br = goalCurrent(b) >= b.target ? 1 : 0; if (ar !== br) return ar - br;
+      var ad = a.due || "", bd = b.due || ""; if (ad && bd && ad !== bd) return ad < bd ? -1 : 1; if (ad && !bd) return -1; if (!ad && bd) return 1;
+      var ap = a.target > 0 ? goalCurrent(a) / a.target : 0, bp = b.target > 0 ? goalCurrent(b) / b.target : 0; return bp - ap;
+    });
+  }
+  function goalRow(g) {
+    var cur = goalCurrent(g), reached = cur >= g.target, pct = g.target > 0 ? Math.max(0, Math.min(100, cur / g.target * 100)) : 0, st = goalStatus(g, cur, reached);
+    var fill = reached ? "var(--income)" : (g.account && amap[g.account] ? amap[g.account].color : "var(--accent)");
+    return '<div class="goal"><div class="goal-top"><span class="goal-name">' + esc(g.name) + '<span class="goal-tag">' + (g.account && amap[g.account] ? esc(amap[g.account].name) : "overall") + '</span></span><span class="goal-amt num">' + fmtBig(cur) + ' / ' + fmtBig(g.target) + '</span></div><div class="bar"><span style="width:' + pct.toFixed(0) + '%;background:' + fill + '"></span></div><div class="goal-foot"><span class="goal-status ' + st.cls + '">' + st.text + '</span><span class="goal-acts"><button class="mini" data-goaledit="' + g.id + '" aria-label="Edit goal" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-goaldel="' + g.id + '" aria-label="Delete goal" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button></span></div></div>';
+  }
+  function goalModal(g) {
+    var isEdit = !!g;
+    var opts = '<option value="">Overall — net worth</option>' + state.accounts.map(function (a) { return '<option value="' + a.id + '"' + (g && g.account === a.id ? " selected" : "") + '>' + esc(a.name) + '</option>'; }).join("");
+    var body = '<div class="field"><label>Goal name</label><input id="gName" type="text" maxlength="32" value="' + (g ? esc(g.name) : "") + '" placeholder="e.g. Emergency fund"></div>' +
+      '<div class="field"><label>Target amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="gTarget" type="number" step="0.01" value="' + (g ? g.target : "") + '" placeholder="0.00"></div></div>' +
+      '<div class="field"><label>Tracks</label><select id="gAcct" class="inp">' + opts + '</select></div>' +
+      '<div class="field"><label>Aim date (optional)</label><input id="gDue" type="date" class="inp" value="' + (g && g.due ? g.due : "") + '"></div>' +
+      '<div class="hint">Overall goals track your net worth; account goals track that one balance.</div>';
+    openModal(isEdit ? "Edit goal" : "New goal", body, "Save", function () {
+      var name = document.getElementById("gName").value.trim(); if (!name) { document.getElementById("gName").focus(); return false; }
+      var target = Math.round((parseFloat(document.getElementById("gTarget").value) || 0) * 100) / 100; if (!(target > 0)) { document.getElementById("gTarget").focus(); return false; }
+      var acct = document.getElementById("gAcct").value, due = document.getElementById("gDue").value || "";
+      commit(isEdit ? "Goal updated" : "Goal added", function () { if (isEdit) { g.name = name; g.target = target; g.account = acct; g.due = due; } else state.goals.push({ id: uid(), name: name, target: target, account: acct, due: due, created: Date.now() }); });
+    });
+  }
+  function delGoal(id) { confirmModal("Delete goal?", "This removes the goal. Your balances aren't affected.", "Delete", function () { commit("Goal deleted", function () { state.goals = state.goals.filter(function (x) { return x.id !== id; }); }); }, true); }
 
   // ---------- LENDING ----------
   function isOverdue(l) { return !l.settled && l.due && l.due < today(); }
@@ -1341,9 +1407,9 @@
   }
   function clearAllData() {
     confirmModal("Clear all data?", "This permanently deletes every account, transaction, loan and template on this device. Download a backup first — this can't be undone.", "Delete everything", function () {
-      state.tx = []; state.loans = []; state.recurring = []; state.accounts = [];
+      state.tx = []; state.loans = []; state.recurring = []; state.accounts = []; state.goals = [];
       state.backupCount = 0;
-      (async function () { try { await store.del(K.tx); await store.del(K.loan); await store.del(K.rec); await store.del(K.acct); } catch (e) {} })();
+      (async function () { try { await store.del(K.tx); await store.del(K.loan); await store.del(K.rec); await store.del(K.acct); await store.del(K.goals); } catch (e) {} })();
       render(); toast("All data cleared");
     }, true);
   }
@@ -1352,7 +1418,7 @@
   function resolveTheme() { if (state.theme === "system") { return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"; } return state.theme; }
   function applyTheme() { document.documentElement.setAttribute("data-theme", resolveTheme()); }
   function download(name, text, mime) { var blob = new Blob([text], { type: mime }), a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-  function backupJSON() { download("ledger-backup-" + today() + ".json", JSON.stringify({ app: "ledger", version: 7, exportedAt: new Date().toISOString(), currency: state.cur, accounts: state.accounts, transactions: state.tx, loans: state.loans, recurring: state.recurring }, null, 2), "application/json"); state.lastBackup = Date.now(); state.backupCount = totalRecords(); state.nagDismissed = false; saveSet(); renderBackupNag(); toast("Backup downloaded"); }
+  function backupJSON() { download("ledger-backup-" + today() + ".json", JSON.stringify({ app: "ledger", version: 8, exportedAt: new Date().toISOString(), currency: state.cur, accounts: state.accounts, transactions: state.tx, loans: state.loans, recurring: state.recurring, goals: state.goals }, null, 2), "application/json"); state.lastBackup = Date.now(); state.backupCount = totalRecords(); state.nagDismissed = false; saveSet(); renderBackupNag(); toast("Backup downloaded"); }
   function restoreJSON(text) {
     var o; try { o = JSON.parse(text); } catch (e) { toast("That file isn't valid JSON"); return; }
     if (!o || (!Array.isArray(o.accounts) && !Array.isArray(o.transactions))) { toast("Not a Ledger backup file"); return; }
@@ -1361,6 +1427,7 @@
       state.tx = Array.isArray(o.transactions) ? o.transactions : [];
       state.loans = Array.isArray(o.loans) ? o.loans : [];
       state.recurring = Array.isArray(o.recurring) ? o.recurring : [];
+      state.goals = Array.isArray(o.goals) ? o.goals : [];
       if (o.currency) state.cur = o.currency;
       state.lastBackup = Date.now(); state.backupCount = totalRecords(); state.nagDismissed = false;
       saveSet(); saveAll(); render(); toast("Backup restored");
