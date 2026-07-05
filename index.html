@@ -363,7 +363,7 @@
     accounts: [], tx: [], loans: [], recurring: [], goals: [],
     cur: "$", theme: "system",
     tab: "overview", prevTab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
-    fType: "all", fQ: "", trackShow: 30, lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
+    fType: "all", fQ: "", trackShow: 30, trackAcct: "", trackPeriod: "all", trackFrom: "", trackTo: "", lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
     lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false, priv: "off", privLast: "partial"
   };
   var amap = {}, lastTab = null;
@@ -716,10 +716,12 @@
 
   // ---------- TRACK ----------
   function renderTrack() {
-    var q = state.fQ.trim().toLowerCase();
+    var q = state.fQ.trim().toLowerCase(), rng = trackRange();
     var visible = entries().filter(function (e) {
       if (state.fType === "lending") { if (e.kind !== "lend" && e.kind !== "borrow" && e.kind !== "settle") return false; }
       else if (state.fType !== "all" && e.kind !== state.fType) return false;
+      if (state.trackAcct && e.account !== state.trackAcct && e.toAccount !== state.trackAcct) return false;
+      if (e.date < rng.from || e.date > rng.to) return false;
       if (q) { var hay = ((e.where || "") + " " + (e.note || "") + " " + (e.person || "") + " " + acctName(e.account)).toLowerCase(); if (hay.indexOf(q) < 0) return false; }
       return true;
     });
@@ -727,7 +729,11 @@
     var remaining = visible.length - shown.length;
     var listBody = !visible.length ? '<div class="empty"><div class="big">No entries yet</div>' + (state.accounts.length ? "Add an income, expense, or transfer to get started." : "Add an account first, then start logging.") + '</div>'
       : '<div class="list">' + groupedRows(shown, false, state.fType === "all" && !q) + '</div>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more · ' + remaining + ' left</button></div>' : "");
-    var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select class="inp" id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select></div>';
+    var tkPeriod = state.trackPeriod || "all";
+    var acctSel = '<select class="inp" id="fAcct" aria-label="Filter by account"><option value=""' + sel(state.trackAcct, "") + '>All accounts</option>' + state.accounts.map(function (a) { return '<option value="' + a.id + '"' + sel(state.trackAcct, a.id) + '>' + esc(a.name) + '</option>'; }).join("") + '</select>';
+    var pchips = '<div class="periodbar" role="group" aria-label="Date range">' + [["all", "All"], ["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["12m", "12M"], ["custom", "Custom"]].map(function (o) { return '<button type="button" data-tkp="' + o[0] + '" class="' + (tkPeriod === o[0] ? "on" : "") + '" aria-pressed="' + (tkPeriod === o[0] ? "true" : "false") + '">' + o[1] + '</button>'; }).join("") + '</div>';
+    var customPick = tkPeriod === "custom" ? '<div class="filters" style="margin-top:8px"><input type="date" class="inp" id="fFrom" value="' + (state.trackFrom || rng.from) + '" max="' + today() + '" aria-label="From date"><span style="align-self:center;color:var(--ink-faint)">–</span><input type="date" class="inp" id="fTo" value="' + (state.trackTo || rng.to) + '" max="' + today() + '" aria-label="To date"></div>' : "";
+    var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select class="inp" id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select>' + acctSel + '</div>' + pchips + customPick;
 
     var chips = shortcutChips();
     var quickCard = chips ? card("Quick log", "Saved shortcuts — one tap to log", chips) : "";
@@ -809,6 +815,10 @@
     var add = document.getElementById("add"); if (add) add.onclick = function () { addEntry(); };
     var amt = document.getElementById("amt"); if (amt) amt.onkeydown = function (e) { if (e.key === "Enter") addEntry(); };
     bind("fType", "change", function (el) { state.fType = el.value; state.trackShow = 30; render(); });
+    bind("fAcct", "change", function (el) { state.trackAcct = el.value; state.trackShow = 30; render(); });
+    Array.prototype.forEach.call(document.querySelectorAll(".periodbar button"), function (b) { b.onclick = function () { state.trackPeriod = b.getAttribute("data-tkp"); state.trackShow = 30; render(); }; });
+    bind("fFrom", "change", function (el) { state.trackFrom = el.value; state.trackShow = 30; render(); });
+    bind("fTo", "change", function (el) { state.trackTo = el.value; state.trackShow = 30; render(); });
     var q = document.getElementById("fQ"); if (q) q.oninput = function () { state.fQ = q.value; state.trackShow = 30; var s = q.selectionStart; render(); var nq = document.getElementById("fQ"); if (nq) { nq.focus(); try { nq.setSelectionRange(s, s); } catch (e) {} } };
     bind("showMore", "click", function () { state.trackShow += 50; render(); });
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
@@ -1066,13 +1076,15 @@
   function addMonthsISO(s, n) { var d = new Date(s + "T00:00:00"); d.setMonth(d.getMonth() + n); return iso(d); }
   function shiftDaysISO(s, n) { return iso(new Date(new Date(s + "T00:00:00").getTime() + n * 86400000)); }
   function eventDates() { var ds = []; state.tx.forEach(function (t) { ds.push(t.date); }); state.loans.forEach(function (l) { ds.push(l.date); if (l.settledDate) ds.push(l.settledDate); }); return ds; }
-  function trendRange() {
-    var p = state.trendPeriod || "12m", to = today(), from;
-    if (p === "custom") { from = state.trendFrom || addMonthsISO(to, -12); to = state.trendTo || today(); if (from > to) { var tmp = from; from = to; to = tmp; } return { from: from, to: to }; }
+  function computeRange(period, fromStr, toStr) {
+    var p = period || "12m", to = today(), from;
+    if (p === "custom") { from = fromStr || addMonthsISO(to, -12); to = toStr || today(); if (from > to) { var tmp = from; from = to; to = tmp; } return { from: from, to: to }; }
     if (p === "all") { var ds = eventDates().sort(); return { from: ds.length ? ds[0] : addMonthsISO(to, -12), to: to }; }
     var mo = { "1m": 1, "3m": 3, "6m": 6, "12m": 12 }[p] || 12;
     return { from: addMonthsISO(to, -mo), to: to };
   }
+  function trendRange() { return computeRange(state.trendPeriod, state.trendFrom, state.trendTo); }
+  function trackRange() { return computeRange(state.trackPeriod, state.trackFrom, state.trackTo); }
   function granFor(from, to) { var days = (new Date(to + "T00:00:00") - new Date(from + "T00:00:00")) / 86400000; return days <= 120 ? "weekly" : days <= 770 ? "monthly" : "yearly"; }
   function bucketKey(d, g) { return g === "weekly" ? weekStart(d) : g === "yearly" ? d.slice(0, 4) : d.slice(0, 7); }
   function bucketKeys(from, to, g) {
@@ -1442,7 +1454,7 @@
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) { b.onclick = function () { state.theme = b.getAttribute("data-theme-set"); applyTheme(); saveSet(); render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-priv-set]"), function (b) { b.onclick = function () { var v = b.getAttribute("data-priv-set"); state.priv = v; if (v !== "off") state.privLast = v; saveSet(); setPrivBtn(); render(); }; });
-    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.lendKind = "lent-out"; state.lendView = "person"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
+    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.lendKind = "lent-out"; state.lendView = "person"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
     bind("curSel", "change", function (el) { if (el.value === "__custom") { var c = document.getElementById("curCustom"); c.focus(); return; } state.cur = el.value; saveSet(); render(); });
     bind("curCustom", "input", function (el) { var sel = document.getElementById("curSel"); if (sel && el.value.trim()) sel.value = "__custom"; });
     var cc = document.getElementById("curCustom"); if (cc) cc.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); var v = cc.value.trim(); if (v) { state.cur = v; saveSet(); render(); toast("Currency set to " + v); } } };
