@@ -119,6 +119,20 @@
   .filt-toggle.open .ic { transform: rotate(180deg); }
   .filt-toggle.active { color: var(--accent); border-color: var(--accent); }
   .filt-more { margin: 0 0 14px; display: flex; flex-direction: column; gap: 12px; }
+  .filters .filt-toggle { padding: 5px 8px; border-radius: 8px; background: var(--paper); }
+  .filt-more .inp { font-size: 13px; padding: 7px 9px; border-radius: 8px; }
+  .vtoggle { display: inline-flex; gap: 4px; background: var(--paper-2); padding: 4px; border-radius: 10px; margin-bottom: 12px; }
+  .vtoggle button { border: 0; background: transparent; padding: 7px 16px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+  .vtoggle button.on { background: var(--accent); color: var(--accent-ink); }
+  .stmt-row { display: flex; align-items: baseline; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+  .stmt-row:last-child { border-bottom: 0; }
+  .stmt-desc { flex: 1 1 auto; min-width: 0; }
+  .stmt-label { color: var(--ink); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stmt-date { color: var(--ink-faint); font-size: 11.5px; margin-top: 1px; }
+  .stmt-delta { font-size: 12.5px; white-space: nowrap; text-align: right; flex: none; }
+  .stmt-bal { font-size: 13.5px; font-weight: 600; white-space: nowrap; text-align: right; flex: none; min-width: 74px; }
+  .stmt-edge { background: var(--paper-2); border-radius: 8px; padding: 10px; border-bottom: 0; margin: 3px 0; }
+  .stmt-edge .stmt-label { font-weight: 700; color: var(--ink-soft); }
   .priv-full .balance.pos, .priv-full .balance.neg, .priv-full .v.pos, .priv-full .v.neg, .priv-full .v.neu { color: var(--ink); }
   .priv-full .badge.gain, .priv-full .badge.loss { background: var(--paper-2); color: var(--ink-soft); }
   .priv-partial .balance.pos, .priv-partial .balance.neg, .priv-partial .pill .v.pos, .priv-partial .pill .v.neg, .priv-partial .stat .v.pos, .priv-partial .stat .v.neg { color: var(--ink); }
@@ -367,7 +381,7 @@
     accounts: [], tx: [], loans: [], recurring: [], goals: [],
     cur: "$", theme: "system",
     tab: "overview", prevTab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
-    fType: "all", fQ: "", trackShow: 30, trackAcct: "", trackPeriod: "all", trackFrom: "", trackTo: "", trackFiltersOpen: false, lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
+    fType: "all", fQ: "", trackShow: 30, trackAcct: "", trackPeriod: "all", trackFrom: "", trackTo: "", trackFiltersOpen: false, trackView: "list", lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
     lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false, priv: "off", privLast: "partial"
   };
   var amap = {}, lastTab = null;
@@ -719,6 +733,45 @@
   }
 
   // ---------- TRACK ----------
+  function statementRows(acctId, from, to) {
+    var evs = [], A = acctId;
+    function add(d, tm, cr, label, delta, cls) { evs.push({ d: d, tm: tm || "", cr: cr != null ? cr : tstamp(d, tm), label: label, delta: delta, cls: cls || "" }); }
+    state.tx.forEach(function (t) {
+      if (t.date < from || t.date > to) return;
+      if (A) {
+        if (t.type === "income" && t.account === A) add(t.date, t.time, t.created, t.where || "Income", t.amount, "pos");
+        else if (t.type === "expense" && t.account === A) add(t.date, t.time, t.created, t.where || "Expense", -t.amount, "neg");
+        else if (t.type === "transfer") { if (t.account === A) add(t.date, t.time, t.created, "Transfer to " + acctName(t.toAccount), -(t.amount + (t.fee || 0)), ""); if (t.toAccount === A) add(t.date, t.time, t.created, "Transfer from " + acctName(t.account), t.amount, ""); }
+      } else {
+        if (t.type === "income") add(t.date, t.time, t.created, t.where || "Income", t.amount, "pos");
+        else if (t.type === "expense") add(t.date, t.time, t.created, t.where || "Expense", -t.amount, "neg");
+        else if (t.type === "transfer" && (t.fee || 0)) add(t.date, t.time, t.created, "Transfer fee · " + acctName(t.account), -(t.fee || 0), "neg");
+      }
+    });
+    state.loans.forEach(function (l) {
+      var sa = l.settledAmount != null ? l.settledAmount : l.amount, sd = l.settledDate || l.date;
+      if (l.date >= from && l.date <= to && (A ? l.account === A : !!l.account)) {
+        if (l.kind === "lent") add(l.date, l.time, l.created, "Lent to " + l.person, -(l.amount + (l.fee || 0)), "");
+        else add(l.date, l.time, l.created, "Borrowed from " + l.person, (l.amount - (l.fee || 0)), "");
+      }
+      if (l.settled && sd >= from && sd <= to && (A ? l.settledAccount === A : !!l.settledAccount)) {
+        if (l.kind === "lent") add(sd, l.settledTime, l.settledCreated, "Repaid by " + l.person, sa, "");
+        else add(sd, l.settledTime, l.settledCreated, "Repaid to " + l.person, -sa, "");
+      }
+    });
+    evs.sort(function (a, b) { if (a.d !== b.d) return a.d < b.d ? -1 : 1; if (a.tm !== b.tm) return a.tm < b.tm ? -1 : 1; return a.cr < b.cr ? -1 : a.cr > b.cr ? 1 : 0; });
+    var run = A ? acctBalAsOf(A, shiftDaysISO(from, -1)) : nwAsOf(shiftDaysISO(from, -1)), opening = run;
+    evs.forEach(function (e) { run += e.delta; e.running = run; });
+    return { opening: opening, rows: evs, closing: run };
+  }
+  function renderStatement(acctId, rng) {
+    var st = statementRows(acctId, rng.from, rng.to);
+    var edge = function (lbl, d, v) { return '<div class="stmt-row stmt-edge"><div class="stmt-desc"><div class="stmt-label">' + lbl + '</div><div class="stmt-date">' + fmtDate(d) + '</div></div><div class="stmt-bal num ' + (v < 0 ? "neg" : "") + '">' + fmtBig(v) + '</div></div>'; };
+    var mid = st.rows.length
+      ? st.rows.map(function (e) { return '<div class="stmt-row"><div class="stmt-desc"><div class="stmt-label">' + esc(e.label) + '</div><div class="stmt-date">' + fmtDate(e.d) + '</div></div><div class="stmt-delta num ' + e.cls + '">' + (e.delta >= 0 ? "+" : "−") + fmtBig(Math.abs(e.delta)) + '</div><div class="stmt-bal num ' + (e.running < 0 ? "neg" : "") + '">' + fmtBig(e.running) + '</div></div>'; }).join("")
+      : '<div class="stmt-row"><div class="stmt-desc"><div class="stmt-date">No transactions in this period.</div></div></div>';
+    return '<div class="stmt">' + edge("Opening balance", rng.from, st.opening) + mid + edge("Closing balance", rng.to, st.closing) + '</div>';
+  }
   function renderTrack() {
     var q = state.fQ.trim().toLowerCase(), rng = trackRange();
     var visible = entries().filter(function (e) {
@@ -737,12 +790,15 @@
     var acctSel = '<select class="inp" id="fAcct" aria-label="Filter by account"><option value=""' + sel(state.trackAcct, "") + '>All accounts</option>' + state.accounts.map(function (a) { return '<option value="' + a.id + '"' + sel(state.trackAcct, a.id) + '>' + esc(a.name) + '</option>'; }).join("") + '</select>';
     var pchips = '<div class="periodbar" role="group" aria-label="Date range">' + [["all", "All"], ["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["12m", "12M"], ["custom", "Custom"]].map(function (o) { return '<button type="button" data-tkp="' + o[0] + '" class="' + (tkPeriod === o[0] ? "on" : "") + '" aria-pressed="' + (tkPeriod === o[0] ? "true" : "false") + '">' + o[1] + '</button>'; }).join("") + '</div>';
     var customPick = tkPeriod === "custom" ? '<div class="filters" style="margin:0"><input type="date" class="inp" id="fFrom" value="' + (state.trackFrom || rng.from) + '" max="' + today() + '" aria-label="From date"><span style="align-self:center;color:var(--ink-faint)">–</span><input type="date" class="inp" id="fTo" value="' + (state.trackTo || rng.to) + '" max="' + today() + '" aria-label="To date"></div>' : "";
-    var listExtra = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select class="inp" id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select><button class="icon-btn filt-toggle' + (filtActive ? " active" : "") + (fopen ? " open" : "") + '" id="filtMore" aria-label="More filters" aria-expanded="' + (fopen ? "true" : "false") + '" title="Account and date filters"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-funnel"></use></svg></button></div>' + (fopen ? '<div class="filt-more">' + acctSel + pchips + customPick + '</div>' : "");
+    var view = state.trackView || "list", stmtMode = view === "statement";
+    var vtoggle = '<div class="vtoggle" role="group" aria-label="View mode"><button type="button" data-view="list" class="' + (stmtMode ? "" : "on") + '">List</button><button type="button" data-view="statement" class="' + (stmtMode ? "on" : "") + '">Statement</button></div>';
+    var line1 = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select class="inp" id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select><button class="icon-btn filt-toggle' + (filtActive ? " active" : "") + (fopen ? " open" : "") + '" id="filtMore" aria-label="More filters" aria-expanded="' + (fopen ? "true" : "false") + '" title="Account and date filters"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-funnel"></use></svg></button></div>';
+    var listExtra = stmtMode ? (vtoggle + '<div class="filt-more" style="margin-top:2px">' + acctSel + pchips + customPick + '</div>') : (vtoggle + line1 + (fopen ? '<div class="filt-more">' + acctSel + pchips + customPick + '</div>' : ""));
 
     var chips = shortcutChips();
     var quickCard = chips ? card("Quick log", "Saved shortcuts — one tap to log", chips) : "";
     var sidebar = quickCard + card("Add entry", "Income, expense, or transfer", state.accounts.length ? formHTML() : accountNudge(), { collapsible: true, key: "track-add" });
-    var main = card("Ledger", visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included", listExtra + listBody);
+    var main = card("Ledger", stmtMode ? ((state.trackAcct ? esc(acctName(state.trackAcct)) : "All accounts") + " · running balance") : (visible.length + " entr" + (visible.length === 1 ? "y" : "ies") + " · loans included"), listExtra + (stmtMode ? renderStatement(state.trackAcct, rng) : listBody));
 
     app.innerHTML = layout(heroBlock("Net worth", fmtBig(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, main);
     wireTrack();
@@ -820,6 +876,7 @@
     var amt = document.getElementById("amt"); if (amt) amt.onkeydown = function (e) { if (e.key === "Enter") addEntry(); };
     bind("fType", "change", function (el) { state.fType = el.value; state.trackShow = 30; render(); });
     bind("filtMore", "click", function () { state.trackFiltersOpen = !state.trackFiltersOpen; render(); });
+    Array.prototype.forEach.call(document.querySelectorAll(".vtoggle button"), function (b) { b.onclick = function () { state.trackView = b.getAttribute("data-view"); render(); }; });
     bind("fAcct", "change", function (el) { state.trackAcct = el.value; state.trackShow = 30; render(); });
     Array.prototype.forEach.call(document.querySelectorAll(".periodbar button"), function (b) { b.onclick = function () { state.trackPeriod = b.getAttribute("data-tkp"); state.trackShow = 30; render(); }; });
     bind("fFrom", "change", function (el) { state.trackFrom = el.value; state.trackShow = 30; render(); });
@@ -1459,7 +1516,7 @@
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) { b.onclick = function () { state.theme = b.getAttribute("data-theme-set"); applyTheme(); saveSet(); render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-priv-set]"), function (b) { b.onclick = function () { var v = b.getAttribute("data-priv-set"); state.priv = v; if (v !== "off") state.privLast = v; saveSet(); setPrivBtn(); render(); }; });
-    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.lendKind = "lent-out"; state.lendView = "person"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackFiltersOpen = false; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
+    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.lendKind = "lent-out"; state.lendView = "person"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackFiltersOpen = false; state.trackView = "list"; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
     bind("curSel", "change", function (el) { if (el.value === "__custom") { var c = document.getElementById("curCustom"); c.focus(); return; } state.cur = el.value; saveSet(); render(); });
     bind("curCustom", "input", function (el) { var sel = document.getElementById("curSel"); if (sel && el.value.trim()) sel.value = "__custom"; });
     var cc = document.getElementById("curCustom"); if (cc) cc.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); var v = cc.value.trim(); if (v) { state.cur = v; saveSet(); render(); toast("Currency set to " + v); } } };
