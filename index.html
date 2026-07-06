@@ -117,12 +117,13 @@
   .periodbar button:not(.on):hover { color: var(--ink); }
   .filt-toggle .ic { transition: transform .15s; }
   .filt-toggle.open .ic { transform: rotate(180deg); }
-  .filt-toggle.active { color: var(--accent); border-color: var(--accent); }
+  .filt-toggle.active { color: var(--accent); position: relative; }
+  .filt-toggle.active::after { content: ""; position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper); }
   .filt-more { margin: 0 0 14px; display: flex; flex-direction: column; gap: 12px; }
-  .filters .filt-toggle { padding: 5px 8px; border-radius: 8px; background: var(--paper); }
+  .filters .filt-toggle { align-self: stretch; aspect-ratio: 1; flex: none; padding: 0; border-radius: 8px; background: var(--paper); }
   .filt-more .inp { font-size: 13px; padding: 7px 9px; border-radius: 8px; }
-  .vtoggle { display: inline-flex; gap: 4px; background: var(--paper-2); padding: 4px; border-radius: 10px; margin-bottom: 12px; }
-  .vtoggle button { border: 0; background: transparent; padding: 7px 16px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+  .vtoggle { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; background: var(--paper-2); padding: 4px; border-radius: 10px; margin-bottom: 14px; }
+  .vtoggle button { border: 0; background: transparent; padding: 9px 4px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); transition: .15s; }
   .vtoggle button.on { background: var(--accent); color: var(--accent-ink); }
   .stmt-row { display: flex; align-items: baseline; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
   .stmt-row:last-child { border-bottom: 0; }
@@ -131,8 +132,13 @@
   .stmt-date { color: var(--ink-faint); font-size: 11.5px; margin-top: 1px; }
   .stmt-delta { font-size: 12.5px; white-space: nowrap; text-align: right; flex: none; }
   .stmt-bal { font-size: 13.5px; font-weight: 600; white-space: nowrap; text-align: right; flex: none; min-width: 74px; }
-  .stmt-edge { background: var(--paper-2); border-radius: 8px; padding: 10px; border-bottom: 0; margin: 3px 0; }
-  .stmt-edge .stmt-label { font-weight: 700; color: var(--ink-soft); }
+  .stmt-edge { padding: 11px 2px; }
+  .stmt-edge .stmt-label { font-weight: 700; color: var(--ink); }
+  .stmt-edge .stmt-bal { font-size: 15px; font-weight: 700; }
+  .stmt .stmt-row:last-child { border-top: 1.5px solid var(--line-strong); border-bottom: 0; }
+  .filt-active { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -2px 0 12px; font-size: 12.5px; color: var(--ink-soft); }
+  .filt-clear { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink-soft); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .filt-clear .ic { width: 12px; height: 12px; }
   .priv-full .balance.pos, .priv-full .balance.neg, .priv-full .v.pos, .priv-full .v.neg, .priv-full .v.neu { color: var(--ink); }
   .priv-full .badge.gain, .priv-full .badge.loss { background: var(--paper-2); color: var(--ink-soft); }
   .priv-partial .balance.pos, .priv-partial .balance.neg, .priv-partial .pill .v.pos, .priv-partial .pill .v.neg, .priv-partial .stat .v.pos, .priv-partial .stat .v.neg { color: var(--ink); }
@@ -768,7 +774,7 @@
     var st = statementRows(acctId, rng.from, rng.to);
     var edge = function (lbl, d, v) { return '<div class="stmt-row stmt-edge"><div class="stmt-desc"><div class="stmt-label">' + lbl + '</div><div class="stmt-date">' + fmtDate(d) + '</div></div><div class="stmt-bal num ' + (v < 0 ? "neg" : "") + '">' + fmtBig(v) + '</div></div>'; };
     var mid = st.rows.length
-      ? st.rows.map(function (e) { return '<div class="stmt-row"><div class="stmt-desc"><div class="stmt-label">' + esc(e.label) + '</div><div class="stmt-date">' + fmtDate(e.d) + '</div></div><div class="stmt-delta num ' + e.cls + '">' + (e.delta >= 0 ? "+" : "−") + fmtBig(Math.abs(e.delta)) + '</div><div class="stmt-bal num ' + (e.running < 0 ? "neg" : "") + '">' + fmtBig(e.running) + '</div></div>'; }).join("")
+      ? st.rows.map(function (e) { return '<div class="stmt-row"><div class="stmt-desc"><div class="stmt-label">' + esc(e.label) + '</div><div class="stmt-date">' + dtLabel(e.d, e.tm) + '</div></div><div class="stmt-delta num ' + e.cls + '">' + (e.delta >= 0 ? "+" : "−") + fmtBig(Math.abs(e.delta)) + '</div><div class="stmt-bal num ' + (e.running < 0 ? "neg" : "") + '">' + fmtBig(e.running) + '</div></div>'; }).join("")
       : '<div class="stmt-row"><div class="stmt-desc"><div class="stmt-date">No transactions in this period.</div></div></div>';
     return '<div class="stmt">' + edge("Opening balance", rng.from, st.opening) + mid + edge("Closing balance", rng.to, st.closing) + '</div>';
   }
@@ -793,7 +799,10 @@
     var view = state.trackView || "list", stmtMode = view === "statement";
     var vtoggle = '<div class="vtoggle" role="group" aria-label="View mode"><button type="button" data-view="list" class="' + (stmtMode ? "" : "on") + '">List</button><button type="button" data-view="statement" class="' + (stmtMode ? "on" : "") + '">Statement</button></div>';
     var line1 = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select class="inp" id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select><button class="icon-btn filt-toggle' + (filtActive ? " active" : "") + (fopen ? " open" : "") + '" id="filtMore" aria-label="More filters" aria-expanded="' + (fopen ? "true" : "false") + '" title="Account and date filters"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-funnel"></use></svg></button></div>';
-    var listExtra = stmtMode ? (vtoggle + '<div class="filt-more" style="margin-top:2px">' + acctSel + pchips + customPick + '</div>') : (vtoggle + line1 + (fopen ? '<div class="filt-more">' + acctSel + pchips + customPick + '</div>' : ""));
+    var perLbl = { "1m": "Last month", "3m": "Last 3 months", "6m": "Last 6 months", "12m": "Last 12 months", custom: fmtDate(rng.from) + " – " + fmtDate(rng.to) };
+    var abits = []; if (state.trackAcct) abits.push(esc(acctName(state.trackAcct))); if (tkPeriod !== "all") abits.push(perLbl[tkPeriod] || tkPeriod);
+    var filtSummary = (!stmtMode && filtActive && !fopen) ? '<div class="filt-active"><span>Filtered · ' + abits.join(" · ") + '</span><button class="filt-clear" id="filtClear" type="button">' + icon('x') + 'Clear</button></div>' : "";
+    var listExtra = stmtMode ? (vtoggle + '<div class="filt-more" style="margin-top:2px">' + acctSel + pchips + customPick + '</div>') : (vtoggle + line1 + (fopen ? '<div class="filt-more">' + acctSel + pchips + customPick + '</div>' : filtSummary));
 
     var chips = shortcutChips();
     var quickCard = chips ? card("Quick log", "Saved shortcuts — one tap to log", chips) : "";
@@ -877,6 +886,7 @@
     bind("fType", "change", function (el) { state.fType = el.value; state.trackShow = 30; render(); });
     bind("filtMore", "click", function () { state.trackFiltersOpen = !state.trackFiltersOpen; render(); });
     Array.prototype.forEach.call(document.querySelectorAll(".vtoggle button"), function (b) { b.onclick = function () { state.trackView = b.getAttribute("data-view"); render(); }; });
+    bind("filtClear", "click", function () { state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackShow = 30; render(); });
     bind("fAcct", "change", function (el) { state.trackAcct = el.value; state.trackShow = 30; render(); });
     Array.prototype.forEach.call(document.querySelectorAll(".periodbar button"), function (b) { b.onclick = function () { state.trackPeriod = b.getAttribute("data-tkp"); state.trackShow = 30; render(); }; });
     bind("fFrom", "change", function (el) { state.trackFrom = el.value; state.trackShow = 30; render(); });
