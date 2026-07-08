@@ -120,7 +120,7 @@
   .filt-toggle.active { color: var(--accent); position: relative; }
   .filt-toggle.active::after { content: ""; position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper); }
   .filt-more { margin: 0 0 14px; display: flex; flex-direction: column; gap: 12px; }
-  .filters .filt-toggle { align-self: stretch; aspect-ratio: 1; flex: none; padding: 0; border-radius: 8px; background: var(--paper); }
+  .filters .filt-toggle { padding: 5px; border-radius: 8px; background: var(--paper); }
   .filt-more .inp { font-size: 13px; padding: 7px 9px; border-radius: 8px; }
   .vtoggle { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; background: var(--paper-2); padding: 4px; border-radius: 10px; margin-bottom: 14px; }
   .vtoggle button { border: 0; background: transparent; padding: 9px 4px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); transition: .15s; }
@@ -134,8 +134,9 @@
   .stmt-bal { font-size: 13.5px; font-weight: 600; white-space: nowrap; text-align: right; flex: none; min-width: 74px; }
   .stmt-edge { padding: 11px 2px; }
   .stmt-edge .stmt-label { font-weight: 700; color: var(--ink); }
-  .stmt-edge .stmt-bal { font-size: 15px; font-weight: 700; }
-  .stmt .stmt-row:last-child { border-top: 1.5px solid var(--line-strong); border-bottom: 0; }
+  .stmt-edge .stmt-bal { font-size: 16px; font-weight: 700; }
+  .stmt .stmt-row:first-child { border-bottom: 2px solid var(--line-strong); }
+  .stmt .stmt-row:last-child { border-top: 2px solid var(--line-strong); border-bottom: 0; }
   .filt-active { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -2px 0 12px; font-size: 12.5px; color: var(--ink-soft); }
   .filt-clear { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink-soft); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 600; cursor: pointer; }
   .filt-clear .ic { width: 12px; height: 12px; }
@@ -886,9 +887,9 @@
     bind("fType", "change", function (el) { state.fType = el.value; state.trackShow = 30; render(); });
     bind("filtMore", "click", function () { state.trackFiltersOpen = !state.trackFiltersOpen; render(); });
     Array.prototype.forEach.call(document.querySelectorAll(".vtoggle button"), function (b) { b.onclick = function () { state.trackView = b.getAttribute("data-view"); render(); }; });
-    bind("filtClear", "click", function () { state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackShow = 30; render(); });
+    bind("filtClear", "click", function () { state.fQ = ""; state.fType = "all"; state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackShow = 30; render(); });
     bind("fAcct", "change", function (el) { state.trackAcct = el.value; state.trackShow = 30; render(); });
-    Array.prototype.forEach.call(document.querySelectorAll(".periodbar button"), function (b) { b.onclick = function () { state.trackPeriod = b.getAttribute("data-tkp"); state.trackShow = 30; render(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll(".periodbar button"), function (b) { b.onclick = function () { var v = b.getAttribute("data-tkp"); if (v === "custom" && !state.trackFrom && !state.trackTo) { var n = new Date(); state.trackFrom = iso(new Date(n.getFullYear(), n.getMonth(), 1)); state.trackTo = today(); } state.trackPeriod = v; state.trackShow = 30; render(); }; });
     bind("fFrom", "change", function (el) { state.trackFrom = el.value; state.trackShow = 30; render(); });
     bind("fTo", "change", function (el) { state.trackTo = el.value; state.trackShow = 30; render(); });
     var q = document.getElementById("fQ"); if (q) q.oninput = function () { state.fQ = q.value; state.trackShow = 30; var s = q.selectionStart; render(); var nq = document.getElementById("fQ"); if (nq) { nq.focus(); try { nq.setSelectionRange(s, s); } catch (e) {} } };
