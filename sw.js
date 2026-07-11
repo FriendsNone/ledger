@@ -1,5 +1,5 @@
 /* Ledger service worker — offline app shell */
-const CACHE = 'ledger-v58';
+const CACHE = 'ledger-v59';
 const ASSETS = [
   './',
   './index.html',

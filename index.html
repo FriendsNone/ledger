@@ -107,9 +107,12 @@
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; background: var(--paper-2); padding: 4px; border-radius: 10px; margin-bottom: 14px; }
   .seg.three { grid-template-columns: 1fr 1fr 1fr; }
   .seg button { border: 0; background: transparent; padding: 9px 4px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); transition: .15s; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); }
   .seg button.on[data-t="expense"], .seg button.on[data-rt="expense"], .seg button.on[data-et="expense"], .seg button.on[data-lk="lent-out"] { background: var(--expense); color: var(--on-fill); }
   .seg button.on[data-t="income"], .seg button.on[data-rt="income"], .seg button.on[data-et="income"], .seg button.on[data-lk="borrowed"] { background: var(--income); color: var(--on-fill); }
   .seg button.on[data-t="transfer"], .seg button.on[data-rt="transfer"], .seg button.on[data-et="transfer"], .seg button.on[data-theme-set], .seg button.on[data-priv-set] { background: var(--accent); color: var(--accent-ink); }
+  .seg button.on[data-iod="i_owe"] { background: var(--expense); color: var(--on-fill); }
+  .seg button.on[data-iod="they_owe"] { background: var(--income); color: var(--on-fill); }
   .periodbar { display: flex; gap: 5px; background: var(--paper-2); padding: 4px; border-radius: 10px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
   .periodbar::-webkit-scrollbar { display: none; }
   .periodbar button { flex: 1 0 auto; border: 0; background: transparent; padding: 8px 14px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; transition: .15s; }
@@ -178,13 +181,17 @@
   .tagbox { border-left: 2px solid var(--accent); padding-left: 11px; margin: -2px 0 12px; }
   .person { border-bottom: 1px solid var(--line); padding: 4px 0; }
   .person:last-child { border-bottom: 0; }
-  .phead { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 2px; cursor: pointer; border-radius: 8px; }
+  .phead { display: flex; align-items: center; gap: 10px; padding: 11px 8px 11px 6px; cursor: pointer; border-radius: 9px; transition: .12s; }
   .phead:hover { background: var(--paper-2); }
-  .pn { font-weight: 700; font-size: 15px; }
+  .phead:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .pcaret { width: 16px; height: 16px; flex: none; color: var(--ink-faint); transition: transform .16s; }
+  .person.open .pcaret { transform: rotate(180deg); }
+  .pmain { flex: 1; min-width: 0; }
+  .pn { font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pstate { font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
-  .pbal { font-weight: 800; font-size: 16px; white-space: nowrap; }
-  .pacts { display: flex; gap: 6px; padding: 0 2px 8px; }
-  .plist { border-top: 1px dashed var(--line-strong); padding: 6px 2px 10px; }
+  .pbal { font-weight: 800; font-size: 16px; white-space: nowrap; flex: none; }
+  .pacts { display: flex; gap: 6px; padding: 0 2px 10px 28px; }
+  .plist { border-top: 1px dashed var(--line-strong); margin-left: 28px; padding: 6px 2px 10px; }
   .prow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 6px 0; }
   .pbody { min-width: 0; }
   .pt { font-size: 13.5px; color: var(--ink); }
@@ -402,7 +409,7 @@
   var state = {
     accounts: [], tx: [], loans: [], recurring: [], goals: [], ious: [],
     cur: "$", theme: "system",
-    tab: "overview", prevTab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
+    tab: "overview", prevTab: "overview", formType: "expense", recType: "expense",
     fType: "all", fQ: "", trackShow: 30, trackAcct: "", trackPeriod: "all", trackFrom: "", trackTo: "", trackFiltersOpen: false, trackView: "list", peopleOpen: {}, iouDir: "i_owe", lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
     lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false, priv: "off", privLast: "partial"
   };
@@ -593,7 +600,6 @@
   }
   function totalsFlow(filter) { var inc = 0, exp = 0; flowEvents().forEach(function (e) { if (filter && !filter(e)) return; inc += e.inc; exp += e.exp; }); return { inc: inc, exp: exp }; }
   function periodTotals(month) { return totalsFlow(month ? function (e) { return e.date.slice(0, 7) === thisMonth(); } : null); }
-  function lendTotals() { var owed = 0, owe = 0, over = 0; state.loans.forEach(function (l) { if (l.settled) return; if (l.kind === "lent") owed += l.amount; else owe += l.amount; if (isOverdue(l)) over++; }); return { owed: owed, owe: owe, over: over }; }
 
   function tstamp(d, t) { return new Date((d || "1970-01-01") + "T" + (t || "00:00") + ":00").getTime() || 0; }
   function entries() {
@@ -1154,7 +1160,7 @@
       var acts = e.kind === "iou" && !e.done ? '<button class="del" data-ioudel="' + e.id + '" aria-label="Delete IOU" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>' : "";
       return '<div class="prow"><div class="pbody"><div class="pt">' + esc(e.label) + '</div><div class="ps">' + dtLabel(e.date, e.time) + ' · ' + e.sub + '</div></div><div class="pend"><span class="num ' + (e.delta > 0 ? "pos" : e.delta < 0 ? "neg" : "") + '">' + amt + '</span>' + acts + '</div></div>';
     }).join("") + '</div>' : "";
-    return '<div class="person' + (open ? " open" : "") + '"><div class="phead" data-ptoggle="' + esc(p) + '" role="button" tabindex="0" aria-expanded="' + (open ? "true" : "false") + '"><div><div class="pn">' + esc(p) + '</div><div class="pstate">' + state_t + '</div></div><div class="pbal num ' + cls + '">' + (zero ? fmtBig(0) : fmtBig(Math.abs(b))) + '</div></div>' +
+    return '<div class="person' + (open ? " open" : "") + '"><div class="phead" data-ptoggle="' + esc(p) + '" role="button" tabindex="0" aria-expanded="' + (open ? "true" : "false") + '" aria-label="' + esc(p) + ', ' + state_t + '"><svg class="ic pcaret" aria-hidden="true" focusable="false"><use href="#ph-caret-down"></use></svg><div class="pmain"><div class="pn">' + esc(p) + '</div><div class="pstate">' + state_t + '</div></div><div class="pbal num ' + cls + '">' + (zero ? fmtBig(0) : fmtBig(Math.abs(b))) + '</div></div>' +
       (zero ? "" : '<div class="pacts"><button class="btn sec btn-sm" data-psettle="' + esc(p) + '">Settle up</button></div>') + body + '</div>';
   }
   function renderPeople() {
@@ -1239,21 +1245,7 @@
     });
   }
 
-  function loanRow(l, showPerson, hideDate) {
-    var t = showPerson ? esc(l.person) : (l.kind === "lent" ? "Lent out" : "Borrowed");
-    var dt = hideDate ? fmtTime(l.time) : dtLabel(l.date, l.time);
-    var sub = '<span>' + metaLine([(l.account ? esc(acctName(l.account)) : ""), dt, (l.note ? esc(l.note) : "")]) + '</span>';
-    if (showPerson) sub += (l.kind === "lent" ? '<span class="badge lent">lent out</span>' : '<span class="badge borrowed">borrowed</span>');
-    var settledAmt = l.settledAmount != null ? l.settledAmount : l.amount;
-    var gain = l.kind === "lent" ? settledAmt - l.amount : l.amount - settledAmt;
-    if (l.settled) { sub += '<span class="badge settled">settled</span>'; if (Math.abs(gain) >= 0.005) sub += '<span class="badge ' + (gain > 0 ? "gain" : "loss") + '">' + (gain > 0 ? "+" : "−") + raw(Math.abs(gain)) + '</span>'; }
-    else sub += dueBadge(l);
-    if (l.fee) sub += '<span class="badge next">fee ' + raw(l.fee) + '</span>';
-    var acts = (l.settled ? '<button class="act" data-unsettle="' + l.id + '">Undo</button>' : '<button class="act" data-settle="' + l.id + '">Settle</button>') + '<button class="mini" data-loanedit="' + l.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-loandel="' + l.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
-    return lrow({ lead: l.settled ? dotEl("var(--ink-faint)") : ringEl(), t: t, sub: sub, val: raw(l.settled ? settledAmt : l.amount), valCls: l.settled ? "neu" : "", acts: acts, settled: l.settled });
-  }
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
-  function addLoan() { var pe = document.getElementById("lperson"), person = pe.value.trim(); if (!person) { flagInvalid(pe); return; } var v = readAmt("lamt"); if (v === null) return; var fee = readFee("lfee"); if (fee === null) return; commit("Loan recorded", function () { state.loans.push({ id: uid(), kind: state.lendKind === "lent-out" ? "lent" : "borrowed", person: person, amount: v, account: document.getElementById("lacct").value, fee: (document.getElementById("lacct").value ? fee : 0), date: (document.getElementById("ldate").value || today()), time: (document.getElementById("ltime").value || nowTime()), due: document.getElementById("ldue").value || "", note: document.getElementById("lnote").value.trim(), settled: false, created: Date.now() }); }); }
   function settleLoan(id) {
     var l = byId(id); if (!l) return;
     var lent = l.kind === "lent";
@@ -1275,24 +1267,6 @@
       h.innerHTML = raw(Math.abs(d)) + (d > 0 ? " more than" : " less than") + " the " + raw(l.amount) + " " + (lent ? "lent" : "borrowed") + " — recorded as a " + (gain >= 0 ? '<span style="color:var(--income);font-weight:700">gain</span>' : '<span style="color:var(--expense);font-weight:700">cost</span>') + " of " + raw(Math.abs(gain)) + ".";
     }
     sAmt.oninput = upd; upd();
-  }
-  function editLoan(id) {
-    var l = byId(id); if (!l) return;
-    var lent = l.kind === "lent";
-    var body = '<div class="field"><label>Person</label><input id="eLPerson" type="text" maxlength="24" value="' + esc(l.person) + '"></div>' +
-      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
-      '<div class="field"><label>' + (lent ? "From account" : "To account") + '</label><select class="inp" id="eLAcct">' + acctOptions(l.account, l.kind === "borrowed" || !l.account) + '</select></div>' +
-      '<div id="eLFeeWrap">' + '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eLFee" type="number" step="0.01" min="0" value="' + (l.fee || 0) + '"></div></div>' + '</div>' +
-      '<div class="two"><div class="field"><label>Date</label><input id="eLDate" type="date" value="' + l.date + '"></div><div class="field"><label>Time</label><input id="eLTime" type="time" value="' + (l.time || "") + '"></div></div>' +
-      '<div class="field"><label>Due <span class="opt">(optional)</span></label><input id="eLDue" type="date" value="' + (l.due || "") + '"></div>' +
-      '<div class="field"><label>Note</label><input id="eLNote" type="text" maxlength="40" value="' + esc(l.note || "") + '"></div>';
-    openModal("Edit loan", body, "Save", function () {
-      var p = document.getElementById("eLPerson").value.trim(); if (!p) { flagInvalid(document.getElementById("eLPerson")); return false; }
-      var v = readAmt("eLAmt"); if (v === null) return false;
-      var elFee = readFee("eLFee"); if (elFee === null) return false;
-      commit("Loan edited", function () { l.person = p; l.amount = v; l.account = document.getElementById("eLAcct").value; l.fee = (l.account ? elFee : 0); l.date = document.getElementById("eLDate").value || l.date; l.time = document.getElementById("eLTime").value || ""; l.due = document.getElementById("eLDue").value || ""; l.note = document.getElementById("eLNote").value.trim(); });
-    });
-    var eLAcctSel = document.getElementById("eLAcct"); if (eLAcctSel) { var updELFee = function () { var w = document.getElementById("eLFeeWrap"); if (w) w.style.display = eLAcctSel.value ? "" : "none"; }; eLAcctSel.onchange = updELFee; updELFee(); }
   }
 
   // ---------- TRENDS ----------
@@ -1678,7 +1652,7 @@
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) { b.onclick = function () { state.theme = b.getAttribute("data-theme-set"); applyTheme(); saveSet(); render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-priv-set]"), function (b) { b.onclick = function () { var v = b.getAttribute("data-priv-set"); state.priv = v; if (v !== "off") state.privLast = v; saveSet(); setPrivBtn(); render(); }; });
-    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.lendKind = "lent-out"; state.lendView = "person"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackFiltersOpen = false; state.trackView = "list"; state.peopleOpen = {}; state.iouDir = "i_owe"; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
+    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackFiltersOpen = false; state.trackView = "list"; state.peopleOpen = {}; state.iouDir = "i_owe"; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
     bind("curSel", "change", function (el) { if (el.value === "__custom") { var c = document.getElementById("curCustom"); c.focus(); return; } state.cur = el.value; saveSet(); render(); });
     bind("curCustom", "input", function (el) { var sel = document.getElementById("curSel"); if (sel && el.value.trim()) sel.value = "__custom"; });
     var cc = document.getElementById("curCustom"); if (cc) cc.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); var v = cc.value.trim(); if (v) { state.cur = v; saveSet(); render(); toast("Currency set to " + v); } } };
