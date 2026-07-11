@@ -198,7 +198,9 @@
   .pbody { min-width: 0; }
   .pt { font-size: 13.5px; color: var(--ink); }
   .ps { font-size: 11.5px; color: var(--ink-faint); margin-top: 1px; }
-  .pend { display: flex; align-items: center; gap: 4px; flex: none; font-size: 13px; }
+  .pend { display: flex; align-items: center; gap: 6px; flex: none; font-size: 13px; }
+  .pend .mini { font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink-soft); cursor: pointer; font-family: inherit; }
+  .pend .mini:hover { color: var(--accent); border-color: var(--accent); }
   .ac-menu { position: fixed; z-index: 2000; background: var(--paper); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.22); max-height: 220px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 4px; -webkit-overflow-scrolling: touch; }
   .ac-menu[hidden] { display: none; }
   .ac-opt { padding: 9px 12px; border-radius: 7px; cursor: pointer; font-size: 15px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1168,8 +1170,10 @@
     var body = open ? '<div class="plist">' + personEvents(p).map(function (e) {
       var amt = Math.abs(e.delta) < 0.005 ? "—" : ((e.delta > 0 ? "+" : "−") + fmtBig(Math.abs(e.delta)));
       var acts = "";
-      if (e.kind === "iou" && !e.done) acts = '<button class="del" data-ioudel="' + e.id + '" aria-label="Delete IOU" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
-      else if (e.kind === "loan") acts = '<button class="del" data-loandel="' + e.id + '" aria-label="Delete old loan" title="Delete this old loan"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
+      var sameDir = !zero && ((b > 0 && e.delta > 0) || (b < 0 && e.delta < 0));
+      if (sameDir && Math.abs(e.delta) >= 0.005) acts += '<button class="mini" data-psettle1="' + esc(p) + '" data-amt="' + Math.abs(e.delta) + '" aria-label="Settle this item" title="Settle just this">Settle</button>';
+      if (e.kind === "iou" && !e.done) acts += '<button class="del" data-ioudel="' + e.id + '" aria-label="Delete IOU" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
+      else if (e.kind === "loan") acts += '<button class="del" data-loandel="' + e.id + '" aria-label="Delete old loan" title="Delete this old loan"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
       return '<div class="prow"><div class="pbody"><div class="pt">' + esc(e.label) + '</div><div class="ps">' + dtLabel(e.date, e.time) + ' · ' + e.sub + '</div></div><div class="pend"><span class="num ' + (e.delta > 0 ? "pos" : e.delta < 0 ? "neg" : "") + '">' + amt + '</span>' + acts + '</div></div>';
     }).join("") + '</div>' : "";
     return '<div class="person' + (open ? " open" : "") + '"><div class="phead"><button class="ptoggle" data-ptoggle="' + esc(p) + '" aria-expanded="' + (open ? "true" : "false") + '" aria-label="' + esc(p) + ', ' + state_t + '"><svg class="ic pcaret" aria-hidden="true" focusable="false"><use href="#ph-caret-down"></use></svg><span class="pmain"><span class="pn">' + esc(p) + '</span><span class="pstate">' + state_t + '</span></span><span class="pbal num ' + cls + '">' + (zero ? fmtBig(0) : fmtBig(Math.abs(b))) + '</span></button>' +
@@ -1204,6 +1208,7 @@
     var lq = document.getElementById("lendQ"); if (lq) lq.oninput = function () { state.lendQ = lq.value; var s = lq.selectionStart; render(); var n = document.getElementById("lendQ"); if (n) { n.focus(); try { n.setSelectionRange(s, s); } catch (e) {} } };
     Array.prototype.forEach.call(document.querySelectorAll("[data-ptoggle]"), function (b) { b.onclick = function () { var p = b.getAttribute("data-ptoggle"); state.peopleOpen[p] = !state.peopleOpen[p]; render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-psettle]"), function (b) { b.onclick = function () { settlePerson(b.getAttribute("data-psettle")); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-psettle1]"), function (b) { b.onclick = function () { settlePerson(b.getAttribute("data-psettle1"), parseFloat(b.getAttribute("data-amt")) || 0); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-ioudel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-ioudel"); commit("IOU deleted", function () { state.ious = state.ious.filter(function (i) { return i.id !== id; }); }); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-loandel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-loandel"); var l = state.loans.filter(function (x) { return x.id === id; })[0]; if (!l) return; confirmModal("Delete this old loan?", "This removes the old loan record for " + esc(l.person) + " (" + fmtBig(l.amount) + "). Your account balances will change unless you've already re-logged it as a transaction.", "Delete", function () { commit("Old loan deleted", function () { state.loans = state.loans.filter(function (x) { return x.id !== id; }); }); }, true); }; });
   }
@@ -1213,51 +1218,59 @@
     var dir = state.iouDir === "they_owe" ? "they_owe" : "i_owe";
     commit("IOU added", function () { state.ious.push({ id: uid(), person: p, dir: dir, amount: v, note: document.getElementById("ioNote").value.trim(), date: document.getElementById("ioDate").value || today(), time: document.getElementById("ioTime").value || "", created: Date.now() }); });
   }
-  function settlePerson(p) {
+  function settlePerson(p, preset) {
     var b = personBalance(p); if (Math.abs(b) < 0.005) return;
     var theyOwe = b > 0, amt = Math.abs(b);
+    var pre = (preset != null && preset > 0) ? Math.min(preset, amt) : amt;
     var body = '<p class="help-p">' + (theyOwe ? esc(p) + ' owes you <strong>' + fmtBig(amt) + '</strong>.' : 'You owe ' + esc(p) + ' <strong>' + fmtBig(amt) + '</strong>.') + '</p>' +
       '<div class="seg' + (theyOwe ? '' : ' three') + '" id="stMode"><button data-st="paid" class="on">' + (theyOwe ? "They paid me" : "I paid them") + '</button><button data-st="write">' + (theyOwe ? "Let it go" : "They shouldered it") + '</button>' + (theyOwe ? '' : '<button data-st="keep">I kept it</button>') + '</div>' +
-      '<div id="stPaid">' + '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + amt + '"></div></div>' +
-      '<div class="field"><label>' + (theyOwe ? "Into account" : "From account") + '</label><select class="inp" id="stAcct">' + acctOptions(defAcct()) + '</select></div>' +
+      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + pre + '"></div><div class="hint">Settle part of it if you like — the rest stays owed.</div></div>' +
+      '<div class="field" id="stAcctWrap"><label>' + (theyOwe ? "Into account" : "From account") + '</label><select class="inp" id="stAcct">' + acctOptions(defAcct()) + '</select></div>' +
       '<div class="two"><div class="field"><label>Date</label><input id="stDate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="stTime" type="time" value="' + nowTime() + '"></div></div>' +
-      '<div class="hint">Logs a real ' + (theyOwe ? "income" : "expense") + ' entry, tagged to ' + esc(p) + ', which draws the balance toward zero.</div></div>' +
-      '<div id="stWrite" style="display:none"><div class="hint">' + (theyOwe ? "You\'re writing off what " + esc(p) + " owed — it becomes your own spending (a treat you gave). Nothing moves in your accounts." : "They covered it for good — nothing ever left your accounts, so nothing is counted. The balance just clears.") + '</div></div>' +
-      '<div id="stKeep" style="display:none"><div class="hint">' + esc(p) + ' told you to keep it — their money becomes yours, so it counts as your income. Your balances don\'t move (you already have it).</div></div>';
+      '<div class="hint" id="stHint"></div>';
     openModal("Settle with " + esc(p), body, "Done", function () {
       var mode = document.querySelector("#stMode button.on").getAttribute("data-st");
+      var v = readAmt("stAmt"); if (v === null) return false;
+      if (v > amt + 0.005) { flagInvalid("stAmt"); toast("More than what's owed"); return false; }
+      var d = document.getElementById("stDate").value || today(), tm = document.getElementById("stTime").value || "";
+      var acct = document.getElementById("stAcct").value;
       if (mode === "keep") {
         commit("Settled with " + p, function () {
-          state.ious.push({ id: uid(), person: p, dir: "they_owe", amount: amt, note: "kept it", date: today(), time: nowTime(), created: Date.now(), offset: true });
-          state.tx.push({ id: uid(), type: "income", amount: amt, where: p, account: "", desc: "Kept " + p + "'s money", date: today(), time: nowTime(), created: Date.now() });
+          state.ious.push({ id: uid(), person: p, dir: "they_owe", amount: v, note: "kept it", date: d, time: tm, created: Date.now() });
+          state.tx.push({ id: uid(), type: "income", amount: v, where: p, account: "", desc: "Kept " + p + "'s money", date: d, time: tm, created: Date.now() });
         });
         return;
       }
       if (mode === "write") {
         commit("Settled with " + p, function () {
-          state.ious.push({ id: uid(), person: p, dir: theyOwe ? "i_owe" : "they_owe", amount: amt, note: theyOwe ? "wrote it off" : "they shouldered it", date: today(), time: nowTime(), created: Date.now(), offset: true });
-          if (theyOwe) state.tx.push({ id: uid(), type: "expense", amount: amt, where: p, account: "", desc: "Wrote off what " + p + " owed", date: today(), time: nowTime(), created: Date.now() });
+          state.ious.push({ id: uid(), person: p, dir: theyOwe ? "i_owe" : "they_owe", amount: v, note: theyOwe ? "wrote it off" : "they shouldered it", date: d, time: tm, created: Date.now() });
+          if (theyOwe) state.tx.push({ id: uid(), type: "expense", amount: v, where: p, account: "", desc: "Wrote off what " + p + " owed", date: d, time: tm, created: Date.now() });
         });
         return;
       }
-      var v = readAmt("stAmt"); if (v === null) return false;
-      var acct = document.getElementById("stAcct").value;
-      var d = document.getElementById("stDate").value || today(), tm = document.getElementById("stTime").value || "";
       commit("Settled with " + p, function () {
         state.tx.push({ id: uid(), type: theyOwe ? "income" : "expense", amount: v, where: p, account: acct, desc: theyOwe ? "Paid me back" : "Paid them back", date: d, time: tm, created: Date.now(), tag: { person: p, slice: v, meaning: theyOwe ? "paying_me" : "paying_back" } });
       });
     });
-    Array.prototype.forEach.call(document.querySelectorAll("#stMode button"), function (b) {
-      b.onclick = function () {
+    var hints = {
+      paid: "Logs a real " + (theyOwe ? "income" : "expense") + " entry, tagged to " + esc(p) + ", drawing the balance toward zero.",
+      write: theyOwe ? "You're writing this off \u2014 it becomes your own spending (a treat you gave). Nothing moves in your accounts." : "They covered it for good \u2014 nothing ever left your accounts, so nothing is counted.",
+      keep: esc(p) + " told you to keep it \u2014 their money becomes yours, so it counts as your income. Your balances don't move."
+    };
+    function updMode() {
+      var m = document.querySelector("#stMode button.on").getAttribute("data-st");
+      document.getElementById("stAcctWrap").style.display = (m === "paid") ? "" : "none";
+      document.getElementById("stHint").innerHTML = hints[m];
+    }
+    Array.prototype.forEach.call(document.querySelectorAll("#stMode button"), function (btn) {
+      btn.onclick = function () {
         Array.prototype.forEach.call(document.querySelectorAll("#stMode button"), function (x) { x.classList.remove("on"); });
-        b.classList.add("on");
-        var m = b.getAttribute("data-st");
-        document.getElementById("stPaid").style.display = m === "paid" ? "" : "none";
-        document.getElementById("stWrite").style.display = m === "write" ? "" : "none";
-        var k = document.getElementById("stKeep"); if (k) k.style.display = m === "keep" ? "" : "none";
+        btn.classList.add("on"); updMode();
       };
     });
+    updMode();
   }
+
 
   function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
   function settleLoan(id) {
@@ -1631,7 +1644,7 @@
     body += card("Accounts &amp; transfers", "Where your money sits", '<div class="help-b">' + "<p>Accounts hold your balances. Each starts from an opening balance and shifts as you log activity. A balance shows in plain ink, turning red only if it goes negative.</p><p>A <strong>transfer</strong> moves money from one account to another and can carry a fee — the fee counts as an expense, the amount moved doesn't.</p>" + '</div>', { collapsible: true, key: "help-acct" });
     body += card("Templates &amp; Upcoming", "Reusable, one-tap entries", '<div class="help-b">' + "<p>Templates are one-tap entries for things that repeat — rent, a subscription, a paycheck. Give one an expected day of the month and it shows under <strong>Upcoming</strong> as its due date nears.</p><p>Leave the amount <strong>blank</strong> to make it variable — you'll type the real figure each time you log it, handy for subscriptions whose price shifts with taxes and fees. Once logged for the month, a template is marked 'logged' and rolls forward to next month.</p><p>Upcoming shows only what's due in the next couple of weeks, plus anything overdue.</p>" + '</div>', { collapsible: true, key: "help-tpl" });
     body += card("People &amp; who owes whom", "Naming someone on an entry", '<div class="help-b">' + "<p>Ledger doesn't keep a separate list of loans. Instead, a debt rides along on the <strong>real transaction</strong> that created it, so you never lose the merchant or the moment it happened.</p><p>When you add an expense or income, there's an optional line: <strong>Someone else's money?</strong> Leave it blank and the entry is purely yours. Name someone and you pick how they're involved:</p><ul><li><strong>They owe me for their share</strong> — you covered part of a bill for them. Type their share; the rest stays your spending.</li><li><strong>It's their money</strong> — you're spending or handing back money that was never yours. None of it counts as your spending.</li><li><strong>I'm paying them back</strong> — your money settling something they covered for you. This <em>does</em> count as your spending, just late.</li><li><strong>They're paying me back</strong> (on income) — clears what they owed. Not your income.</li><li><strong>It's their money</strong> (on income) — you're holding it for them, so you owe them.</li></ul><p>The <strong>People</strong> tab adds all of this up into one running balance per person. Tap someone to see every entry behind their number.</p>" + '</div>', { collapsible: true, key: "help-lend" });
-    body += card("Settling up &amp; IOUs", "Paying back, treats, and money that isn't yours", '<div class="help-b">' + "<p><strong>Settle up</strong> on the People tab handles the ending.</p><ul><li><strong>They paid me / I paid them</strong> — logs a real entry that draws the balance toward zero.</li><li><strong>Let it go</strong> — you forgive what they owed. That money truly left you, so it becomes your spending (a treat you gave).</li><li><strong>They shouldered it</strong> — they covered you for good. Nothing ever left your accounts, so nothing is counted.</li><li><strong>I kept it</strong> — they told you to keep their money, so it becomes your income.</li></ul><p><strong>Settle up works on a person's whole balance</strong>, except <em>paid</em>, where you can enter a part and leave the rest owed. So if someone owes you for two separate things and you only want to forgive one, settle that one first, before you record the other.</p><p><strong>Fronted, then treated them anyway?</strong> Log the entry at its real full amount, name them as <strong>they owe me</strong> for their share, then later hit <strong>Let it go</strong>. You keep the whole story, and the forgiven share correctly lands back in your own spending.</p><p><strong>IOUs.</strong> If a friend pays the merchant for your share, no money leaves your accounts — so there's no entry to name them on. That's the one case for a standalone <strong>IOU</strong> on the People tab. Pay it back later and the balance clears.</p><p><strong>Money that's just passing through.</strong> Only what sticks to you counts. Acting as a human ATM (someone hands you cash, you send them the same amount) is a <strong>transfer</strong>, not a debt — nothing is owed once it's done. A fee is yours only when it leaves your account; a commission you earn is income. And if someone's money lands in one account but you spend it from another, name them on those entries as <strong>their money</strong> — your balances stay right and your stats stay clean.</p>" + '</div>', { collapsible: true, key: "help-passthrough" });
+    body += card("Settling up &amp; IOUs", "Paying back, treats, and money that isn't yours", '<div class="help-b">' + "<p><strong>Settle up</strong> on the People tab handles the ending.</p><ul><li><strong>They paid me / I paid them</strong> — logs a real entry that draws the balance toward zero.</li><li><strong>Let it go</strong> — you forgive what they owed. That money truly left you, so it becomes your spending (a treat you gave).</li><li><strong>They shouldered it</strong> — they covered you for good. Nothing ever left your accounts, so nothing is counted.</li><li><strong>I kept it</strong> — they told you to keep their money, so it becomes your income.</li></ul><p>Every option takes an <strong>amount</strong> and a date, so you can settle just part of what's owed and leave the rest. Each entry in a person's history also has its own small <strong>Settle</strong> button, which fills in that item's amount \u2014 handy when someone owes you for two separate things and you only want to close one.</p><p><strong>Fronted, then treated them anyway?</strong> Log the entry at its real full amount, name them as <strong>they owe me</strong> for their share, then later hit <strong>Let it go</strong>. You keep the whole story, and the forgiven share correctly lands back in your own spending.</p><p><strong>IOUs.</strong> If a friend pays the merchant for your share, no money leaves your accounts — so there's no entry to name them on. That's the one case for a standalone <strong>IOU</strong> on the People tab. Pay it back later and the balance clears.</p><p><strong>Money that's just passing through.</strong> Only what sticks to you counts. Acting as a human ATM (someone hands you cash, you send them the same amount) is a <strong>transfer</strong>, not a debt — nothing is owed once it's done. A fee is yours only when it leaves your account; a commission you earn is income. And if someone's money lands in one account but you spend it from another, name them on those entries as <strong>their money</strong> — your balances stay right and your stats stay clean.</p>" + '</div>', { collapsible: true, key: "help-passthrough" });
     body += card("Privacy mode", "Hide your amounts", '<div class="help-b">' + "<p>The <strong>eye</strong> button up top hides your amounts — for when someone's looking over your shoulder. <strong>Partial</strong> hides the revealing totals (net worth, balances, summaries) but keeps line items visible, so the app stays usable. <strong>Full</strong> hides every amount and the chart.</p><p>Either way, colors go neutral so nothing leaks whether you're up or down. Your numbers aren't gone — just masked on screen.</p>" + '</div>', { collapsible: true, key: "help-priv" });
     body += card("Backup &amp; installing", "Keep your data safe", '<div class="help-b">' + "<p>Because your data lives only in this browser, it's worth backing up. In <strong>Settings</strong> you can download everything as a file, and restore from one later or on another device.</p><p>You can also install Ledger as an app — Add to Home Screen on mobile, or the install icon in your browser's address bar — so it opens full-screen and works offline.</p>" + '</div>', { collapsible: true, key: "help-backup" });
     body += card("FAQ", "Common questions", '<div class="help-b">' + "<p><strong>Is my data sent anywhere?</strong><br>No. It's stored on your device and never leaves it — no accounts, no servers.</p><p><strong>What if I clear my browser data?</strong><br>That would erase your ledger, so keep a backup from Settings.</p><p><strong>Why doesn't a bill I paid still show in Upcoming?</strong><br>Once you log it for the month it's handled, and rolls to next month's date.</p><p><strong>Can I track a foreign-priced subscription?</strong><br>Use a variable-amount template and log the actual amount your account was charged, in your own currency.</p><p><strong>Can I fix a mistake?</strong><br>Every row has a pencil to edit and a trash to delete, and an Undo appears right after any change.</p>" + '</div>', { collapsible: true, key: "help-faq" });
