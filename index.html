@@ -1156,12 +1156,13 @@
       if (t.sid) return;
       if (!t.tag || t.tag.person !== p) return;
       var d = t.type === "expense" ? t.tag.slice : -t.tag.slice;
-      evs.push({ kind: "tx", id: t.id, date: t.date, time: t.time || "", label: (t.where || (t.type === "income" ? "Income" : "Expense")), sub: tagDirLabel(t), delta: d });
+      var isPay = (t.type === "income" && t.tag.meaning === "paying_me") || (t.type === "expense" && (t.tag.meaning === "paying_back" || t.tag.meaning === "their_money"));
+      evs.push({ kind: "tx", id: t.id, date: t.date, time: t.time || "", label: (t.where || (t.type === "income" ? "Income" : "Expense")), sub: tagDirLabel(t), delta: d, pay: isPay });
     });
     state.ious.forEach(function (i) {
       if (i.person !== p) return;
       var d = i.done ? 0 : (i.dir === "they_owe" ? i.amount : -i.amount);
-      evs.push({ kind: "iou", id: i.id, date: i.date, time: i.time || "", label: (i.note || "IOU"), sub: i.done ? "written off" : (i.dir === "they_owe" ? p + " owes you" : "you owe " + p), delta: d, done: i.done });
+      evs.push({ kind: "iou", id: i.id, date: i.date, time: i.time || "", label: (i.note || "IOU"), sub: i.done ? "written off" : (i.dir === "they_owe" ? p + " owes you" : "you owe " + p), delta: d, done: i.done, pay: !!i.sid });
     });
     state.loans.forEach(function (l) {
       if (l.person !== p) return;
@@ -1177,13 +1178,17 @@
     evs.forEach(function (e) {
       if (Math.abs(e.delta) < 0.005) return;
       var sign = e.delta > 0 ? 1 : -1, amt = Math.abs(e.delta);
-      // a movement first pays down anything outstanding in the OPPOSITE direction (FIFO)
-      for (var i = 0; i < open.length && amt > 0.005; i++) {
-        if (open[i].sign === sign || open[i].remaining <= 0.005) continue;
-        var take = Math.min(open[i].remaining, amt);
-        open[i].remaining -= take; amt -= take;
+      if (e.pay) {
+        // repayments/write-offs draw down outstanding debts in the OPPOSITE direction (oldest first)
+        for (var i = 0; i < open.length && amt > 0.005; i++) {
+          if (open[i].sign === sign || open[i].remaining <= 0.005) continue;
+          var take = Math.min(open[i].remaining, amt);
+          open[i].remaining -= take; amt -= take;
+        }
+        return;
       }
-      if (amt > 0.005) open.push({ key: e.kind + ":" + e.id, sign: sign, remaining: amt });
+      // a debt always stands on its own — an opposite debt is not a repayment
+      open.push({ key: e.kind + ":" + e.id, sign: sign, remaining: amt });
     });
     open.forEach(function (o) { if (o.remaining > 0.005) rem[o.key] = (rem[o.key] || 0) + o.remaining; });
     return rem;
@@ -1197,7 +1202,7 @@
       var amt = Math.abs(e.delta) < 0.005 ? "—" : ((e.delta > 0 ? "+" : "−") + fmtBig(Math.abs(e.delta)));
       var acts = "";
       var outstanding = openMap[e.kind + ":" + e.id] || 0;
-      if (outstanding > 0.005) acts += '<button class="mini" data-psettle1="' + esc(p) + '" data-amt="' + outstanding + '" aria-label="Settle this item" title="Settle just this">Settle' + (Math.abs(outstanding - Math.abs(e.delta)) > 0.005 ? " " + fmtBig(outstanding) : "") + '</button>';
+      if (outstanding > 0.005) acts += '<button class="mini" data-psettle1="' + esc(p) + '" data-amt="' + outstanding + '" data-sign="' + (e.delta > 0 ? 1 : -1) + '" aria-label="Settle this item" title="Settle just this">Settle' + (Math.abs(outstanding - Math.abs(e.delta)) > 0.005 ? " " + fmtBig(outstanding) : "") + '</button>';
       if (e.kind === "iou" && !e.done) acts += '<button class="del" data-ioudel="' + e.id + '" aria-label="Delete IOU" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
       else if (e.kind === "loan") acts += '<button class="del" data-loandel="' + e.id + '" aria-label="Delete old loan" title="Delete this old loan"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
       return '<div class="prow"><div class="pbody"><div class="pt">' + esc(e.label) + '</div><div class="ps">' + dtLabel(e.date, e.time) + ' · ' + e.sub + '</div></div><div class="pend"><span class="num ' + (e.delta > 0 ? "pos" : e.delta < 0 ? "neg" : "") + '">' + amt + '</span>' + acts + '</div></div>';
@@ -1234,7 +1239,7 @@
     var lq = document.getElementById("lendQ"); if (lq) lq.oninput = function () { state.lendQ = lq.value; var s = lq.selectionStart; render(); var n = document.getElementById("lendQ"); if (n) { n.focus(); try { n.setSelectionRange(s, s); } catch (e) {} } };
     Array.prototype.forEach.call(document.querySelectorAll("[data-ptoggle]"), function (b) { b.onclick = function () { var p = b.getAttribute("data-ptoggle"); state.peopleOpen[p] = !state.peopleOpen[p]; render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-psettle]"), function (b) { b.onclick = function () { settlePerson(b.getAttribute("data-psettle")); }; });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-psettle1]"), function (b) { b.onclick = function () { settlePerson(b.getAttribute("data-psettle1"), parseFloat(b.getAttribute("data-amt")) || 0); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-psettle1]"), function (b) { b.onclick = function () { settlePerson(b.getAttribute("data-psettle1"), parseFloat(b.getAttribute("data-amt")) || 0, parseInt(b.getAttribute("data-sign"), 10)); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-ioudel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-ioudel"); var io = state.ious.filter(function (i) { return i.id === id; })[0]; if (!io) return; commit(io.sid ? "Settle undone" : "IOU deleted", function () { state.ious = state.ious.filter(function (i) { return i.id !== id; }); if (io.sid) state.tx = state.tx.filter(function (t) { return t.sid !== io.sid; }); }); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-loandel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-loandel"); var l = state.loans.filter(function (x) { return x.id === id; })[0]; if (!l) return; confirmModal("Delete this old loan?", "This removes the old loan record for " + esc(l.person) + " (" + fmtBig(l.amount) + "). Your account balances will change unless you've already re-logged it as a transaction.", "Delete", function () { commit("Old loan deleted", function () { state.loans = state.loans.filter(function (x) { return x.id !== id; }); }); }, true); }; });
   }
@@ -1244,11 +1249,14 @@
     var dir = state.iouDir === "they_owe" ? "they_owe" : "i_owe";
     commit("IOU added", function () { state.ious.push({ id: uid(), person: p, dir: dir, amount: v, note: document.getElementById("ioNote").value.trim(), date: document.getElementById("ioDate").value || today(), time: document.getElementById("ioTime").value || "", created: Date.now() }); });
   }
-  function settlePerson(p, preset) {
-    var b = personBalance(p); if (Math.abs(b) < 0.005) return;
-    var theyOwe = b > 0, amt = Math.abs(b);
-    var pre = (preset != null && preset > 0) ? Math.min(preset, amt) : amt;
-    var body = '<p class="help-p">' + (theyOwe ? esc(p) + ' owes you <strong>' + fmtBig(amt) + '</strong>.' : 'You owe ' + esc(p) + ' <strong>' + fmtBig(amt) + '</strong>.') + '</p>' +
+  function settlePerson(p, preset, sign) {
+    var b = personBalance(p);
+    var perItem = (sign === 1 || sign === -1) && preset != null && preset > 0;
+    if (!perItem && Math.abs(b) < 0.005) return;
+    var theyOwe = perItem ? (sign > 0) : (b > 0);
+    var amt = perItem ? preset : Math.abs(b);
+    var pre = amt;
+    var body = '<p class="help-p">' + (theyOwe ? esc(p) + ' owes you <strong>' + fmtBig(amt) + '</strong>' : 'You owe ' + esc(p) + ' <strong>' + fmtBig(amt) + '</strong>') + (perItem ? ' for this item.' : '.') + '</p>' +
       '<div class="seg' + (theyOwe ? '' : ' three') + '" id="stMode"><button data-st="paid" class="on">' + (theyOwe ? "They paid me" : "I paid them") + '</button><button data-st="write">' + (theyOwe ? "Let it go" : "They shouldered it") + '</button>' + (theyOwe ? '' : '<button data-st="keep">I kept it</button>') + '</div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + pre + '"></div><div class="hint">Settle part of it if you like — the rest stays owed.</div></div>' +
       '<div class="field" id="stAcctWrap"><label>' + (theyOwe ? "Into account" : "From account") + '</label><select class="inp" id="stAcct">' + acctOptions(defAcct()) + '</select></div>' +
