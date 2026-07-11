@@ -176,6 +176,20 @@
   .goal-status.pos { color: var(--income); }
   .goal-acts { display: flex; gap: 4px; flex-shrink: 0; }
   .tagbox { border-left: 2px solid var(--accent); padding-left: 11px; margin: -2px 0 12px; }
+  .person { border-bottom: 1px solid var(--line); padding: 4px 0; }
+  .person:last-child { border-bottom: 0; }
+  .phead { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 2px; cursor: pointer; border-radius: 8px; }
+  .phead:hover { background: var(--paper-2); }
+  .pn { font-weight: 700; font-size: 15px; }
+  .pstate { font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+  .pbal { font-weight: 800; font-size: 16px; white-space: nowrap; }
+  .pacts { display: flex; gap: 6px; padding: 0 2px 8px; }
+  .plist { border-top: 1px dashed var(--line-strong); padding: 6px 2px 10px; }
+  .prow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 6px 0; }
+  .pbody { min-width: 0; }
+  .pt { font-size: 13.5px; color: var(--ink); }
+  .ps { font-size: 11.5px; color: var(--ink-faint); margin-top: 1px; }
+  .pend { display: flex; align-items: center; gap: 4px; flex: none; font-size: 13px; }
   .ac-menu { position: fixed; z-index: 2000; background: var(--paper); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.22); max-height: 220px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 4px; -webkit-overflow-scrolling: touch; }
   .ac-menu[hidden] { display: none; }
   .ac-opt { padding: 9px 12px; border-radius: 7px; cursor: pointer; font-size: 15px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -355,7 +369,7 @@
     <button data-tab="overview" class="on">Overview</button>
     <button data-tab="track">Track</button>
     <button data-tab="accounts">Accounts</button>
-    <button data-tab="lending">Lending</button>
+    <button data-tab="people">People</button>
     <button data-tab="recurring">Templates</button>
     <button data-tab="trends">Trends</button>
     </div>
@@ -389,7 +403,7 @@
     accounts: [], tx: [], loans: [], recurring: [], goals: [], ious: [],
     cur: "$", theme: "system",
     tab: "overview", prevTab: "overview", formType: "expense", recType: "expense", lendKind: "lent-out", lendView: "person",
-    fType: "all", fQ: "", trackShow: 30, trackAcct: "", trackPeriod: "all", trackFrom: "", trackTo: "", trackFiltersOpen: false, trackView: "list", lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
+    fType: "all", fQ: "", trackShow: 30, trackAcct: "", trackPeriod: "all", trackFrom: "", trackTo: "", trackFiltersOpen: false, trackView: "list", peopleOpen: {}, iouDir: "i_owe", lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
     lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false, priv: "off", privLast: "partial"
   };
   var amap = {}, lastTab = null;
@@ -426,7 +440,7 @@
     var r = await getv(K.rec); if (Array.isArray(r)) state.recurring = r;
     var gl = await getv(K.goals); if (Array.isArray(gl)) state.goals = gl;
     var io = await getv(K.ious); if (Array.isArray(io)) state.ious = io;
-    var s = await getv(K.set); if (s) { if (s.cur) state.cur = s.cur; if (s.theme) state.theme = s.theme; if (s.lastBackup) state.lastBackup = s.lastBackup; if (typeof s.backupCount === "number") state.backupCount = s.backupCount; if (s.collapsed && typeof s.collapsed === "object") state.collapsed = s.collapsed; if (s.tab) { state.tab = s.tab; state.prevTab = s.tab === "settings" ? "overview" : s.tab; } if (s.priv === "off" || s.priv === "partial" || s.priv === "full") state.priv = s.priv; if (s.privLast === "partial" || s.privLast === "full") state.privLast = s.privLast; if (s.trendPeriod) state.trendPeriod = s.trendPeriod; if (typeof s.trendFrom === "string") state.trendFrom = s.trendFrom; if (typeof s.trendTo === "string") state.trendTo = s.trendTo; }
+    var s = await getv(K.set); if (s) { if (s.cur) state.cur = s.cur; if (s.theme) state.theme = s.theme; if (s.lastBackup) state.lastBackup = s.lastBackup; if (typeof s.backupCount === "number") state.backupCount = s.backupCount; if (s.collapsed && typeof s.collapsed === "object") state.collapsed = s.collapsed; if (s.tab) { var st0 = (s.tab === "lending" ? "people" : s.tab); state.tab = st0; state.prevTab = st0 === "settings" ? "overview" : st0; } if (s.priv === "off" || s.priv === "partial" || s.priv === "full") state.priv = s.priv; if (s.privLast === "partial" || s.privLast === "full") state.privLast = s.privLast; if (s.trendPeriod) state.trendPeriod = s.trendPeriod; if (typeof s.trendFrom === "string") state.trendFrom = s.trendFrom; if (typeof s.trendTo === "string") state.trendTo = s.trendTo; }
     applyTheme();
   }
 
@@ -644,7 +658,7 @@
         if (t) ctl.setAttribute("aria-label", t);
       }
     });
-    var fl = { fQ: "Search entries", fType: "Filter by type", lendQ: "Search loans", lview: "Group loans", curSel: "Currency" };
+    var fl = { fQ: "Search entries", fType: "Filter by type", lendQ: "Search people", curSel: "Currency" };
     Object.keys(fl).forEach(function (id) { var el = document.getElementById(id); if (el && !el.getAttribute("aria-label")) el.setAttribute("aria-label", fl[id]); });
   }
   function render() {
@@ -653,7 +667,7 @@
     var actTab = document.querySelector("#tabs button.on"), navEl = document.getElementById("tabsTrack");
     if (actTab && navEl && actTab.scrollIntoView) { var ar = actTab.getBoundingClientRect(), nr = navEl.getBoundingClientRect(); if (ar.left < nr.left + 1 || ar.right > nr.right - 1) { try { actTab.scrollIntoView({ block: "nearest", inline: "nearest" }); } catch (e) {} } }
     updateNavFade();
-    ({ overview: renderOverview, track: renderTrack, accounts: renderAccounts, lending: renderLending, trends: renderTrends, recurring: renderRecurring, settings: renderSettings, help: renderHelp }[state.tab] || renderOverview)();
+    ({ overview: renderOverview, track: renderTrack, accounts: renderAccounts, people: renderPeople, trends: renderTrends, recurring: renderRecurring, settings: renderSettings, help: renderHelp }[state.tab] || renderOverview)();
     var gb = document.getElementById("settingsBtn"); if (gb) gb.classList.toggle("on", state.tab === "settings");
     var hb = document.getElementById("helpBtn"); if (hb) hb.classList.toggle("on", state.tab === "help");
     var tabChanged = state.tab !== lastTab;
@@ -1101,49 +1115,130 @@
   // ---------- LENDING ----------
   function isOverdue(l) { return !l.settled && l.due && l.due < today(); }
   function dueBadge(l) { if (l.settled || !l.due) return ""; var rl = relLabel(l.due); return '<span class="badge ' + rl.c + '" title="due ' + fmtDate(l.due) + '">' + rl.t + '</span>'; }
-  function renderLending() {
-    var lt = lendTotals(), net = lt.owed - lt.owe;
-    var q = state.lendQ.trim().toLowerCase();
-    var pool = state.loans.filter(function (l) { if (!q) return true; return ((l.person || "") + " " + (l.note || "")).toLowerCase().indexOf(q) >= 0; });
-    var listBody;
-    if (!state.loans.length) listBody = '<div class="empty"><div class="big">No loans yet</div>Track money you\'ve lent out or borrowed, and settle it when it\'s paid back.</div>';
-    else if (!pool.length) listBody = '<div class="empty">No loans match “' + esc(state.lendQ) + '”.</div>';
-    else if (state.lendView === "person") {
-      var groups = {}; pool.forEach(function (l) { (groups[l.person] = groups[l.person] || []).push(l); });
-      listBody = '<div class="list">' + Object.keys(groups).map(function (p) { var pnet = 0; groups[p].forEach(function (l) { if (!l.settled) pnet += (l.kind === "lent" ? l.amount : -l.amount); }); return { p: p, net: pnet, loans: groups[p].slice().sort(function (a, b) { return (a.settled - b.settled) || (a.date < b.date ? 1 : -1); }) }; }).sort(function (a, b) { return Math.abs(b.net) - Math.abs(a.net) || a.p.localeCompare(b.p); }).map(function (g) { var nl = g.net > 0 ? '<span class="pos">owes you ' + raw(g.net) + '</span>' : g.net < 0 ? '<span class="neg">you owe ' + raw(g.net) + '</span>' : '<span class="neu">settled up</span>'; return '<div class="day-div"><span class="day-date pn">' + esc(g.p) + '</span><span class="pnet">' + nl + '</span></div>' + g.loans.map(function (l) { return loanRow(l, false, false); }).join(""); }).join("") + '</div>';
-    } else {
-      var sorted = pool.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
-      var lastD = null, h = "";
-      sorted.forEach(function (l) { if (l.date !== lastD) { lastD = l.date; h += '<div class="day-div"><span class="day-date">' + relDay(l.date) + '</span></div>'; } h += loanRow(l, true, true); });
-      listBody = '<div class="list">' + h + '</div>';
-    }
-
-    var sidebar = card("Add loan", "Money you've lent or borrowed", state.accounts.length ?
-      '<div class="seg"><button data-lk="lent-out" class="' + (state.lendKind === "lent-out" ? "on" : "") + '">You lent</button><button data-lk="borrowed" class="' + (state.lendKind === "borrowed" ? "on" : "") + '">You borrowed</button></div>' +
-      '<div class="field"><label>Person</label><input id="lperson" type="text" maxlength="24" data-ac="person" placeholder="who?"></div>' +
-      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lamt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
-      '<div class="field"><label>' + (state.lendKind === "lent-out" ? "From account" : "To account") + '</label><select class="inp" id="lacct">' + acctOptions(defAcct(), state.lendKind === "borrowed") + '</select></div>' +
-      '<div id="lfeeWrap">' + '<div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="lfee" type="number" step="0.01" min="0" placeholder="0.00"></div></div>' +
-      '<div class="hint">A cost you paid' + (state.lendKind === "lent-out" ? " to send this" : " to receive this") + ' (e.g. a transfer fee). Counts as your expense; doesn’t change what’s owed.</div>' + '</div>' +
-      '<div class="two"><div class="field"><label>Date</label><input id="ldate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="ltime" type="time" value="' + nowTime() + '"></div></div>' +
-      '<div class="field"><label>Due <span class="opt">(optional)</span></label><input id="ldue" type="date"></div>' +
-      '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="lnote" type="text" maxlength="40" placeholder="what for?"></div>' +
-      '<button class="btn" id="ladd">' + icon('plus') + 'Add loan</button>'
-      : accountNudge(), { collapsible: true, key: "lend-add" });
-    var extra = '<div class="filters"><input id="lendQ" type="text" placeholder="Search…" value="' + esc(state.lendQ) + '"><select class="inp" id="lview"><option value="person"' + sel(state.lendView, "person") + '>By person</option><option value="date"' + sel(state.lendView, "date") + '>By date</option></select></div>';
-
-    app.innerHTML = layout(heroBlock("Net position" + (lt.over ? " · " + lt.over + " overdue" : ""), fmtBig(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>', '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmtBig(lt.owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmtBig(lt.owe) + '</div></div></div>'), sidebar, card("Loans", "What you've lent and borrowed", extra + listBody));
-
-    Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.lendKind = b.getAttribute("data-lk"); render(); }; });
-    bind("lview", "change", function (el) { state.lendView = el.value; render(); });
-    var lq = document.getElementById("lendQ"); if (lq) lq.oninput = function () { state.lendQ = lq.value; var s = lq.selectionStart; render(); var n = document.getElementById("lendQ"); if (n) { n.focus(); try { n.setSelectionRange(s, s); } catch (e) {} } };
-    bind("ladd", "click", addLoan);
-    var lacctSel = document.getElementById("lacct"); if (lacctSel) { var updLFee = function () { var w = document.getElementById("lfeeWrap"); if (w) w.style.display = lacctSel.value ? "" : "none"; }; lacctSel.onchange = updLFee; updLFee(); }
-    Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-loanedit]"), function (b) { b.onclick = function () { editLoan(b.getAttribute("data-loanedit")); }; });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-unsettle]"), function (b) { b.onclick = function () { var l = byId(b.getAttribute("data-unsettle")); if (l) commit("Settle undone", function () { l.settled = false; delete l.settledDate; delete l.settledTime; delete l.settledAccount; delete l.settledAmount; delete l.settledCreated; }); }; });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-loandel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-loandel"); commit("Loan deleted", function () { state.loans = state.loans.filter(function (l) { return l.id !== id; }); }); }; });
+  // ---------- PEOPLE ----------
+  function tagDirLabel(t) {
+    var m = t.tag.meaning, p = esc(t.tag.person);
+    if (m === "owes_me") return p + " owes you";
+    if (m === "paying_me") return p + " paid you back";
+    if (m === "their_money") return p + "'s money";
+    if (m === "paying_back") return "you paid " + p;
+    return p;
   }
+  function personEvents(p) {
+    var evs = [];
+    state.tx.forEach(function (t) {
+      if (!t.tag || t.tag.person !== p) return;
+      var d = t.type === "expense" ? t.tag.slice : -t.tag.slice;
+      evs.push({ kind: "tx", id: t.id, date: t.date, time: t.time || "", label: (t.where || (t.type === "income" ? "Income" : "Expense")), sub: tagDirLabel(t), delta: d });
+    });
+    state.ious.forEach(function (i) {
+      if (i.person !== p) return;
+      var d = i.done ? 0 : (i.dir === "they_owe" ? i.amount : -i.amount);
+      evs.push({ kind: "iou", id: i.id, date: i.date, time: i.time || "", label: (i.note || "IOU"), sub: i.done ? "written off" : (i.dir === "they_owe" ? p + " owes you" : "you owe " + p), delta: d, done: i.done });
+    });
+    state.loans.forEach(function (l) {
+      if (l.person !== p) return;
+      var d = l.settled ? 0 : (l.kind === "lent" ? l.amount : -l.amount);
+      evs.push({ kind: "loan", id: l.id, date: l.date, time: l.time || "", label: (l.note || (l.kind === "lent" ? "Lent out" : "Borrowed")) + " · old loan", sub: l.settled ? "settled" : (l.kind === "lent" ? p + " owes you" : "you owe " + p), delta: d, settled: l.settled });
+    });
+    evs.sort(function (a, b) { if (a.date !== b.date) return a.date < b.date ? 1 : -1; return (a.time || "") < (b.time || "") ? 1 : -1; });
+    return evs;
+  }
+  function personRow(p) {
+    var b = personBalance(p), zero = Math.abs(b) < 0.005;
+    var state_t = zero ? "settled up" : (b > 0 ? "owes you" : "you owe");
+    var cls = zero ? "" : (b > 0 ? "pos" : "neg");
+    var open = !!state.peopleOpen[p];
+    var body = open ? '<div class="plist">' + personEvents(p).map(function (e) {
+      var amt = Math.abs(e.delta) < 0.005 ? "—" : ((e.delta > 0 ? "+" : "−") + fmtBig(Math.abs(e.delta)));
+      var acts = e.kind === "iou" && !e.done ? '<button class="del" data-ioudel="' + e.id + '" aria-label="Delete IOU" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>' : "";
+      return '<div class="prow"><div class="pbody"><div class="pt">' + esc(e.label) + '</div><div class="ps">' + dtLabel(e.date, e.time) + ' · ' + e.sub + '</div></div><div class="pend"><span class="num ' + (e.delta > 0 ? "pos" : e.delta < 0 ? "neg" : "") + '">' + amt + '</span>' + acts + '</div></div>';
+    }).join("") + '</div>' : "";
+    return '<div class="person' + (open ? " open" : "") + '"><div class="phead" data-ptoggle="' + esc(p) + '" role="button" tabindex="0" aria-expanded="' + (open ? "true" : "false") + '"><div><div class="pn">' + esc(p) + '</div><div class="pstate">' + state_t + '</div></div><div class="pbal num ' + cls + '">' + (zero ? fmtBig(0) : fmtBig(Math.abs(b))) + '</div></div>' +
+      (zero ? "" : '<div class="pacts"><button class="btn sec btn-sm" data-psettle="' + esc(p) + '">Settle up</button></div>') + body + '</div>';
+  }
+  function renderPeople() {
+    var ppl = allPeople(), owed = 0, owe = 0;
+    ppl.forEach(function (p) { var b = personBalance(p); if (b > 0) owed += b; else owe += -b; });
+    var net = owed - owe;
+    var q = (state.lendQ || "").trim().toLowerCase();
+    var shown = ppl.filter(function (p) { return !q || p.toLowerCase().indexOf(q) >= 0; });
+    var active = shown.filter(function (p) { return Math.abs(personBalance(p)) >= 0.005; });
+    var settled = shown.filter(function (p) { return Math.abs(personBalance(p)) < 0.005; });
+    var body;
+    if (!ppl.length) body = '<div class="empty"><div class="big">No one yet</div>When an entry involves someone else\'s money, name them on it — their balance shows up here.</div>';
+    else if (!shown.length) body = '<div class="empty">No one matches “' + esc(state.lendQ) + '”.</div>';
+    else body = (active.length ? active.map(personRow).join("") : '<div class="empty">Everyone\'s settled up.</div>') +
+      (settled.length ? '<div class="day-div"><span class="day-date">Settled</span></div>' + settled.map(personRow).join("") : "");
+    var searchBar = ppl.length ? '<div class="filters"><input id="lendQ" type="text" placeholder="Search people…" value="' + esc(state.lendQ) + '"></div>' : "";
+    var sidebar = card("Add an IOU", "A debt with no transaction of yours", 
+      '<div class="seg"><button data-iod="i_owe" class="' + (state.iouDir === "they_owe" ? "" : "on") + '">I owe them</button><button data-iod="they_owe" class="' + (state.iouDir === "they_owe" ? "on" : "") + '">They owe me</button></div>' +
+      '<div class="field"><label>Person</label><input id="ioPerson" type="text" maxlength="24" data-ac="person" placeholder="who?"></div>' +
+      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="ioAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
+      '<div class="two"><div class="field"><label>Date</label><input id="ioDate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="ioTime" type="time" value="' + nowTime() + '"></div></div>' +
+      '<div class="field"><label>What for <span class="opt">(optional)</span></label><input id="ioNote" type="text" maxlength="40" placeholder="e.g. they covered my meal"></div>' +
+      '<div class="hint">Use this only when no money left your accounts — like a friend paying the bill for your share. Otherwise just name them on the entry itself.</div>' +
+      '<button class="btn" id="ioAdd">' + icon('plus') + 'Add IOU</button>', { collapsible: true, key: "people-iou" });
+    app.innerHTML = layout(heroBlock("Net position", fmtBig(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>', '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmtBig(owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmtBig(owe) + '</div></div></div>'), sidebar, card("People", "Who owes whom", searchBar + body));
+    Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-iod]"), function (b) { b.onclick = function () { state.iouDir = b.getAttribute("data-iod"); render(); }; });
+    bind("ioAdd", "click", addIou);
+    var lq = document.getElementById("lendQ"); if (lq) lq.oninput = function () { state.lendQ = lq.value; var s = lq.selectionStart; render(); var n = document.getElementById("lendQ"); if (n) { n.focus(); try { n.setSelectionRange(s, s); } catch (e) {} } };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ptoggle]"), function (b) { var f = function () { var p = b.getAttribute("data-ptoggle"); state.peopleOpen[p] = !state.peopleOpen[p]; render(); }; b.onclick = f; b.onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); f(); } }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-psettle]"), function (b) { b.onclick = function () { settlePerson(b.getAttribute("data-psettle")); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ioudel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-ioudel"); commit("IOU deleted", function () { state.ious = state.ious.filter(function (i) { return i.id !== id; }); }); }; });
+  }
+  function addIou() {
+    var p = document.getElementById("ioPerson").value.trim(); if (!p) { document.getElementById("ioPerson").focus(); toast("Who is it?"); return; }
+    var v = readAmt("ioAmt"); if (v === null) return;
+    var dir = state.iouDir === "they_owe" ? "they_owe" : "i_owe";
+    commit("IOU added", function () { state.ious.push({ id: uid(), person: p, dir: dir, amount: v, note: document.getElementById("ioNote").value.trim(), date: document.getElementById("ioDate").value || today(), time: document.getElementById("ioTime").value || "", created: Date.now() }); });
+  }
+  function settlePerson(p) {
+    var b = personBalance(p); if (Math.abs(b) < 0.005) return;
+    var theyOwe = b > 0, amt = Math.abs(b);
+    var body = '<p class="help-p">' + (theyOwe ? esc(p) + ' owes you <strong>' + fmtBig(amt) + '</strong>.' : 'You owe ' + esc(p) + ' <strong>' + fmtBig(amt) + '</strong>.') + '</p>' +
+      '<div class="seg' + (theyOwe ? '' : ' three') + '" id="stMode"><button data-st="paid" class="on">' + (theyOwe ? "They paid me" : "I paid them") + '</button><button data-st="write">' + (theyOwe ? "Let it go" : "They shouldered it") + '</button>' + (theyOwe ? '' : '<button data-st="keep">I kept it</button>') + '</div>' +
+      '<div id="stPaid">' + '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + amt + '"></div></div>' +
+      '<div class="field"><label>' + (theyOwe ? "Into account" : "From account") + '</label><select class="inp" id="stAcct">' + acctOptions(defAcct()) + '</select></div>' +
+      '<div class="two"><div class="field"><label>Date</label><input id="stDate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="stTime" type="time" value="' + nowTime() + '"></div></div>' +
+      '<div class="hint">Logs a real ' + (theyOwe ? "income" : "expense") + ' entry, tagged to ' + esc(p) + ', which draws the balance toward zero.</div></div>' +
+      '<div id="stWrite" style="display:none"><div class="hint">' + (theyOwe ? "You\'re writing off what " + esc(p) + " owed — it becomes your own spending (a treat you gave). Nothing moves in your accounts." : "They covered it for good — nothing ever left your accounts, so nothing is counted. The balance just clears.") + '</div></div>' +
+      '<div id="stKeep" style="display:none"><div class="hint">' + esc(p) + ' told you to keep it — their money becomes yours, so it counts as your income. Your balances don\'t move (you already have it).</div></div>';
+    openModal("Settle with " + esc(p), body, "Done", function () {
+      var mode = document.querySelector("#stMode button.on").getAttribute("data-st");
+      if (mode === "keep") {
+        commit("Settled with " + p, function () {
+          state.ious.push({ id: uid(), person: p, dir: "they_owe", amount: amt, note: "kept it", date: today(), time: nowTime(), created: Date.now(), offset: true });
+          state.tx.push({ id: uid(), type: "income", amount: amt, where: p, account: "", desc: "Kept " + p + "'s money", date: today(), time: nowTime(), created: Date.now() });
+        });
+        return;
+      }
+      if (mode === "write") {
+        commit("Settled with " + p, function () {
+          state.ious.push({ id: uid(), person: p, dir: theyOwe ? "i_owe" : "they_owe", amount: amt, note: theyOwe ? "wrote it off" : "they shouldered it", date: today(), time: nowTime(), created: Date.now(), offset: true });
+          if (theyOwe) state.tx.push({ id: uid(), type: "expense", amount: amt, where: p, account: "", desc: "Wrote off what " + p + " owed", date: today(), time: nowTime(), created: Date.now() });
+        });
+        return;
+      }
+      var v = readAmt("stAmt"); if (v === null) return false;
+      var acct = document.getElementById("stAcct").value;
+      var d = document.getElementById("stDate").value || today(), tm = document.getElementById("stTime").value || "";
+      commit("Settled with " + p, function () {
+        state.tx.push({ id: uid(), type: theyOwe ? "income" : "expense", amount: v, where: p, account: acct, desc: theyOwe ? "Paid me back" : "Paid them back", date: d, time: tm, created: Date.now(), tag: { person: p, slice: v, meaning: theyOwe ? "paying_me" : "paying_back" } });
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#stMode button"), function (b) {
+      b.onclick = function () {
+        Array.prototype.forEach.call(document.querySelectorAll("#stMode button"), function (x) { x.classList.remove("on"); });
+        b.classList.add("on");
+        var m = b.getAttribute("data-st");
+        document.getElementById("stPaid").style.display = m === "paid" ? "" : "none";
+        document.getElementById("stWrite").style.display = m === "write" ? "" : "none";
+        var k = document.getElementById("stKeep"); if (k) k.style.display = m === "keep" ? "" : "none";
+      };
+    });
+  }
+
   function loanRow(l, showPerson, hideDate) {
     var t = showPerson ? esc(l.person) : (l.kind === "lent" ? "Lent out" : "Borrowed");
     var dt = hideDate ? fmtTime(l.time) : dtLabel(l.date, l.time);
@@ -1583,7 +1678,7 @@
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) { b.onclick = function () { state.theme = b.getAttribute("data-theme-set"); applyTheme(); saveSet(); render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-priv-set]"), function (b) { b.onclick = function () { var v = b.getAttribute("data-priv-set"); state.priv = v; if (v !== "off") state.privLast = v; saveSet(); setPrivBtn(); render(); }; });
-    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.lendKind = "lent-out"; state.lendView = "person"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackFiltersOpen = false; state.trackView = "list"; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
+    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.lendKind = "lent-out"; state.lendView = "person"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackFiltersOpen = false; state.trackView = "list"; state.peopleOpen = {}; state.iouDir = "i_owe"; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
     bind("curSel", "change", function (el) { if (el.value === "__custom") { var c = document.getElementById("curCustom"); c.focus(); return; } state.cur = el.value; saveSet(); render(); });
     bind("curCustom", "input", function (el) { var sel = document.getElementById("curSel"); if (sel && el.value.trim()) sel.value = "__custom"; });
     var cc = document.getElementById("curCustom"); if (cc) cc.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); var v = cc.value.trim(); if (v) { state.cur = v; saveSet(); render(); toast("Currency set to " + v); } } };
