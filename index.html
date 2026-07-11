@@ -917,7 +917,7 @@
   function entryFields(pfx, type, d) {
     var isT = type === "transfer";
     var fields = isT
-      ? '<div class="field"><label>From account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions((d && d.acct) ? d.acct : defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="' + pfx + 'acct2">' + /*draft*/ acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
+      ? '<div class="field"><label>From account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions((d && d.acct) ? d.acct : defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="' + pfx + 'acct2">' + acctOptions((d && d.acct2) ? d.acct2 : (state.accounts[1] ? state.accounts[1].id : defAcct())) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'fee" type="number" inputmode="decimal" step="0.01" min="0" value="' + dv(d, "fee", "") + '" placeholder="0.00"></div></div>'
       : '<div class="field"><label>Where</label><input id="' + pfx + 'where" type="text" maxlength="40" data-ac="where" value="' + dv(d, "where", "") + '" placeholder="' + (type === "income" ? "where from?" : "where did it go?") + '"></div><div class="field"><label>Account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions((d && d.acct) ? d.acct : defAcct()) + '</select></div>';
     return '<div class="seg three"><button data-t="expense" class="' + (type === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (type === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'amt" type="number" inputmode="decimal" step="0.01" min="0" value="' + dv(d, "amt", "") + '" placeholder="0.00"></div></div>' +
@@ -1018,6 +1018,7 @@
       var from = document.getElementById(pfx + "acct").value, to = document.getElementById(pfx + "acct2").value;
       if (from === to) { toast("Pick two different accounts"); return false; }
       var fee = readFee(pfx + "fee"); if (fee === null) return false;
+      if (!pfx) state.formDraft = null;
       commit("Transfer recorded", function () { state.tx.push({ id: uid(), tpl: tplId, type: "transfer", amount: v, fee: fee, account: from, toAccount: to, desc: document.getElementById(pfx + "desc").value.trim(), date: date, time: time, created: Date.now() }); }); return true;
     }
     var tg = readTag(pfx, type, v);
@@ -1177,19 +1178,19 @@
       if (!t.tag || t.tag.person !== p) return;
       var d = t.type === "expense" ? t.tag.slice : -t.tag.slice;
       var isPay = (t.type === "income" && t.tag.meaning === "paying_me") || (t.type === "expense" && (t.tag.meaning === "paying_back" || t.tag.meaning === "their_money"));
-      evs.push({ kind: "tx", id: t.id, date: t.date, time: t.time || "", label: (t.where || (t.type === "income" ? "Income" : "Expense")), sub: tagDirLabel(t), delta: d, pay: isPay });
+      evs.push({ kind: "tx", id: t.id, created: t.created || 0, date: t.date, time: t.time || "", label: (t.where || (t.type === "income" ? "Income" : "Expense")), sub: tagDirLabel(t), delta: d, pay: isPay });
     });
     state.ious.forEach(function (i) {
       if (i.person !== p) return;
       var d = i.done ? 0 : (i.dir === "they_owe" ? i.amount : -i.amount);
-      evs.push({ kind: "iou", id: i.id, date: i.date, time: i.time || "", label: (i.note || "IOU"), sub: i.done ? "written off" : (i.dir === "they_owe" ? p + " owes you" : "you owe " + p), delta: d, done: i.done, pay: !!i.sid });
+      evs.push({ kind: "iou", id: i.id, created: i.created || 0, date: i.date, time: i.time || "", label: (i.note || "IOU"), sub: i.done ? "written off" : (i.dir === "they_owe" ? p + " owes you" : "you owe " + p), delta: d, done: i.done, pay: !!i.sid });
     });
     state.loans.forEach(function (l) {
       if (l.person !== p) return;
       var d = l.settled ? 0 : (l.kind === "lent" ? l.amount : -l.amount);
-      evs.push({ kind: "loan", id: l.id, date: l.date, time: l.time || "", label: (l.note || (l.kind === "lent" ? "Lent out" : "Borrowed")) + " · old loan", sub: l.settled ? "settled" : (l.kind === "lent" ? p + " owes you" : "you owe " + p), delta: d, settled: l.settled });
+      evs.push({ kind: "loan", id: l.id, created: l.created || 0, date: l.date, time: l.time || "", label: (l.note || (l.kind === "lent" ? "Lent out" : "Borrowed")) + " · old loan", sub: l.settled ? "settled" : (l.kind === "lent" ? p + " owes you" : "you owe " + p), delta: d, settled: l.settled });
     });
-    evs.sort(function (a, b) { if (a.date !== b.date) return a.date < b.date ? 1 : -1; return (a.time || "") < (b.time || "") ? 1 : -1; });
+    evs.sort(function (a, b) { if (a.date !== b.date) return a.date < b.date ? 1 : -1; if ((a.time || "") !== (b.time || "")) return (a.time || "") < (b.time || "") ? 1 : -1; return (b.created || 0) - (a.created || 0); });
     return evs;
   }
   function personOpenItems(p) {
