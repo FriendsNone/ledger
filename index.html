@@ -1183,7 +1183,7 @@
     state.ious.forEach(function (i) {
       if (i.person !== p) return;
       var d = i.done ? 0 : (i.dir === "they_owe" ? i.amount : -i.amount);
-      evs.push({ kind: "iou", id: i.id, created: i.created || 0, date: i.date, time: i.time || "", label: (i.note || "IOU"), sub: i.done ? "written off" : (i.dir === "they_owe" ? p + " owes you" : "you owe " + p), delta: d, done: i.done, pay: !!i.sid });
+      evs.push({ kind: "iou", id: i.id, created: i.created || 0, date: i.date, time: i.time || "", label: (i.note || "IOU"), sub: i.sid ? "settled" : (i.done ? "written off" : (i.dir === "they_owe" ? p + " owes you" : "you owe " + p)), delta: d, done: i.done, pay: !!i.sid });
     });
     state.loans.forEach(function (l) {
       if (l.person !== p) return;
@@ -1195,21 +1195,25 @@
   }
   function personOpenItems(p) {
     var evs = personEvents(p).slice().reverse(); // chronological ascending
-    var open = [], rem = {};
+    var open = [], rem = {}, credit = { "1": 0, "-1": 0 };
     evs.forEach(function (e) {
       if (Math.abs(e.delta) < 0.005) return;
-      var sign = e.delta > 0 ? 1 : -1, amt = Math.abs(e.delta);
+      var sign = e.delta > 0 ? 1 : -1, amt = Math.abs(e.delta), i, take;
       if (e.pay) {
-        // repayments/write-offs draw down outstanding debts in the OPPOSITE direction (oldest first)
-        for (var i = 0; i < open.length && amt > 0.005; i++) {
+        // a repayment/write-off draws down outstanding debts in the OPPOSITE direction (oldest first)
+        for (i = 0; i < open.length && amt > 0.005; i++) {
           if (open[i].sign === sign || open[i].remaining <= 0.005) continue;
-          var take = Math.min(open[i].remaining, amt);
+          take = Math.min(open[i].remaining, amt);
           open[i].remaining -= take; amt -= take;
         }
+        // anything left over is a credit against a debt logged later (same timestamp, or out of order)
+        if (amt > 0.005) credit[-sign] += amt;
         return;
       }
-      // a debt always stands on its own — an opposite debt is not a repayment
-      open.push({ key: e.kind + ":" + e.id, sign: sign, remaining: amt });
+      // a debt: first consume any credit already paid toward it, then stand on its own
+      take = Math.min(credit[sign], amt);
+      credit[sign] -= take; amt -= take;
+      if (amt > 0.005) open.push({ key: e.kind + ":" + e.id, sign: sign, remaining: amt });
     });
     open.forEach(function (o) { if (o.remaining > 0.005) rem[o.key] = (rem[o.key] || 0) + o.remaining; });
     return rem;
