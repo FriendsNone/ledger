@@ -412,7 +412,7 @@
     accounts: [], tx: [], loans: [], recurring: [], goals: [], ious: [],
     cur: "$", theme: "system",
     tab: "overview", prevTab: "overview", formType: "expense", recType: "expense",
-    fType: "all", fQ: "", trackShow: 30, trackAcct: "", trackPeriod: "all", trackFrom: "", trackTo: "", trackFiltersOpen: false, trackView: "list", peopleOpen: {}, iouDir: "i_owe", lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
+    fType: "all", fQ: "", trackShow: 30, trackAcct: "", trackPeriod: "all", trackFrom: "", trackTo: "", trackFiltersOpen: false, trackView: "list", peopleOpen: {}, iouDir: "i_owe", formDraft: null, iouDraft: null, lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
     lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false, priv: "off", privLast: "partial"
   };
   var amap = {}, lastTab = null;
@@ -832,7 +832,7 @@
     var shown = visible.slice(0, state.trackShow);
     var remaining = visible.length - shown.length;
     var listBody = !visible.length ? '<div class="empty"><div class="big">No entries yet</div>' + (state.accounts.length ? "Add an income, expense, or transfer to get started." : "Add an account first, then start logging.") + '</div>'
-      : '<div class="list">' + groupedRows(shown, false, state.fType === "all" && !q) + '</div>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more · ' + remaining + ' left</button></div>' : "");
+      : '<div class="list">' + groupedRows(shown, false, state.fType === "all" && !q) + '</div>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more</button><button class="btn sec btn-sm" id="showAll">Show all ' + visible.length + '</button></div>' : "");
     var tkPeriod = state.trackPeriod || "all", filtActive = !!state.trackAcct || tkPeriod !== "all", fopen = state.trackFiltersOpen;
     var acctSel = '<select class="inp" id="fAcct" aria-label="Filter by account"><option value=""' + sel(state.trackAcct, "") + '>All accounts</option>' + state.accounts.map(function (a) { return '<option value="' + a.id + '"' + sel(state.trackAcct, a.id) + '>' + esc(a.name) + '</option>'; }).join("") + '</select>';
     var pchips = '<div class="periodbar" role="group" aria-label="Date range">' + [["all", "All"], ["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["12m", "12M"], ["custom", "Custom"]].map(function (o) { return '<button type="button" data-tkp="' + o[0] + '" class="' + (tkPeriod === o[0] ? "on" : "") + '" aria-pressed="' + (tkPeriod === o[0] ? "true" : "false") + '">' + o[1] + '</button>'; }).join("") + '</div>';
@@ -885,23 +885,30 @@
     function upd() { var on = pe.value.trim() !== ""; if (box) box.style.display = on ? "block" : "none"; if (sw && me) sw.style.display = (me.value === "owes_me" || me.value === "paying_me") ? "block" : "none"; }
     pe.addEventListener("input", upd); if (me) me.addEventListener("change", upd);
   }
-  function entryFields(pfx, type) {
+  var DRAFT_IDS = ["amt", "where", "acct", "toacct", "fee", "desc", "date", "time", "person", "tagmean", "tagslice"];
+  function grabDraft(pfx) {
+    var o = {}, any = false;
+    DRAFT_IDS.forEach(function (k) { var e = document.getElementById(pfx + k); if (e && e.value !== "") { o[k] = e.value; any = true; } });
+    return any ? o : null;
+  }
+  function dv(d, k, fb) { return (d && d[k] != null) ? esc(d[k]) : fb; }
+  function entryFields(pfx, type, d) {
     var isT = type === "transfer";
     var fields = isT
-      ? '<div class="field"><label>From account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions(defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="' + pfx + 'acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
-      : '<div class="field"><label>Where</label><input id="' + pfx + 'where" type="text" maxlength="40" data-ac="where" placeholder="' + (type === "income" ? "where from?" : "where did it go?") + '"></div><div class="field"><label>Account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions(defAcct()) + '</select></div>';
+      ? '<div class="field"><label>From account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions((d && d.acct) ? d.acct : defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="' + pfx + 'acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
+      : '<div class="field"><label>Where</label><input id="' + pfx + 'where" type="text" maxlength="40" data-ac="where" value="' + dv(d, "where", "") + '" placeholder="' + (type === "income" ? "where from?" : "where did it go?") + '"></div><div class="field"><label>Account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions((d && d.acct) ? d.acct : defAcct()) + '</select></div>';
     return '<div class="seg three"><button data-t="expense" class="' + (type === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (type === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
-      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
+      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'amt" type="number" inputmode="decimal" step="0.01" min="0" value="' + dv(d, "amt", "") + '" placeholder="0.00"></div></div>' +
       fields +
-      tagSection(pfx, type, null) +
-      '<div class="two"><div class="field"><label>Date</label><input id="' + pfx + 'date" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="' + pfx + 'time" type="time" value="' + nowTime() + '"></div></div>' +
-      '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="' + pfx + 'desc" type="text" maxlength="60" placeholder="anything to remember"></div>';
+      tagSection(pfx, type, (d && d.person) ? { person: d.person, meaning: d.tagmean || (type === "income" ? "paying_me" : "owes_me"), slice: (d.tagslice != null ? d.tagslice : "") } : null) +
+      '<div class="two"><div class="field"><label>Date</label><input id="' + pfx + 'date" type="date" value="' + dv(d, "date", today()) + '"></div><div class="field"><label>Time</label><input id="' + pfx + 'time" type="time" value="' + dv(d, "time", nowTime()) + '"></div></div>' +
+      '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="' + pfx + 'desc" type="text" maxlength="60" value="' + dv(d, "desc", "") + '" placeholder="anything to remember"></div>';
   }
-  function formHTML() { return entryFields("", state.formType) + '<button class="btn" id="add">' + icon('plus') + (state.formType === "transfer" ? "Add transfer" : "Add " + state.formType) + '</button>'; }
+  function formHTML() { var d = state.formDraft; state.formDraft = null; return entryFields("", state.formType, d) + '<button class="btn" id="add">' + icon('plus') + (state.formType === "transfer" ? "Add transfer" : "Add " + state.formType) + '</button>'; }
   var quickType = "expense", quickTpl = null;
   function quickOk() { return addEntry("q", quickType, quickTpl); }
   function wireQuick() {
-    Array.prototype.forEach.call(document.querySelectorAll("#modal .modal-b .seg button"), function (b) { b.onclick = function () { quickType = b.getAttribute("data-t"); var bd = document.querySelector("#modal .modal-b"); if (bd) bd.innerHTML = entryFields("q", quickType); var ok = document.getElementById("mOk"); if (ok) ok.textContent = quickType === "transfer" ? "Add transfer" : "Add " + quickType; labelControls(); wireQuick(); initAutocomplete(); wireTag("q"); var a = document.getElementById("qamt"); if (a) { try { a.focus(); } catch (e) {} } }; });
+    Array.prototype.forEach.call(document.querySelectorAll("#modal .modal-b .seg button"), function (b) { b.onclick = function () { quickType = b.getAttribute("data-t"); var bd = document.querySelector("#modal .modal-b"); var qd = grabDraft("q"); if (bd) bd.innerHTML = entryFields("q", quickType, qd); var ok = document.getElementById("mOk"); if (ok) ok.textContent = quickType === "transfer" ? "Add transfer" : "Add " + quickType; labelControls(); wireQuick(); initAutocomplete(); wireTag("q"); var a = document.getElementById("qamt"); if (a) { try { a.focus(); } catch (e) {} } }; });
     var qa = document.getElementById("qamt"); if (qa) qa.onkeydown = function (e) { if (e.key === "Enter") { var ok = document.getElementById("mOk"); if (ok) ok.click(); } };
     initAutocomplete(); wireTag("q");
   }
@@ -954,7 +961,7 @@
     return html;
   }
   function wireTrack() {
-    Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.formType = b.getAttribute("data-t"); render(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-t]"), function (b) { b.onclick = function () { state.formDraft = grabDraft(""); state.formType = b.getAttribute("data-t"); render(); }; });
     wireTag("");
     var add = document.getElementById("add"); if (add) add.onclick = function () { addEntry(); };
     var amt = document.getElementById("amt"); if (amt) amt.onkeydown = function (e) { if (e.key === "Enter") addEntry(); };
@@ -968,6 +975,7 @@
     bind("fTo", "change", function (el) { state.trackTo = el.value; state.trackShow = 30; render(); });
     var q = document.getElementById("fQ"); if (q) q.oninput = function () { state.fQ = q.value; state.trackShow = 30; var s = q.selectionStart; render(); var nq = document.getElementById("fQ"); if (nq) { nq.focus(); try { nq.setSelectionRange(s, s); } catch (e) {} } };
     bind("showMore", "click", function () { state.trackShow += 50; render(); });
+    bind("showAll", "click", function () { state.trackShow = 1e9; render(); });
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
     Array.prototype.forEach.call(document.querySelectorAll(".del"), function (b) { b.onclick = function () { var id = b.getAttribute("data-id"); commit("Entry deleted", function () { state.tx = state.tx.filter(function (t) { return t.id !== id; }); }); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-edit-tx]"), function (b) { b.onclick = function () { editEntry(b.getAttribute("data-edit-tx")); }; });
@@ -1181,16 +1189,17 @@
     else body = (active.length ? active.map(personRow).join("") : '<div class="empty">Everyone\'s settled up.</div>') +
       (settled.length ? '<div class="day-div"><span class="day-date">Settled</span></div>' + settled.map(personRow).join("") : "");
     var searchBar = ppl.length ? '<div class="filters"><input id="lendQ" type="text" placeholder="Search people…" value="' + esc(state.lendQ) + '"></div>' : "";
+    var iod = state.iouDraft; state.iouDraft = null;
     var sidebar = card("Add an IOU", "A debt with no transaction of yours", 
       '<div class="seg"><button data-iod="i_owe" class="' + (state.iouDir === "they_owe" ? "" : "on") + '">I owe them</button><button data-iod="they_owe" class="' + (state.iouDir === "they_owe" ? "on" : "") + '">They owe me</button></div>' +
-      '<div class="field"><label>Person</label><input id="ioPerson" type="text" maxlength="24" data-ac="person" placeholder="who?"></div>' +
-      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="ioAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
-      '<div class="two"><div class="field"><label>Date</label><input id="ioDate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="ioTime" type="time" value="' + nowTime() + '"></div></div>' +
-      '<div class="field"><label>What for <span class="opt">(optional)</span></label><input id="ioNote" type="text" maxlength="40" placeholder="e.g. they covered my meal"></div>' +
+      '<div class="field"><label>Person</label><input id="ioPerson" type="text" maxlength="24" data-ac="person" value="' + dv(iod, "ioPerson", "") + '" placeholder="who?"></div>' +
+      '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="ioAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + dv(iod, "ioAmt", "") + '" placeholder="0.00"></div></div>' +
+      '<div class="two"><div class="field"><label>Date</label><input id="ioDate" type="date" value="' + dv(iod, "ioDate", today()) + '"></div><div class="field"><label>Time</label><input id="ioTime" type="time" value="' + dv(iod, "ioTime", nowTime()) + '"></div></div>' +
+      '<div class="field"><label>What for <span class="opt">(optional)</span></label><input id="ioNote" type="text" maxlength="40" value="' + dv(iod, "ioNote", "") + '" placeholder="e.g. they covered my meal"></div>' +
       '<div class="hint">Use this only when no money left your accounts — like a friend paying the bill for your share. Otherwise just name them on the entry itself.</div>' +
       '<button class="btn" id="ioAdd">' + icon('plus') + 'Add IOU</button>', { collapsible: true, key: "people-iou" });
     app.innerHTML = layout(heroBlock("Net position", fmtBig(net), net >= 0 ? "pos" : "neg", '<div class="csub">' + (net >= 0 ? "owed to you, on balance" : "you owe, on balance") + '</div>', '<div class="pills"><div class="pill"><div class="label">Owed to you</div><div class="v num pos">' + fmtBig(owed) + '</div></div><div class="pill"><div class="label">You owe</div><div class="v num neg">' + fmtBig(owe) + '</div></div></div>'), sidebar, card("People", "Who owes whom", searchBar + body));
-    Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-iod]"), function (b) { b.onclick = function () { state.iouDir = b.getAttribute("data-iod"); render(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-iod]"), function (b) { b.onclick = function () { var g = {}; ["ioPerson", "ioAmt", "ioDate", "ioTime", "ioNote"].forEach(function (k) { var e = document.getElementById(k); if (e && e.value !== "") g[k] = e.value; }); state.iouDraft = g; state.iouDir = b.getAttribute("data-iod"); render(); }; });
     bind("ioAdd", "click", addIou);
     var lq = document.getElementById("lendQ"); if (lq) lq.oninput = function () { state.lendQ = lq.value; var s = lq.selectionStart; render(); var n = document.getElementById("lendQ"); if (n) { n.focus(); try { n.setSelectionRange(s, s); } catch (e) {} } };
     Array.prototype.forEach.call(document.querySelectorAll("[data-ptoggle]"), function (b) { b.onclick = function () { var p = b.getAttribute("data-ptoggle"); state.peopleOpen[p] = !state.peopleOpen[p]; render(); }; });
