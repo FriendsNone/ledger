@@ -907,7 +907,7 @@
     function upd() { var on = pe.value.trim() !== ""; if (box) box.style.display = on ? "block" : "none"; if (sw && me) sw.style.display = (me.value === "owes_me" || me.value === "paying_me") ? "block" : "none"; }
     pe.addEventListener("input", upd); if (me) me.addEventListener("change", upd);
   }
-  var DRAFT_IDS = ["amt", "where", "acct", "toacct", "fee", "desc", "date", "time", "person", "tagmean", "tagslice"];
+  var DRAFT_IDS = ["amt", "where", "acct", "acct2", "fee", "desc", "date", "time", "person", "tagmean", "tagslice"];
   function grabDraft(pfx) {
     var o = {}, any = false;
     DRAFT_IDS.forEach(function (k) { var e = document.getElementById(pfx + k); if (e && e.value !== "") { o[k] = e.value; any = true; } });
@@ -917,7 +917,7 @@
   function entryFields(pfx, type, d) {
     var isT = type === "transfer";
     var fields = isT
-      ? '<div class="field"><label>From account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions((d && d.acct) ? d.acct : defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="' + pfx + 'acct2">' + acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
+      ? '<div class="field"><label>From account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions((d && d.acct) ? d.acct : defAcct()) + '</select></div><div class="field"><label>To account</label><select class="inp" id="' + pfx + 'acct2">' + /*draft*/ acctOptions(state.accounts[1] ? state.accounts[1].id : defAcct()) + '</select></div><div class="field"><label>Fee <span class="opt">(optional)</span></label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'
       : '<div class="field"><label>Where</label><input id="' + pfx + 'where" type="text" maxlength="40" data-ac="where" value="' + dv(d, "where", "") + '" placeholder="' + (type === "income" ? "where from?" : "where did it go?") + '"></div><div class="field"><label>Account</label><select class="inp" id="' + pfx + 'acct">' + acctOptions((d && d.acct) ? d.acct : defAcct()) + '</select></div>';
     return '<div class="seg three"><button data-t="expense" class="' + (type === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (type === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'amt" type="number" inputmode="decimal" step="0.01" min="0" value="' + dv(d, "amt", "") + '" placeholder="0.00"></div></div>' +
@@ -926,7 +926,7 @@
       '<div class="two"><div class="field"><label>Date</label><input id="' + pfx + 'date" type="date" value="' + dv(d, "date", today()) + '"></div><div class="field"><label>Time</label><input id="' + pfx + 'time" type="time" value="' + dv(d, "time", nowTime()) + '"></div></div>' +
       '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="' + pfx + 'desc" type="text" maxlength="60" value="' + dv(d, "desc", "") + '" placeholder="anything to remember"></div>';
   }
-  function formHTML() { var d = state.formDraft; state.formDraft = null; return entryFields("", state.formType, d) + '<button class="btn" id="add">' + icon('plus') + (state.formType === "transfer" ? "Add transfer" : "Add " + state.formType) + '</button>'; }
+  function formHTML() { return entryFields("", state.formType, state.formDraft) + '<button class="btn" id="add">' + icon('plus') + (state.formType === "transfer" ? "Add transfer" : "Add " + state.formType) + '</button>'; }
   var quickType = "expense", quickTpl = null;
   function quickOk() { return addEntry("q", quickType, quickTpl); }
   function wireQuick() {
@@ -984,7 +984,13 @@
   }
   function wireTrack() {
     Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-t]"), function (b) { b.onclick = function () { state.formDraft = grabDraft(""); state.formType = b.getAttribute("data-t"); render(); }; });
+    
     wireTag("");
+    DRAFT_IDS.forEach(function (k) {
+      var e = document.getElementById(k); if (!e) return;
+      var save = function () { state.formDraft = grabDraft(""); };
+      e.addEventListener("input", save); e.addEventListener("change", save);
+    });
     var add = document.getElementById("add"); if (add) add.onclick = function () { addEntry(); };
     var amt = document.getElementById("amt"); if (amt) amt.onkeydown = function (e) { if (e.key === "Enter") addEntry(); };
     bind("fType", "change", function (el) { state.fType = el.value; state.trackShow = 30; render(); });
@@ -1015,6 +1021,7 @@
       commit("Transfer recorded", function () { state.tx.push({ id: uid(), tpl: tplId, type: "transfer", amount: v, fee: fee, account: from, toAccount: to, desc: document.getElementById(pfx + "desc").value.trim(), date: date, time: time, created: Date.now() }); }); return true;
     }
     var tg = readTag(pfx, type, v);
+    if (!pfx) state.formDraft = null;
     commit("Entry added", function () { var e = { id: uid(), tpl: tplId, type: type, amount: v, where: document.getElementById(pfx + "where").value.trim(), account: document.getElementById(pfx + "acct").value, desc: document.getElementById(pfx + "desc").value.trim(), date: date, time: time, created: Date.now() }; if (tg) e.tag = tg; state.tx.push(e); });
     return true;
   }
@@ -1728,7 +1735,7 @@
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) { b.onclick = function () { state.theme = b.getAttribute("data-theme-set"); applyTheme(); saveSet(); render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-priv-set]"), function (b) { b.onclick = function () { var v = b.getAttribute("data-priv-set"); state.priv = v; if (v !== "off") state.privLast = v; saveSet(); setPrivBtn(); render(); }; });
-    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackFiltersOpen = false; state.trackView = "list"; state.peopleOpen = {}; state.iouDir = "i_owe"; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
+    bind("resetUI", "click", function () { state.collapsed = {}; state.formType = "expense"; state.recType = "expense"; state.fType = "all"; state.fQ = ""; state.trackShow = 30; state.trackAcct = ""; state.trackPeriod = "all"; state.trackFrom = ""; state.trackTo = ""; state.trackFiltersOpen = false; state.trackView = "list"; state.peopleOpen = {}; state.iouDir = "i_owe"; state.formDraft = null; state.iouDraft = null; state.lendQ = ""; state.trendPeriod = "12m"; state.trendFrom = ""; state.trendTo = ""; state.placesAll = false; saveSet(); render(); toast("View reset"); });
     bind("curSel", "change", function (el) { if (el.value === "__custom") { var c = document.getElementById("curCustom"); c.focus(); return; } state.cur = el.value; saveSet(); render(); });
     bind("curCustom", "input", function (el) { var sel = document.getElementById("curSel"); if (sel && el.value.trim()) sel.value = "__custom"; });
     var cc = document.getElementById("curCustom"); if (cc) cc.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); var v = cc.value.trim(); if (v) { state.cur = v; saveSet(); render(); toast("Currency set to " + v); } } };
