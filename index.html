@@ -514,7 +514,6 @@
   function flagInvalid(el) { if (!el) return; el.classList.add("invalid"); try { el.focus(); } catch (e) {} el.addEventListener("input", function h() { el.classList.remove("invalid"); el.removeEventListener("input", h); }); }
   function readAmt(id, allowZero) { var el = document.getElementById(id); if (!el) return null; var v = parseFloat(el.value); if (!isFinite(v) || v < 0 || v > 1e12 || (!allowZero && v <= 0)) { flagInvalid(el); return null; } return Math.round(v * 100) / 100; }
   function readFee(id) { var el = document.getElementById(id); if (!el) return 0; var raw = (el.value || "").trim(); if (raw === "") return 0; var v = parseFloat(raw); if (!isFinite(v) || v < 0 || v > 1e12) { flagInvalid(el); return null; } return Math.round(v * 100) / 100; }
-  function uniqSorted(arr) { var seen = {}, out = []; arr.forEach(function (v) { v = (v || "").trim(); var k = v.toLowerCase(); if (v && !seen[k]) { seen[k] = 1; out.push(v); } }); return out.sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; }); }
   var acMenu = null, AC = { input: null, items: [], active: -1 };
   function rankByUse(arr) {
     var n = {}, disp = {};
@@ -763,7 +762,6 @@
 
     var up = [];
     state.recurring.forEach(function (r) { if (r.dueDay) { var td = tplDue(r); up.push({ kind: "recurring", iso: td.iso, r: r }); } });
-    state.loans.forEach(function (l) { if (!l.settled && l.due) up.push({ kind: "loan", iso: l.due, l: l }); });
     up = up.filter(function (u) { return Math.round((new Date(u.iso + "T00:00:00") - new Date(today() + "T00:00:00")) / 86400000) <= 13; });
     up.sort(function (a, b) { return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0; });
     var upBody = !up.length ? '<div class="empty">Nothing due soon.</div>'
@@ -773,15 +771,9 @@
           var r = u.r, isT = r.type === "transfer", cls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ", color = r.type === "income" ? "var(--income)" : r.type === "expense" ? "var(--expense)" : "var(--ink-faint)", name = r.desc || r.where || (isT ? "Transfer" : r.type);
           return lrow({ lead: dotEl(color), t: esc(name), sub: tb + '<span>recurring · ' + esc(acctName(r.account)) + '</span>', val: r.variable ? "varies" : sign + raw(r.amount), valCls: r.variable ? "" : cls, acts: '<button class="act" data-log="' + r.id + '">Log</button>' });
         }
-        var l = u.l;
-        return lrow({ lead: ringEl(), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: tb + '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: raw(l.amount), valCls: "", acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
+        return "";
       }).join("");
-    var upcoming = card("Upcoming", "Bills, subscriptions &amp; loans due soon", upBody);
-
-    var noDue = state.loans.filter(function (l) { return !l.settled && !l.due; });
-    var reminders = !noDue.length ? "" : card("Reminders", "Open loans with no due date", noDue.map(function (l) {
-      return lrow({ lead: ringEl(), t: (l.kind === "lent" ? "Collect from " : "Repay ") + esc(l.person), sub: '<span>loan · ' + esc(acctName(l.account)) + '</span>', val: raw(l.amount), valCls: "", acts: '<button class="act" data-settle="' + l.id + '">Settle</button>' });
-    }).join(""));
+    var upcoming = card("Upcoming", "Bills &amp; subscriptions due soon", upBody);
 
     var weekAgo = new Date(today() + "T00:00:00"); weekAgo.setDate(weekAgo.getDate() - 6); var waStr = weekAgo.getFullYear() + "-" + ("0" + (weekAgo.getMonth() + 1)).slice(-2) + "-" + ("0" + weekAgo.getDate()).slice(-2);
     var entsAll = entries().filter(function (e) { return e.date >= waStr; }), ents = entsAll.slice(0, 40);
@@ -790,12 +782,11 @@
 
     var topGoal = state.goals.length ? goalPriority(state.goals)[0] : null;
     var goalCard = topGoal ? card("Goal", topGoal.due ? "Your priority goal" : "Your closest goal", goalRow(topGoal), { collapsible: true, key: "ov-goal" }) : "";
-    app.innerHTML = layout(heroBlock("Net worth", fmtBig(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, goalCard + upcoming + reminders + recent);
+    app.innerHTML = layout(heroBlock("Net worth", fmtBig(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, goalCard + upcoming + recent);
     Array.prototype.forEach.call(document.querySelectorAll("[data-goaledit]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-goaledit"); var g = state.goals.filter(function (x) { return x.id === id; })[0]; if (g) goalModal(g); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-goaldel]"), function (b) { b.onclick = function () { delGoal(b.getAttribute("data-goaldel")); }; });
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-settle]"), function (b) { b.onclick = function () { settleLoan(b.getAttribute("data-settle")); }; });
     bind("goTrack", "click", function () { state.tab = "track"; render(); });
     bind("goAcct2", "click", function () { state.tab = "accounts"; render(); });
     bind("impBackup", "click", function () { document.getElementById("fileJSON").click(); });
@@ -1160,8 +1151,6 @@
   function delGoal(id) { confirmModal("Delete goal?", "This removes the goal. Your balances aren't affected.", "Delete", function () { commit("Goal deleted", function () { state.goals = state.goals.filter(function (x) { return x.id !== id; }); }); }, true); }
 
   // ---------- LENDING ----------
-  function isOverdue(l) { return !l.settled && l.due && l.due < today(); }
-  function dueBadge(l) { if (l.settled || !l.due) return ""; var rl = relLabel(l.due); return '<span class="badge ' + rl.c + '" title="due ' + fmtDate(l.due) + '">' + rl.t + '</span>'; }
   // ---------- PEOPLE ----------
   function tagDirLabel(t) {
     var m = t.tag.meaning, p = esc(t.tag.person);
@@ -1333,29 +1322,6 @@
   }
 
 
-  function byId(id) { return state.loans.filter(function (l) { return l.id === id; })[0]; }
-  function settleLoan(id) {
-    var l = byId(id); if (!l) return;
-    var lent = l.kind === "lent";
-    var body =
-      '<div class="field"><label>' + (lent ? "Amount received" : "Amount paid back") + '</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="sAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + l.amount + '"></div></div>' +
-      '<div class="field"><label>' + (lent ? "To account" : "From account") + '</label><select class="inp" id="sAcct">' + acctOptions(l.account, true) + '</select></div>' +
-      '<div class="two"><div class="field"><label>Date</label><input id="sDate" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="sTime" type="time" value="' + nowTime() + '"></div></div>' +
-      '<div class="hint" id="sHint"></div>';
-    openModal(lent ? "Mark repaid to you" : "Mark paid back", body, "Settle", function () {
-      var amt = readAmt("sAmt", true); if (amt === null) return false;
-      var acct = document.getElementById("sAcct").value, sd = document.getElementById("sDate").value || today(), st = document.getElementById("sTime").value || nowTime();
-      commit(lent ? "Marked repaid" : "Marked paid back", function () { l.settled = true; l.settledAmount = amt; l.settledAccount = acct; l.settledDate = sd; l.settledTime = st; l.settledCreated = Date.now(); });
-    });
-    var sAmt = document.getElementById("sAmt");
-    function upd() {
-      var v = Math.round((parseFloat(sAmt.value) || 0) * 100) / 100, d = v - l.amount, h = document.getElementById("sHint");
-      if (Math.abs(d) < 0.005) { h.textContent = "Settling the full " + raw(l.amount) + "."; return; }
-      var gain = lent ? d : -d;
-      h.innerHTML = raw(Math.abs(d)) + (d > 0 ? " more than" : " less than") + " the " + raw(l.amount) + " " + (lent ? "lent" : "borrowed") + " — recorded as a " + (gain >= 0 ? '<span style="color:var(--income);font-weight:700">gain</span>' : '<span style="color:var(--expense);font-weight:700">cost</span>') + " of " + raw(Math.abs(gain)) + ".";
-    }
-    sAmt.oninput = upd; upd();
-  }
 
   // ---------- TRENDS ----------
   function weekStart(dateStr) { var dt = new Date(dateStr + "T00:00:00"); var day = (dt.getDay() + 6) % 7; dt.setDate(dt.getDate() - day); return iso(dt); }
@@ -1804,7 +1770,6 @@
       if (!date || isNaN(amt)) continue;
       if (type === "transfer") state.tx.push({ id: uid(), type: "transfer", amount: amt, fee: fee, account: acctIdByName(acc), toAccount: acctIdByName(tos), desc: note, date: date, time: time, created: Date.now() + i });
       else if (type === "income" || type === "expense") state.tx.push({ id: uid(), type: type, amount: amt, where: wp, account: acctIdByName(acc), desc: note, date: date, time: time, created: Date.now() + i });
-      else if (type === "lent out" || type === "borrowed") { var loan = { id: uid(), kind: type === "lent out" ? "lent" : "borrowed", person: wp, amount: amt, account: acctIdByName(acc), date: date, time: time, note: note, settled: false, created: Date.now() + i }; var st = tos.toLowerCase(); if (st.indexOf("settled") === 0) { loan.settled = true; loan.settledDate = tos.split(" ")[1] || date; loan.settledAccount = loan.account; } else if (st.indexOf("due") === 0) loan.due = tos.split(" ")[1] || ""; state.loans.push(loan); }
       else continue;
       added++;
     }
