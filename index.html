@@ -175,6 +175,7 @@
   .goal-status { font-size: 12.5px; color: var(--ink-soft); }
   .goal-status.pos { color: var(--income); }
   .goal-acts { display: flex; gap: 4px; flex-shrink: 0; }
+  .tagbox { border-left: 2px solid var(--accent); padding-left: 11px; margin: -2px 0 12px; }
   .ac-menu { position: fixed; z-index: 2000; background: var(--paper); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.22); max-height: 220px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 4px; -webkit-overflow-scrolling: touch; }
   .ac-menu[hidden] { display: none; }
   .ac-opt { padding: 9px 12px; border-radius: 7px; cursor: pointer; font-size: 15px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -478,7 +479,7 @@
   function readFee(id) { var el = document.getElementById(id); if (!el) return 0; var raw = (el.value || "").trim(); if (raw === "") return 0; var v = parseFloat(raw); if (!isFinite(v) || v < 0 || v > 1e12) { flagInvalid(el); return null; } return Math.round(v * 100) / 100; }
   function uniqSorted(arr) { var seen = {}, out = []; arr.forEach(function (v) { v = (v || "").trim(); var k = v.toLowerCase(); if (v && !seen[k]) { seen[k] = 1; out.push(v); } }); return out.sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; }); }
   var acMenu = null, AC = { input: null, items: [], active: -1 };
-  function acSource(kind) { return uniqSorted((kind === "person" ? state.loans.map(function (l) { return l.person; }) : state.tx.map(function (t) { return t.where; }))); }
+  function acSource(kind) { if (kind === "person") { var ps = state.loans.map(function (l) { return l.person; }); state.tx.forEach(function (t) { if (t.tag) ps.push(t.tag.person); }); state.ious.forEach(function (i) { ps.push(i.person); }); return uniqSorted(ps); } return uniqSorted(state.tx.map(function (t) { return t.where; })); }
   function acEnsureMenu() {
     if (acMenu) return acMenu;
     acMenu = document.createElement("div"); acMenu.className = "ac-menu"; acMenu.setAttribute("role", "listbox"); acMenu.hidden = true;
@@ -830,6 +831,38 @@
     app.innerHTML = layout(heroBlock("Net worth", fmtBig(netWorth()), netWorth() >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, main);
     wireTrack();
   }
+  function tagMeanOptions(type, sel) {
+    var opts = type === "income"
+      ? [["paying_me", "They're paying me back"], ["their_money", "It's their money (I'm holding it)"]]
+      : [["owes_me", "They owe me for their share"], ["their_money", "It's their money"], ["paying_back", "I'm paying them back"]];
+    return opts.map(function (o) { return '<option value="' + o[0] + '"' + (sel === o[0] ? " selected" : "") + '>' + o[1] + '</option>'; }).join("");
+  }
+  function tagSection(pfx, type, tag) {
+    if (type === "transfer") return "";
+    var person = tag ? tag.person : "", meaning = tag ? tag.meaning : (type === "income" ? "paying_me" : "owes_me"), slice = tag ? tag.slice : "";
+    var showSlice = (meaning === "owes_me" || meaning === "paying_me");
+    return '<div class="field"><label>Someone else\'s money? <span class="opt">(optional)</span></label><input id="' + pfx + 'person" type="text" maxlength="24" data-ac="person" value="' + esc(person) + '" placeholder="who? — blank if it\'s all yours"></div>' +
+      '<div id="' + pfx + 'tagbox" class="tagbox" style="display:' + (person ? "block" : "none") + '">' +
+      '<div class="field"><label>How it involves them</label><select class="inp" id="' + pfx + 'tagmean">' + tagMeanOptions(type, meaning) + '</select></div>' +
+      '<div class="field" id="' + pfx + 'tagslicewrap" style="display:' + (showSlice ? "block" : "none") + '"><label>How much is theirs</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'tagslice" type="number" inputmode="decimal" step="0.01" min="0" value="' + (slice === "" ? "" : slice) + '" placeholder="whole amount"></div></div>' +
+      '</div>';
+  }
+  function readTag(pfx, type, amount) {
+    if (type === "transfer") return null;
+    var pe = document.getElementById(pfx + "person"); if (!pe) return null;
+    var person = pe.value.trim(); if (!person) return null;
+    var me = document.getElementById(pfx + "tagmean"), meaning = me ? me.value : (type === "income" ? "paying_me" : "owes_me");
+    var slice = amount;
+    if (meaning === "owes_me" || meaning === "paying_me") { var se = document.getElementById(pfx + "tagslice"); var sv = se ? parseFloat(se.value) : NaN; if (!isNaN(sv) && sv > 0) slice = sv; }
+    if (slice > amount) slice = amount;
+    return { person: person, slice: Math.round(slice * 100) / 100, meaning: meaning };
+  }
+  function wireTag(pfx) {
+    var pe = document.getElementById(pfx + "person"); if (!pe) return;
+    var box = document.getElementById(pfx + "tagbox"), me = document.getElementById(pfx + "tagmean"), sw = document.getElementById(pfx + "tagslicewrap");
+    function upd() { var on = pe.value.trim() !== ""; if (box) box.style.display = on ? "block" : "none"; if (sw && me) sw.style.display = (me.value === "owes_me" || me.value === "paying_me") ? "block" : "none"; }
+    pe.addEventListener("input", upd); if (me) me.addEventListener("change", upd);
+  }
   function entryFields(pfx, type) {
     var isT = type === "transfer";
     var fields = isT
@@ -838,6 +871,7 @@
     return '<div class="seg three"><button data-t="expense" class="' + (type === "expense" ? "on" : "") + '">Expense</button><button data-t="income" class="' + (type === "income" ? "on" : "") + '">Income</button><button data-t="transfer" class="' + (isT ? "on" : "") + '">Transfer</button></div>' +
       '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="' + pfx + 'amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>' +
       fields +
+      tagSection(pfx, type, null) +
       '<div class="two"><div class="field"><label>Date</label><input id="' + pfx + 'date" type="date" value="' + today() + '"></div><div class="field"><label>Time</label><input id="' + pfx + 'time" type="time" value="' + nowTime() + '"></div></div>' +
       '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="' + pfx + 'desc" type="text" maxlength="60" placeholder="anything to remember"></div>';
   }
@@ -845,9 +879,9 @@
   var quickType = "expense", quickTpl = null;
   function quickOk() { return addEntry("q", quickType, quickTpl); }
   function wireQuick() {
-    Array.prototype.forEach.call(document.querySelectorAll("#modal .modal-b .seg button"), function (b) { b.onclick = function () { quickType = b.getAttribute("data-t"); var bd = document.querySelector("#modal .modal-b"); if (bd) bd.innerHTML = entryFields("q", quickType); var ok = document.getElementById("mOk"); if (ok) ok.textContent = quickType === "transfer" ? "Add transfer" : "Add " + quickType; labelControls(); wireQuick(); var a = document.getElementById("qamt"); if (a) { try { a.focus(); } catch (e) {} } }; });
+    Array.prototype.forEach.call(document.querySelectorAll("#modal .modal-b .seg button"), function (b) { b.onclick = function () { quickType = b.getAttribute("data-t"); var bd = document.querySelector("#modal .modal-b"); if (bd) bd.innerHTML = entryFields("q", quickType); var ok = document.getElementById("mOk"); if (ok) ok.textContent = quickType === "transfer" ? "Add transfer" : "Add " + quickType; labelControls(); wireQuick(); initAutocomplete(); wireTag("q"); var a = document.getElementById("qamt"); if (a) { try { a.focus(); } catch (e) {} } }; });
     var qa = document.getElementById("qamt"); if (qa) qa.onkeydown = function (e) { if (e.key === "Enter") { var ok = document.getElementById("mOk"); if (ok) ok.click(); } };
-    initAutocomplete();
+    initAutocomplete(); wireTag("q");
   }
   function openQuickAdd(tpl) {
     if (!state.accounts.length) { toast("Add an account first"); if (state.tab !== "accounts") { state.tab = "accounts"; render(); } return; }
@@ -899,6 +933,7 @@
   }
   function wireTrack() {
     Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) { b.onclick = function () { state.formType = b.getAttribute("data-t"); render(); }; });
+    wireTag("");
     var add = document.getElementById("add"); if (add) add.onclick = function () { addEntry(); };
     var amt = document.getElementById("amt"); if (amt) amt.onkeydown = function (e) { if (e.key === "Enter") addEntry(); };
     bind("fType", "change", function (el) { state.fType = el.value; state.trackShow = 30; render(); });
@@ -926,12 +961,13 @@
       var fee = readFee(pfx + "fee"); if (fee === null) return false;
       commit("Transfer recorded", function () { state.tx.push({ id: uid(), tpl: tplId, type: "transfer", amount: v, fee: fee, account: from, toAccount: to, desc: document.getElementById(pfx + "desc").value.trim(), date: date, time: time, created: Date.now() }); }); return true;
     }
-    commit("Entry added", function () { state.tx.push({ id: uid(), tpl: tplId, type: type, amount: v, where: document.getElementById(pfx + "where").value.trim(), account: document.getElementById(pfx + "acct").value, desc: document.getElementById(pfx + "desc").value.trim(), date: date, time: time, created: Date.now() }); });
+    var tg = readTag(pfx, type, v);
+    commit("Entry added", function () { var e = { id: uid(), tpl: tplId, type: type, amount: v, where: document.getElementById(pfx + "where").value.trim(), account: document.getElementById(pfx + "acct").value, desc: document.getElementById(pfx + "desc").value.trim(), date: date, time: time, created: Date.now() }; if (tg) e.tag = tg; state.tx.push(e); });
     return true;
   }
   function editEntry(id) {
     var t = state.tx.filter(function (x) { return x.id === id; })[0]; if (!t) return;
-    var d = { type: t.type, amount: t.amount, where: t.where || "", account: t.account, toAccount: t.toAccount, fee: t.fee || 0, desc: t.desc || "", date: t.date, time: t.time || "" };
+    var d = { type: t.type, amount: t.amount, where: t.where || "", account: t.account, toAccount: t.toAccount, fee: t.fee || 0, desc: t.desc || "", date: t.date, time: t.time || "", tag: t.tag ? { person: t.tag.person, slice: t.tag.slice, meaning: t.tag.meaning } : null };
     function fieldsFor(ty) {
       var out = '<div class="field"><label>Amount</label><div class="amount-wrap"><span class="sym">' + state.cur + '</span><input id="eAmt" type="number" inputmode="decimal" step="0.01" min="0" value="' + d.amount + '"></div></div>';
       if (ty === "transfer") {
@@ -942,7 +978,8 @@
         out += '<div class="field"><label>Where</label><input id="eWhere" type="text" maxlength="40" value="' + esc(d.where) + '" placeholder="' + (ty === "income" ? "where from?" : "where did it go?") + '"></div>' +
           '<div class="field"><label>Account</label><select class="inp" id="eAcct">' + acctOptions(d.account) + '</select></div>';
       }
-      out += '<div class="two"><div class="field"><label>Date</label><input id="eDate" type="date" value="' + d.date + '"></div><div class="field"><label>Time</label><input id="eTime" type="time" value="' + d.time + '"></div></div>' +
+      out += tagSection("e", ty, d.tag) +
+        '<div class="two"><div class="field"><label>Date</label><input id="eDate" type="date" value="' + d.date + '"></div><div class="field"><label>Time</label><input id="eTime" type="time" value="' + d.time + '"></div></div>' +
         '<div class="field"><label>Note <span class="opt">(optional)</span></label><input id="eDesc" type="text" maxlength="60" value="' + esc(d.desc) + '"></div>';
       return out;
     }
@@ -956,6 +993,7 @@
       if (g("eAcct")) d.account = g("eAcct").value;
       if (g("eAcct2")) d.toAccount = g("eAcct2").value;
       if (g("eFee")) d.fee = g("eFee").value;
+      d.tag = readTag("e", d.type, parseFloat(g("eAmt") ? g("eAmt").value : 0) || 0);
     }
     var body = '<div class="seg three" id="eSeg"><button data-et="expense" class="' + (d.type === "expense" ? "on" : "") + '">Expense</button><button data-et="income" class="' + (d.type === "income" ? "on" : "") + '">Income</button><button data-et="transfer" class="' + (d.type === "transfer" ? "on" : "") + '">Transfer</button></div><div id="eFields">' + fieldsFor(d.type) + '</div>';
     openModal("Edit entry", body, "Save", function () {
@@ -965,8 +1003,8 @@
       if (d.type === "transfer" && d.account === d.toAccount) { toast("Pick two different accounts"); return false; }
       commit("Entry edited", function () {
         t.type = d.type; t.amount = v; t.desc = (d.desc || "").trim(); t.date = d.date || t.date; t.time = d.time || "";
-        if (d.type === "transfer") { t.account = d.account; t.toAccount = d.toAccount; t.fee = eFeeV; delete t.where; }
-        else { t.account = d.account; t.where = (d.where || "").trim(); delete t.toAccount; delete t.fee; }
+        if (d.type === "transfer") { t.account = d.account; t.toAccount = d.toAccount; t.fee = eFeeV; delete t.where; delete t.tag; }
+        else { t.account = d.account; t.where = (d.where || "").trim(); delete t.toAccount; delete t.fee; var ntag = readTag("e", d.type, v); if (ntag) t.tag = ntag; else delete t.tag; }
       });
     });
     Array.prototype.forEach.call(document.querySelectorAll("#eSeg button"), function (b) {
@@ -974,6 +1012,7 @@
         readInto(); d.type = b.getAttribute("data-et");
         document.getElementById("eFields").innerHTML = fieldsFor(d.type);
         Array.prototype.forEach.call(document.querySelectorAll("#eSeg button"), function (x) { x.classList.toggle("on", x.getAttribute("data-et") === d.type); });
+        labelControls(); initAutocomplete(); wireTag("e");
       };
     });
   }
@@ -1629,7 +1668,7 @@
     document.getElementById("mCancel").onclick = closeModal;
     document.getElementById("mClose").onclick = closeModal;
     m.querySelector(".modal-bg").onclick = function (e) { if (e.target === this) closeModal(); };
-    labelControls(); initAutocomplete();
+    labelControls(); initAutocomplete(); wireTag("e");
     document.getElementById("mOk").onclick = function () { if (modalConfirm && modalConfirm() === false) return; closeModal(); };
     var f = m.querySelector(".modal-b input, .modal-b select, .modal-b textarea") || document.getElementById("mOk");
     if (f) setTimeout(function () { try { f.focus(); } catch (e) {} }, 30);
