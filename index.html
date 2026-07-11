@@ -179,6 +179,11 @@
   .goal-status.pos { color: var(--income); }
   .goal-acts { display: flex; gap: 4px; flex-shrink: 0; }
   .tagbox { border-left: 2px solid var(--accent); padding-left: 11px; margin: -2px 0 12px; }
+  .totop { position: fixed; right: 20px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 60; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--card); color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,.14); opacity: 0; transform: translateY(6px); transition: opacity .18s, transform .18s; pointer-events: none; }
+  .totop.on { opacity: 1; transform: none; pointer-events: auto; }
+  .totop:hover { color: var(--accent); border-color: var(--accent); }
+  .totop .ic { width: 18px; height: 18px; transform: rotate(180deg); }
+  @media (max-width: 780px) { .totop { bottom: calc(140px + env(safe-area-inset-bottom, 0px)); right: 16px; } }
   .person { border-bottom: 1px solid var(--line); padding: 4px 0; }
   .person:last-child { border-bottom: 0; }
   .phead { display: flex; align-items: center; gap: 8px; border-radius: 9px; transition: background .12s; padding-right: 8px; }
@@ -393,6 +398,7 @@
 
   <footer class="foot">Saved automatically &amp; privately to you. &nbsp;·&nbsp; <button id="footSettings">Settings &amp; backup</button></footer>
 </div>
+<button id="toTop" class="totop" aria-label="Back to top" title="Back to top"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-caret-down"></use></svg></button>
 <button id="fabAdd" class="fab" aria-label="Quick add" title="Quick add"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg></button>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -467,6 +473,7 @@
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
   function hideToast(restore) { var inside = toastEl.contains(document.activeElement); clearTimeout(toastT); toastEl.classList.remove("show"); if (restore !== false && inside && toastReturnSel) { var el = null; try { el = document.querySelector(toastReturnSel); } catch (e) {} if (el) { try { el.focus(); } catch (e2) {} } } toastReturnSel = null; }
   function armToast(ms) { clearTimeout(toastT); var left = ms, t0 = Date.now(); function done() { hideToast(); } function pause() { if (toastFocusing || !toastEl.classList.contains("show")) return; clearTimeout(toastT); left -= Date.now() - t0; } function resume() { if (!toastEl.classList.contains("show")) return; t0 = Date.now(); clearTimeout(toastT); toastT = setTimeout(done, Math.max(left, 1500)); } toastEl.onmouseenter = pause; toastEl.onmouseleave = resume; toastEl.onfocusin = pause; toastEl.onfocusout = function (e) { if (e.relatedTarget && toastEl.contains(e.relatedTarget)) return; resume(); }; toastEl.onkeydown = function (e) { if (e.key === "Escape") { hideToast(); } }; toastT = setTimeout(done, ms); }
+  function scrollTop() { try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) { window.scrollTo(0, 0); } }
   function toast(msg) { toastEl.innerHTML = '<span>' + esc(msg) + '</span><button class="toast-x" id="toastClose2" aria-label="Dismiss" title="Dismiss">' + icon('x') + '</button>'; toastEl.classList.add("show"); clearTimeout(toastT); toastReturnSel = null; var c = document.getElementById("toastClose2"); if (c) c.onclick = function () { hideToast(false); }; armToast(2600); }
   function snapState() { return JSON.stringify({ tx: state.tx, loans: state.loans, recurring: state.recurring, accounts: state.accounts, goals: state.goals, ious: state.ious, cur: state.cur }); }
   function undoTo(snap) { var o = JSON.parse(snap); state.tx = o.tx; state.loans = o.loans; state.recurring = o.recurring; state.accounts = o.accounts; state.goals = o.goals || []; state.ious = o.ious || []; state.cur = o.cur; saveAll(); saveSet(); render(); toast("Undone"); }
@@ -834,7 +841,7 @@
     var shown = visible.slice(0, state.trackShow);
     var remaining = visible.length - shown.length;
     var listBody = !visible.length ? '<div class="empty"><div class="big">No entries yet</div>' + (state.accounts.length ? "Add an income, expense, or transfer to get started." : "Add an account first, then start logging.") + '</div>'
-      : '<div class="list">' + groupedRows(shown, false, state.fType === "all" && !q) + '</div>' + (remaining > 0 ? '<div class="more"><button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more</button><button class="btn sec btn-sm" id="showAll">Show all ' + visible.length + '</button></div>' : "");
+      : '<div class="list">' + groupedRows(shown, false, state.fType === "all" && !q) + '</div>' + (remaining > 0 || state.trackShow > 30 ? '<div class="more">' + (remaining > 0 ? '<button class="btn sec btn-sm" id="showMore">Show ' + Math.min(50, remaining) + ' more</button><button class="btn sec btn-sm" id="showAll">Show all ' + visible.length + '</button>' : "") + (state.trackShow > 30 ? '<button class="btn sec btn-sm" id="showLess">Show less</button>' : "") + '</div>' : "");
     var tkPeriod = state.trackPeriod || "all", filtActive = !!state.trackAcct || tkPeriod !== "all", fopen = state.trackFiltersOpen;
     var acctSel = '<select class="inp" id="fAcct" aria-label="Filter by account"><option value=""' + sel(state.trackAcct, "") + '>All accounts</option>' + state.accounts.map(function (a) { return '<option value="' + a.id + '"' + sel(state.trackAcct, a.id) + '>' + esc(a.name) + '</option>'; }).join("") + '</select>';
     var pchips = '<div class="periodbar" role="group" aria-label="Date range">' + [["all", "All"], ["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["12m", "12M"], ["custom", "Custom"]].map(function (o) { return '<button type="button" data-tkp="' + o[0] + '" class="' + (tkPeriod === o[0] ? "on" : "") + '" aria-pressed="' + (tkPeriod === o[0] ? "true" : "false") + '">' + o[1] + '</button>'; }).join("") + '</div>';
@@ -978,8 +985,9 @@
     var q = document.getElementById("fQ"); if (q) q.oninput = function () { state.fQ = q.value; state.trackShow = 30; var s = q.selectionStart; render(); var nq = document.getElementById("fQ"); if (nq) { nq.focus(); try { nq.setSelectionRange(s, s); } catch (e) {} } };
     bind("showMore", "click", function () { state.trackShow += 50; render(); });
     bind("showAll", "click", function () { state.trackShow = 1e9; render(); });
+    bind("showLess", "click", function () { state.trackShow = 30; render(); scrollTop(); });
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
-    Array.prototype.forEach.call(document.querySelectorAll(".del"), function (b) { b.onclick = function () { var id = b.getAttribute("data-id"); commit("Entry deleted", function () { state.tx = state.tx.filter(function (t) { return t.id !== id; }); }); }; });
+    Array.prototype.forEach.call(document.querySelectorAll(".del"), function (b) { b.onclick = function () { var id = b.getAttribute("data-id"); var tt = state.tx.filter(function (t) { return t.id === id; })[0]; commit((tt && tt.sid) ? "Settle undone" : "Entry deleted", function () { state.tx = state.tx.filter(function (t) { return t.id !== id; }); if (tt && tt.sid) state.ious = state.ious.filter(function (i) { return i.sid !== tt.sid; }); }); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-edit-tx]"), function (b) { b.onclick = function () { editEntry(b.getAttribute("data-edit-tx")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-jump]"), function (b) { b.onclick = function () { state.tab = b.getAttribute("data-jump"); render(); }; });
   }
@@ -1145,6 +1153,7 @@
   function personEvents(p) {
     var evs = [];
     state.tx.forEach(function (t) {
+      if (t.sid) return;
       if (!t.tag || t.tag.person !== p) return;
       var d = t.type === "expense" ? t.tag.slice : -t.tag.slice;
       evs.push({ kind: "tx", id: t.id, date: t.date, time: t.time || "", label: (t.where || (t.type === "income" ? "Income" : "Expense")), sub: tagDirLabel(t), delta: d });
@@ -1162,16 +1171,33 @@
     evs.sort(function (a, b) { if (a.date !== b.date) return a.date < b.date ? 1 : -1; return (a.time || "") < (b.time || "") ? 1 : -1; });
     return evs;
   }
+  function personOpenItems(p) {
+    var evs = personEvents(p).slice().reverse(); // chronological ascending
+    var open = [], rem = {};
+    evs.forEach(function (e) {
+      if (Math.abs(e.delta) < 0.005) return;
+      var sign = e.delta > 0 ? 1 : -1, amt = Math.abs(e.delta);
+      // a movement first pays down anything outstanding in the OPPOSITE direction (FIFO)
+      for (var i = 0; i < open.length && amt > 0.005; i++) {
+        if (open[i].sign === sign || open[i].remaining <= 0.005) continue;
+        var take = Math.min(open[i].remaining, amt);
+        open[i].remaining -= take; amt -= take;
+      }
+      if (amt > 0.005) open.push({ key: e.kind + ":" + e.id, sign: sign, remaining: amt });
+    });
+    open.forEach(function (o) { if (o.remaining > 0.005) rem[o.key] = (rem[o.key] || 0) + o.remaining; });
+    return rem;
+  }
   function personRow(p) {
     var b = personBalance(p), zero = Math.abs(b) < 0.005;
     var state_t = zero ? "settled up" : (b > 0 ? "owes you" : "you owe");
     var cls = zero ? "" : (b > 0 ? "pos" : "neg");
-    var open = !!state.peopleOpen[p];
+    var open = !!state.peopleOpen[p], openMap = open ? personOpenItems(p) : {};
     var body = open ? '<div class="plist">' + personEvents(p).map(function (e) {
       var amt = Math.abs(e.delta) < 0.005 ? "—" : ((e.delta > 0 ? "+" : "−") + fmtBig(Math.abs(e.delta)));
       var acts = "";
-      var sameDir = !zero && ((b > 0 && e.delta > 0) || (b < 0 && e.delta < 0));
-      if (sameDir && Math.abs(e.delta) >= 0.005) acts += '<button class="mini" data-psettle1="' + esc(p) + '" data-amt="' + Math.abs(e.delta) + '" aria-label="Settle this item" title="Settle just this">Settle</button>';
+      var outstanding = openMap[e.kind + ":" + e.id] || 0;
+      if (outstanding > 0.005) acts += '<button class="mini" data-psettle1="' + esc(p) + '" data-amt="' + outstanding + '" aria-label="Settle this item" title="Settle just this">Settle' + (Math.abs(outstanding - Math.abs(e.delta)) > 0.005 ? " " + fmtBig(outstanding) : "") + '</button>';
       if (e.kind === "iou" && !e.done) acts += '<button class="del" data-ioudel="' + e.id + '" aria-label="Delete IOU" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
       else if (e.kind === "loan") acts += '<button class="del" data-loandel="' + e.id + '" aria-label="Delete old loan" title="Delete this old loan"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
       return '<div class="prow"><div class="pbody"><div class="pt">' + esc(e.label) + '</div><div class="ps">' + dtLabel(e.date, e.time) + ' · ' + e.sub + '</div></div><div class="pend"><span class="num ' + (e.delta > 0 ? "pos" : e.delta < 0 ? "neg" : "") + '">' + amt + '</span>' + acts + '</div></div>';
@@ -1209,7 +1235,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-ptoggle]"), function (b) { b.onclick = function () { var p = b.getAttribute("data-ptoggle"); state.peopleOpen[p] = !state.peopleOpen[p]; render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-psettle]"), function (b) { b.onclick = function () { settlePerson(b.getAttribute("data-psettle")); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-psettle1]"), function (b) { b.onclick = function () { settlePerson(b.getAttribute("data-psettle1"), parseFloat(b.getAttribute("data-amt")) || 0); }; });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-ioudel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-ioudel"); commit("IOU deleted", function () { state.ious = state.ious.filter(function (i) { return i.id !== id; }); }); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ioudel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-ioudel"); var io = state.ious.filter(function (i) { return i.id === id; })[0]; if (!io) return; commit(io.sid ? "Settle undone" : "IOU deleted", function () { state.ious = state.ious.filter(function (i) { return i.id !== id; }); if (io.sid) state.tx = state.tx.filter(function (t) { return t.sid !== io.sid; }); }); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-loandel]"), function (b) { b.onclick = function () { var id = b.getAttribute("data-loandel"); var l = state.loans.filter(function (x) { return x.id === id; })[0]; if (!l) return; confirmModal("Delete this old loan?", "This removes the old loan record for " + esc(l.person) + " (" + fmtBig(l.amount) + "). Your account balances will change unless you've already re-logged it as a transaction.", "Delete", function () { commit("Old loan deleted", function () { state.loans = state.loans.filter(function (x) { return x.id !== id; }); }); }, true); }; });
   }
   function addIou() {
@@ -1236,15 +1262,17 @@
       var acct = document.getElementById("stAcct").value;
       if (mode === "keep") {
         commit("Settled with " + p, function () {
-          state.ious.push({ id: uid(), person: p, dir: "they_owe", amount: v, note: "kept it", date: d, time: tm, created: Date.now() });
-          state.tx.push({ id: uid(), type: "income", amount: v, where: p, account: "", desc: "Kept " + p + "'s money", date: d, time: tm, created: Date.now() });
+          var sid = uid();
+          state.ious.push({ id: uid(), sid: sid, person: p, dir: "they_owe", amount: v, note: "you kept it", date: d, time: tm, created: Date.now() });
+          state.tx.push({ id: uid(), sid: sid, type: "income", amount: v, where: p, account: "", desc: "Kept " + p + "'s money", date: d, time: tm, created: Date.now() });
         });
         return;
       }
       if (mode === "write") {
         commit("Settled with " + p, function () {
-          state.ious.push({ id: uid(), person: p, dir: theyOwe ? "i_owe" : "they_owe", amount: v, note: theyOwe ? "wrote it off" : "they shouldered it", date: d, time: tm, created: Date.now() });
-          if (theyOwe) state.tx.push({ id: uid(), type: "expense", amount: v, where: p, account: "", desc: "Wrote off what " + p + " owed", date: d, time: tm, created: Date.now() });
+          var sid = uid();
+          state.ious.push({ id: uid(), sid: sid, person: p, dir: theyOwe ? "i_owe" : "they_owe", amount: v, note: theyOwe ? "you wrote it off" : "they shouldered it", date: d, time: tm, created: Date.now() });
+          if (theyOwe) state.tx.push({ id: uid(), sid: sid, type: "expense", amount: v, where: p, account: "", desc: "Wrote off what " + p + " owed", date: d, time: tm, created: Date.now() });
         });
         return;
       }
@@ -1778,6 +1806,13 @@
   function setPrivBtn() { var b = document.getElementById("privBtn"); if (!b) return; var on = state.priv !== "off"; b.classList.toggle("on", on); var u = b.querySelector("use"); if (u) u.setAttribute("href", on ? "#ph-eye-slash" : "#ph-eye"); b.setAttribute("title", on ? "Show amounts" : "Hide amounts"); b.setAttribute("aria-label", on ? "Show amounts" : "Hide amounts"); }
   document.getElementById("privBtn").onclick = function () { if (state.priv === "off") state.priv = state.privLast || "partial"; else { state.privLast = state.priv; state.priv = "off"; } saveSet(); setPrivBtn(); render(); };
   document.getElementById("fabAdd").onclick = function () { openQuickAdd(); };
+  var toTopBtn = document.getElementById("toTop");
+  if (toTopBtn) {
+    toTopBtn.onclick = scrollTop;
+    var updTop = function () { toTopBtn.classList.toggle("on", (window.scrollY || document.documentElement.scrollTop) > 420); };
+    window.addEventListener("scroll", updTop, { passive: true });
+    updTop();
+  }
   function updateNavFade() { var n = document.getElementById("tabsTrack"); if (!n) return; var l = n.scrollLeft > 2, r = n.scrollLeft < (n.scrollWidth - n.clientWidth - 2); var m = "linear-gradient(to right, transparent 0, #000 " + (l ? "18px" : "0px") + ", #000 calc(100% - " + (r ? "18px" : "0px") + "), transparent 100%)"; n.style.webkitMaskImage = m; n.style.maskImage = m; }
   var navScroll = document.getElementById("tabsTrack"); if (navScroll) navScroll.addEventListener("scroll", updateNavFade, { passive: true });
   window.addEventListener("resize", updateNavFade);
