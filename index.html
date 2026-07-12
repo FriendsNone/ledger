@@ -311,6 +311,7 @@
   .pt { font-size: var(--fs-md); color: var(--ink); }
   .ps { font-size: var(--fs-xs); color: var(--ink-faint); margin-top: 1px; }
   .pend { display: flex; align-items: center; gap: 6px; flex: none; font-size: var(--fs-md); }
+  .bd-row .cat .ps { display: block; font-size: var(--fs-xs); color: var(--ink-faint); margin-top: 1px; }
   .ac-menu { position: fixed; z-index: 2000; background: var(--paper); border: 1px solid var(--line-strong); border-radius: var(--r-md); box-shadow: var(--shadow-lg); max-height: 220px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 4px; -webkit-overflow-scrolling: touch; }
   .ac-menu[hidden] { display: none; }
   .ac-opt { padding: 9px 12px; border-radius: var(--r-sm); cursor: pointer; font-size: var(--fs-lg); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -677,6 +678,15 @@
   function netWorth() { return state.accounts.reduce(function (s, a) { return s + acctBal(a.id); }, 0); }
   function ownIncome(t) { if (t.type !== "income") return 0; return t.amount - (t.tag ? t.tag.slice : 0); }
   function ownExpense(t) { if (t.type !== "expense") return 0; return t.amount - (t.tag && t.tag.meaning !== "paying_back" ? t.tag.slice : 0); }
+  /* A person-directed entry: money that went to/from a PERSON, not a merchant.
+     Write-offs & "kept it" carry no account; settle-ups are tagged paying_back / paying_me.
+     Real spending — but the "where" is a person, so it must not pollute Top Places. */
+  function personDirected(t) {
+    if (t.type === "transfer") return false;
+    if (!amap[t.account]) return true;
+    return !!(t.tag && (t.tag.meaning === "paying_back" || t.tag.meaning === "paying_me"));
+  }
+  function entryPerson(t) { return t.tag ? t.tag.person : (t.where || "").trim(); }
   function personBalance(p) {
     var b = 0;
     state.tx.forEach(function (t) { if (t.tag && t.tag.person === p) b += (t.type === "expense" ? t.tag.slice : t.type === "income" ? -t.tag.slice : 0); });
@@ -1515,15 +1525,22 @@
       var pv = totalsFlow(function (e) { return e.date >= pFrom && e.date <= pTo; }); prevCmp = { inc: pv.inc, exp: pv.exp };
     }
 
-    var byWhere = {}, fees = 0, biggest = null, bigInc = null, freq = {}, expCount = 0, txCount = 0, dayTot = {};
+    var byWhere = {}, fees = 0, biggest = null, bigInc = null, freq = {}, expCount = 0, txCount = 0, dayTot = {}, byPerson = {}, peopleSpend = 0;
     state.tx.forEach(function (t) {
       if (!inR(t.date)) return;
       if (t.type === "transfer") { fees += (t.fee || 0); txCount++; return; }
       /* count only YOUR share — someone else's money is not your spending or income */
       var oe = ownExpense(t), oi = ownIncome(t);
+      var pd = personDirected(t);
+      if (pd) {
+        var pn = entryPerson(t) || "(someone)";
+        if (!byPerson[pn]) byPerson[pn] = 0;
+        byPerson[pn] += (t.type === "expense" ? oe : -oi);
+        if (t.type === "expense") peopleSpend += oe;
+      }
       if (t.type === "expense") {
         txCount++;
-        if (oe > 0.005) {
+        if (oe > 0.005 && !pd) {
           var w = (t.where || "").trim() || "(unlabeled)";
           byWhere[w] = (byWhere[w] || 0) + oe;
           if (!biggest || oe > biggest.amt) biggest = { amt: oe, where: w };
@@ -1533,7 +1550,7 @@
         }
       } else if (t.type === "income") {
         txCount++;
-        if (oi > 0.005 && (!bigInc || oi > bigInc.amt)) bigInc = { amt: oi, where: (t.where || "").trim() };
+        if (oi > 0.005 && !pd && (!bigInc || oi > bigInc.amt)) bigInc = { amt: oi, where: (t.where || "").trim() };
       }
     });
     var allPlaces = Object.keys(byWhere).map(function (k) { return [k, byWhere[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
