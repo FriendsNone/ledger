@@ -891,6 +891,7 @@
         else if (t.type === "expense" && t.account === A) add(t.date, t.time, t.created, t.where || "Expense", -t.amount, "neg");
         else if (t.type === "transfer") { if (t.account === A) add(t.date, t.time, t.created, "Transfer to " + acctName(t.toAccount), -(t.amount + (t.fee || 0)), ""); if (t.toAccount === A) add(t.date, t.time, t.created, "Transfer from " + acctName(t.account), t.amount, ""); }
       } else {
+        if (!amap[t.account]) return; /* no account = no money moved */
         if (t.type === "income") add(t.date, t.time, t.created, t.where || "Income", t.amount, "pos");
         else if (t.type === "expense") add(t.date, t.time, t.created, t.where || "Expense", -t.amount, "neg");
         else if (t.type === "transfer" && (t.fee || 0)) add(t.date, t.time, t.created, "Transfer fee · " + acctName(t.account), -(t.fee || 0), "neg");
@@ -1447,16 +1448,30 @@
   }
   function nwDeltas() {
     var d = [];
-    state.tx.forEach(function (t) { if (t.type === "income") d.push([t.date, t.amount]); else if (t.type === "expense") d.push([t.date, -t.amount]); else if (t.type === "transfer" && t.fee) d.push([t.date, -(t.fee || 0)]); });
+    state.tx.forEach(function (t) {
+      if (t.type === "transfer") { if (t.fee && amap[t.account]) d.push([t.date, -(t.fee || 0)]); return; }
+      if (!amap[t.account]) return; /* write-offs/keeps carry no account: they move no money */
+      if (t.type === "income") d.push([t.date, t.amount]);
+      else if (t.type === "expense") d.push([t.date, -t.amount]);
+    });
     state.loans.forEach(function (l) {
       if (l.account) d.push([l.date, l.kind === "lent" ? -(l.amount + (l.fee || 0)) : (l.amount - (l.fee || 0))]);
       if (l.settled && l.settledAccount) { var sa = l.settledAmount != null ? l.settledAmount : l.amount; d.push([l.settledDate || l.date, l.kind === "lent" ? sa : -sa]); }
     });
     return d;
   }
-  function netWorthSeries(from, to, g) {
+  function firstEventDate(deltas) { var d = null; deltas.forEach(function (x) { if (x[1] && (!d || x[0] < d)) d = x[0]; }); return d; }
+  /* Drop leading buckets from BEFORE anything was ever logged — otherwise the line
+     runs flat along the opening balance for months, which is noise, not history.
+     A gap in the MIDDLE stays flat: the balance genuinely didn't change. */
+  function trimLeading(keys, g, to, first) {
+    if (!first) return keys;
+    var out = keys.filter(function (k) { return bucketEnd(k, g, to) >= first; });
+    return out.length >= 2 ? out : keys.slice(-2);
+  }
+  function netWorthSeries(keys, to, g) {
     var openTotal = state.accounts.reduce(function (s, a) { return s + (a.opening || 0); }, 0), deltas = nwDeltas();
-    return bucketKeys(from, to, g).map(function (k) { var b = bucketEnd(k, g, to), nw = openTotal; deltas.forEach(function (x) { if (x[0] <= b) nw += x[1]; }); return { key: k, end: b, nw: nw }; });
+    return keys.map(function (k) { var b = bucketEnd(k, g, to), nw = openTotal; deltas.forEach(function (x) { if (x[0] <= b) nw += x[1]; }); return { key: k, end: b, nw: nw }; });
   }
   function acctDeltas(id) {
     var d = [];
@@ -1464,9 +1479,9 @@
     state.loans.forEach(function (l) { var sa = l.settledAmount != null ? l.settledAmount : l.amount; if (l.kind === "lent") { if (l.account === id) d.push([l.date, -(l.amount + (l.fee || 0))]); if (l.settled && l.settledAccount === id) d.push([l.settledDate || l.date, sa]); } else { if (l.account === id) d.push([l.date, (l.amount - (l.fee || 0))]); if (l.settled && l.settledAccount === id) d.push([l.settledDate || l.date, -sa]); } });
     return d;
   }
-  function acctSeries(id, from, to, g) {
+  function acctSeries(id, keys, to, g) {
     var op = amap[id] ? (amap[id].opening || 0) : 0, del = acctDeltas(id);
-    return bucketKeys(from, to, g).map(function (k) { var b = bucketEnd(k, g, to), v = op; del.forEach(function (x) { if (x[0] <= b) v += x[1]; }); return v; });
+    return keys.map(function (k) { var b = bucketEnd(k, g, to), v = op; del.forEach(function (x) { if (x[0] <= b) v += x[1]; }); return v; });
   }
   function weekdaySpend(from, to) {
     var w = [0, 0, 0, 0, 0, 0, 0];
@@ -1488,9 +1503,10 @@
     var rng = trendRange(), from = rng.from, to = rng.to, g = granFor(from, to), pid = state.trendPeriod || "12m";
     var inR = function (d) { return d >= from && d <= to; };
     var data = scopedGrouped(from, to, g), bkeys = bucketKeys(from, to, g);
+    var ckeys = trimLeading(bkeys, g, to, firstEventDate(nwDeltas()));
     var hiddenMsg = '<div class="empty">Hidden in privacy mode.</div>';
     function xlab(key) { return g === "weekly" ? fmtDate(key) : g === "yearly" ? key : new Date(key + "-01T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" }); }
-    function xticks(count, xFn, yBottom) { var idx = [0, Math.floor((count - 1) / 2), count - 1].filter(function (v, i, a) { return a.indexOf(v) === i; }); return idx.map(function (i) { return '<text x="' + xFn(i).toFixed(1) + '" y="' + yBottom + '" text-anchor="' + (i === 0 ? "start" : i === count - 1 ? "end" : "middle") + '" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + xlab(bkeys[i]) + '</text>'; }).join(""); }
+    function xticks(count, xFn, yBottom, keys) { keys = keys || bkeys; var idx = [0, Math.floor((count - 1) / 2), count - 1].filter(function (v, i, a) { return a.indexOf(v) === i; }); return idx.map(function (i) { return '<text x="' + xFn(i).toFixed(1) + '" y="' + yBottom + '" text-anchor="' + (i === 0 ? "start" : i === count - 1 ? "end" : "middle") + '" style="fill:var(--ink-faint);font-size:10.5px;font-family:Hanken Grotesk">' + xlab(keys[i]) + '</text>'; }).join(""); }
 
     var pt = totalsFlow(function (e) { return inR(e.date); }), totInc = pt.inc, totExp = pt.exp, net = totInc - totExp;
     var prevCmp = null;
@@ -1567,7 +1583,7 @@
     var nwBody;
     if (state.priv !== "off") nwBody = hiddenMsg;
     else {
-      var series = netWorthSeries(from, to, g);
+      var series = netWorthSeries(ckeys, to, g);
       if (series.length < 2) nwBody = '<div class="empty">Not enough history to chart yet.</div>';
       else {
         var vals = series.map(function (p) { return p.nw; }), mn = Math.min.apply(null, vals.concat([0])), mx = Math.max.apply(null, vals.concat([0])); if (mx === mn) mx = mn + 1;
@@ -1577,7 +1593,7 @@
         var grid2 = yGrid(AX2, LW, ticks, yy, true), baseY = yy(mn);
         var pts = series.map(function (p, i) { return xx(i).toFixed(1) + "," + yy(p.nw).toFixed(1); }).join(" ");
         var last = series[m - 1];
-        nwBody = '<div style="overflow-x:auto"><svg viewBox="0 0 ' + LW + ' ' + LH + '" style="display:block;width:100%;min-width:360px;height:auto">' + grid2 + '<polygon points="' + xx(0).toFixed(1) + ',' + baseY.toFixed(1) + ' ' + pts + ' ' + xx(m - 1).toFixed(1) + ',' + baseY.toFixed(1) + '" style="fill:var(--accent);opacity:.08"/><polyline points="' + pts + '" fill="none" style="stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"/><circle cx="' + xx(m - 1).toFixed(1) + '" cy="' + yy(last.nw).toFixed(1) + '" r="3.2" style="fill:var(--accent)"><title>' + fmtDate(last.end) + ": " + fmt(last.nw) + '</title></circle>' + xticks(m, xx, LH - 7) + '</svg></div>';
+        nwBody = '<div style="overflow-x:auto"><svg viewBox="0 0 ' + LW + ' ' + LH + '" style="display:block;width:100%;min-width:360px;height:auto">' + grid2 + '<polygon points="' + xx(0).toFixed(1) + ',' + baseY.toFixed(1) + ' ' + pts + ' ' + xx(m - 1).toFixed(1) + ',' + baseY.toFixed(1) + '" style="fill:var(--accent);opacity:.08"/><polyline points="' + pts + '" fill="none" style="stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"/><circle cx="' + xx(m - 1).toFixed(1) + '" cy="' + yy(last.nw).toFixed(1) + '" r="3.2" style="fill:var(--accent)"><title>' + fmtDate(last.end) + ": " + fmt(last.nw) + '</title></circle>' + xticks(m, xx, LH - 7, ckeys) + '</svg></div>';
       }
     }
 
@@ -1599,7 +1615,7 @@
     var acctChart;
     if (state.priv !== "off") acctChart = hiddenMsg;
     else {
-      var aser = accts.map(function (a) { return { name: a.name, color: a.color, vals: acctSeries(a.id, from, to, g) }; });
+      var aser = accts.map(function (a) { return { name: a.name, color: a.color, vals: acctSeries(a.id, ckeys, to, g) }; });
       var m2 = aser.length ? aser[0].vals.length : 0;
       if (m2 < 2) acctChart = '<div class="empty">Not enough history to chart yet.</div>';
       else {
@@ -1611,7 +1627,7 @@
         var agrid = yGrid(AX4, AW, aticks, ay, true);
         var lines = aser.map(function (s) { var pts = s.vals.map(function (v, i) { return ax(i).toFixed(1) + "," + ay(v).toFixed(1); }).join(" "); return '<polyline points="' + pts + '" fill="none" style="stroke:' + s.color + ';stroke-width:2;stroke-linejoin:round;stroke-linecap:round" opacity="0.9"><title>' + esc(s.name) + '</title></polyline>'; }).join("");
         var legend = '<div class="legend" style="flex-wrap:wrap">' + aser.map(function (s) { return '<span><i style="background:' + s.color + '"></i>' + esc(s.name) + '</span>'; }).join("") + '</div>';
-        acctChart = legend + '<div style="overflow-x:auto"><svg viewBox="0 0 ' + AW + ' ' + AH + '" style="display:block;width:100%;min-width:360px;height:auto">' + agrid + lines + xticks(m2, ax, AH - 7) + '</svg></div>';
+        acctChart = legend + '<div style="overflow-x:auto"><svg viewBox="0 0 ' + AW + ' ' + AH + '" style="display:block;width:100%;min-width:360px;height:auto">' + agrid + lines + xticks(m2, ax, AH - 7, ckeys) + '</svg></div>';
       }
     }
 
