@@ -138,7 +138,9 @@
   .card.collapsed .cwrap { grid-template-rows: 0fr; }
   .card.collapsed .cwrap > .card-b { opacity: 0; padding-top: 0; padding-bottom: 0; }
   .card.collapsed > .card-h.ch { padding-bottom: 15px; }
-  .card-b { padding: 16px 18px 18px; }
+  .card-b { padding: var(--s-4) 18px 18px; }
+  .card-b > :last-child { margin-bottom: 0; }
+  .card-b > .list:last-child, .card-b > .statcol:last-child { margin-bottom: 0; }
 
 
   /* ===== BUTTONS =====
@@ -183,6 +185,15 @@
   .act .ic { width: 14px; height: 14px; }
   .act .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
   .act .amt { font-family: 'JetBrains Mono', monospace; font-weight: var(--fw-semi); flex: none; }
+
+  /* filter panel (Track) — restored: the toggle merge had destroyed these */
+  .filt-more { margin: 0 0 var(--s-3); display: flex; flex-direction: column; gap: var(--s-3); }
+  .filt-more .inp { font-size: var(--fs-sm); padding: 7px 9px; border-radius: var(--r-sm); }
+  .filters .filt-toggle { padding: 5px; border-radius: var(--r-sm); }
+  .filt-toggle .ic { transition: transform var(--t-fast); }
+  .filt-toggle.open .ic { transform: rotate(180deg); }
+  .filt-toggle.active { color: var(--accent); position: relative; }
+  .filt-toggle.active::after { content: ""; position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: var(--r-circle); background: var(--accent); border: 2px solid var(--paper); }
 
   /* ===== SEGMENTED CONTROL — the single toggle primitive =====
      .seg            equal-width columns (2 by default, .three for 3)
@@ -234,7 +245,10 @@
   .amount-wrap .sym { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; font-size: var(--fs-lg); }
   .amount-wrap input { padding-left: 32px; font-family: 'JetBrains Mono', monospace; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .hint { font-size: var(--fs-xs); color: var(--ink-faint); margin: -7px 0 12px 2px; }
+  .hint { font-size: var(--fs-xs); color: var(--ink-faint); margin: -7px 0 var(--s-3) 2px; }
+  .field .hint { margin: 5px 0 0 2px; }
+  .help-p { font-size: var(--fs-md); color: var(--ink-soft); line-height: 1.5; margin-bottom: var(--s-3); }
+  .help-p strong { color: var(--ink); font-weight: var(--fw-bold); }
   .fab { position: fixed; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: var(--r-circle); border: 0; cursor: pointer; color: var(--accent-ink); background: var(--accent); display: none; align-items: center; justify-content: center; box-shadow: var(--shadow-md); z-index: 40; }
   .fab .ic { width: 26px; height: 26px; }
   .fab:active { transform: scale(.94); }
@@ -261,7 +275,8 @@
   @media (max-width: 780px) { .totop { bottom: calc(140px + env(safe-area-inset-bottom, 0px)); right: 16px; } }
   .person { border-bottom: 1px solid var(--line); padding: 4px 0; }
   .person:last-child { border-bottom: 0; }
-  .phead { display: flex; align-items: center; gap: 8px; border-radius: var(--r-sm); transition: background var(--t-fast); padding-right: 8px; }
+  .phead { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); border-radius: var(--r-sm); transition: background var(--t-fast); padding-right: var(--s-2); }
+  .phead > .act, .phead > .btn { flex: none; margin-left: auto; }
   .phead:hover { background: var(--paper-2); }
   .phead:has(.ptoggle:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
   .ptoggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; background: transparent; border: 0; padding: 11px 6px; margin: 0; border-radius: var(--r-sm); cursor: pointer; font: inherit; color: inherit; text-align: left; }
@@ -321,7 +336,7 @@
   .end { flex: none; margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
   .end .v { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -.02em; font-size: var(--fs-lg); font-weight: var(--fw-semi); white-space: nowrap; }
   .act.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .more { text-align: center; margin-top: 10px; }
+  .more { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-3); }
 
   .snap-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
   .snap-row:last-child { border-bottom: 0; }
