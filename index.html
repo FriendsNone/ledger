@@ -130,6 +130,9 @@
 
   .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
   .card-h { padding: 15px 18px 0; }
+  /* the collapsible header is a real <button> — never div[role=button] */
+  button.card-h { display: block; width: 100%; text-align: left; background: transparent; border: 0; font: inherit; color: inherit; cursor: pointer; }
+  button.card-h:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--r-md); }
   .card-h h2 { font-family: 'Fraunces', serif; font-weight: var(--fw-semi); font-size: var(--fs-lg); }
   .card-h .sub { font-size: var(--fs-sm); color: var(--ink-faint); }
   .card-h.ch { display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; user-select: none; -webkit-user-select: none; }
@@ -246,7 +249,6 @@
   .stmt .stmt-row:last-child { border-top: 2px solid var(--line-strong); border-bottom: 0; }
   .filt-active { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; margin: 0; font-size: var(--fs-sm); color: var(--ink-soft); }
   .priv-full .balance.pos, .priv-full .balance.neg, .priv-full .v.pos, .priv-full .v.neg, .priv-full .v.neu { color: var(--ink); }
-  .priv-full .badge.gain, .priv-full .badge.loss { background: var(--paper-2); color: var(--ink-soft); }
   .priv-partial .balance.pos, .priv-partial .balance.neg, .priv-partial .pill .v.pos, .priv-partial .pill .v.neg, .priv-partial .stat .v.pos, .priv-partial .stat .v.neg { color: var(--ink); }
 
   label { display: block; font-size: var(--fs-sm); font-weight: var(--fw-semi); color: var(--ink-soft); margin: 0 0 5px 2px; }
@@ -321,7 +323,6 @@
     body { padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px)); }
   }
   .data-btns { display: flex; flex-direction: column; gap: 8px; }
-  .row-gap { display: flex; gap: 10px; flex-wrap: wrap; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -359,8 +360,6 @@
   .snap-row .bl { font-size: var(--fs-md); font-weight: var(--fw-semi); }
 
   .badge { font-size: var(--fs-xs); font-weight: var(--fw-bold); padding: 2px 7px; border-radius: var(--r-pill); white-space: nowrap; }
-  .badge.gain { background: var(--income-soft); color: var(--income); }
-  .badge.loss { background: var(--expense-soft); color: var(--expense); }
   #modal { display: none; }
     /* ===== MODAL ===== */
   .modal-bg { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: var(--s-4); z-index: 100; }
@@ -406,12 +405,11 @@
   @media (prefers-reduced-motion: reduce) { .nag, .view-enter > .hero, .view-enter > .cols, .modal-bg, .modal, .chev, .cwrap { animation: none !important; transition: none !important; } }
   .badge.lent { background: var(--expense-soft); color: var(--expense); }
   .badge.borrowed { background: var(--income-soft); color: var(--income); }
-  .badge.settled, .badge.shortcut { background: var(--paper-2); color: var(--ink-soft); }
+  .badge.settled { background: var(--paper-2); color: var(--ink-soft); }
   .badge.overdue { background: var(--expense-soft); color: var(--expense); }
   .badge.due { background: var(--amber-soft); color: var(--amber); }
   .badge.next { background: var(--paper-2); color: var(--ink-soft); }
   .day-date.pn { text-transform: none; font-size: var(--fs-sm); letter-spacing: .01em; color: var(--ink-soft); }
-  .pnet { font-size: var(--fs-sm); font-weight: var(--fw-semi); }
 
   .legend { display: flex; gap: 16px; font-size: var(--fs-sm); color: var(--ink-soft); margin-bottom: 10px; flex-wrap: wrap; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: var(--r-xs); margin-right: 6px; vertical-align: -1px; }
@@ -421,6 +419,7 @@
   .stat .v { font-size: var(--fs-xl); font-weight: var(--fw-semi); margin-top: 3px; }
   .stat .v.sm { font-size: var(--fs-md); }
 
+  .empty .big { font-family: 'Fraunces', serif; font-size: var(--fs-display-sm); font-weight: var(--fw-semi); line-height: 1; color: var(--ink); margin-bottom: 6px; }
   .empty { text-align: center; color: var(--ink-faint); padding: 26px 10px; font-size: var(--fs-md); }
   .empty .big { font-family: 'Fraunces', serif; font-size: var(--fs-xl); color: var(--ink-soft); margin-bottom: 4px; }
   .nudge { text-align: center; padding: 18px 10px; }
@@ -448,7 +447,6 @@
     .tabs-track { padding-left: 12px; padding-right: 12px; }
     .lrow { padding: 9px 2px; gap: 5px 9px; }
     .lrow.has-acts .end { flex: 1 0 100%; margin-top: 3px; }
-    .stats { grid-template-columns: 1fr 1fr; }
     .filters input { width: 100px; }
     .bd-row { grid-template-columns: 76px 1fr auto; gap: 8px; }
     .pill .label { font-size: var(--fs-xs); }
@@ -742,11 +740,11 @@
     var isColl = coll && !!state.collapsed[key];
     var titleBlock = '<div><h2>' + title + '</h2>' + (sub ? '<div class="sub">' + sub + '</div>' : "") + '</div>';
     var h = coll
-      ? '<div class="card-h ch" data-collapse="' + esc(key) + '" role="button" tabindex="0" aria-expanded="' + (isColl ? "false" : "true") + '">' + titleBlock + '<span class="chev">' + icon("caret-down") + '</span></div>'
+      ? '<button type="button" class="card-h ch" data-collapse="' + esc(key) + '" aria-expanded="' + (isColl ? "false" : "true") + '">' + titleBlock + '<span class="chev">' + icon("caret-down") + '</span></button>'
       : '<div class="card-h">' + titleBlock + '</div>';
     return '<div class="card' + (coll ? " collapsible" : "") + (isColl ? " collapsed" : "") + '">' + h + '<div class="cwrap"' + (isColl ? " inert" : "") + '><div class="card-b">' + body + '</div></div></div>';
   }
-  function accountNudge() { return '<div class="nudge"><div class="empty big" style="margin-bottom:8px">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>'; }
+  function accountNudge() { return '<div class="nudge"><div class="empty big" style="margin-bottom:var(--s-2)">No accounts yet</div><button class="btn btn-sm" id="goAcct">Add an account →</button></div>'; }
   function wireNudge() { var g = document.getElementById("goAcct"); if (g) g.onclick = function () { state.tab = "accounts"; render(); }; }
 
   function shortcutChips() {
@@ -843,9 +841,9 @@
     var chips = shortcutChips();
     var firstCard;
     if (!state.accounts.length) {
-      firstCard = card("Get started", "Add an account, or restore a backup", '<div style="display:flex;flex-direction:column;gap:10px"><button class="btn" id="goAcct2" style="font-size:16px;padding:14px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>Add your first account</button><button class="btn sec" id="impBackup" style="font-size:16px;padding:14px">Import a backup</button></div>');
+      firstCard = card("Get started", "Add an account, or restore a backup", '<div style="display:flex;flex-direction:column;gap:var(--s-2)"><button class="btn" id="goAcct2"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>Add your first account</button><button class="btn sec" id="impBackup">Import a backup</button></div>');
     } else {
-      var newBtn = '<button class="btn" id="goTrack" style="font-size:16px;padding:14px' + (chips ? ";margin-top:12px" : "") + '"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>New entry</button>';
+      var newBtn = '<button class="btn" id="goTrack"' + (chips ? ' style="margin-top:var(--s-3)"' : '') + '><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>New entry</button>';
       firstCard = card("Quick log", chips ? "Tap a shortcut, or add something new" : "Record an entry, or save a template for one-tap logging", (chips || "") + newBtn);
     }
     var sidebar = firstCard + (state.accounts.length ? card("Accounts", state.accounts.length + " total", snap, { collapsible: true, key: "ov-accounts" }) : "");
@@ -1046,7 +1044,7 @@
     else if (e.loanKind === "lent") { label = "Repaid by " + e.person; sg = "+"; cl = "pos"; }
     else { label = "Paid back " + e.person; sg = "−"; cl = "neg"; }
     var sub3 = '<span>' + metaLine([esc(acctName(e.account)), rt]) + '</span>' + (e.fee ? '<span class="badge next">fee ' + raw(e.fee) + '</span>' : "") + '<span class="badge next">loan</span>';
-    return lrow({ lead: ringEl(), t: esc(label), sub: sub3, val: sg + raw(e.amount), valCls: cl, acts: ro ? "" : '<button class="mini" data-jump="lending" aria-label="Manage in Lending" title="Manage in Lending"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-arrow-up-right"></use></svg></button>' });
+    return lrow({ lead: ringEl(), t: esc(label), sub: sub3, val: sg + raw(e.amount), valCls: cl, acts: ro ? "" : '<button class="mini" data-jump="people" aria-label="Manage in Lending" title="Manage in Lending"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-arrow-up-right"></use></svg></button>' });
   }
   function dayNetMap() { var m = {}; flowEvents().forEach(function (f) { m[f.date] = (m[f.date] || 0) + (f.inc || 0) - (f.exp || 0); }); return m; }
   function groupedRows(list, ro, showNet) {
@@ -1526,7 +1524,7 @@
     var spentMonth = 0; state.tx.forEach(function (t) { if (t.type === "expense" && t.date >= mStart && t.date <= tdy) spentMonth += t.amount; });
     var dom = nowD.getDate(), pace = dom > 0 ? spentMonth / dom * dim(pjY, pjM) : spentMonth;
     var daysToYE = Math.max(0, (new Date(pjY + "-12-31T00:00:00") - new Date(tdy + "T00:00:00")) / 86400000), projYE = nw + avgNet * (daysToYE / 30.44);
-    var projBody = '<div class="statcol">' + stat("Balance at month-end", fmtBig(projMonthEnd), projMonthEnd >= 0 ? "pos" : "neg") + stat("Spent so far this month", fmtBig(spentMonth), "neg") + stat("Projected full month", fmtBig(pace), "neg") + stat("Net worth at year-end", fmtBig(projYE), projYE >= 0 ? "pos" : "neg") + (projVar ? '<div class="hint" style="margin-top:6px">Variable templates not counted.</div>' : "") + '</div>';
+    var projBody = '<div class="statcol">' + stat("Balance at month-end", fmtBig(projMonthEnd), projMonthEnd >= 0 ? "pos" : "neg") + stat("Spent so far this month", fmtBig(spentMonth), "neg") + stat("Projected full month", fmtBig(pace), "neg") + stat("Net worth at year-end", fmtBig(projYE), projYE >= 0 ? "pos" : "neg") + (projVar ? '<div class="hint" style="margin-top:var(--s-2)">Variable templates not counted.</div>' : "") + '</div>';
 
     var statsBody = '<div class="statcol">' +
       stat("Net / month avg", fmtBig(avgNet), avgNet >= 0 ? "pos" : "neg") +
@@ -1545,7 +1543,7 @@
 
     var pOpts = [["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["12m", "12M"], ["all", "All"], ["custom", "Custom"]];
     var bar = '<div class="seg scroll" role="group" aria-label="Time period">' + pOpts.map(function (o) { return '<button type="button" data-tp="' + o[0] + '" class="' + (pid === o[0] ? "on" : "") + '" aria-pressed="' + (pid === o[0] ? "true" : "false") + '">' + o[1] + '</button>'; }).join("") + '</div>';
-    if (pid === "custom") bar += '<div class="filters" style="margin-top:10px"><input type="date" class="inp" id="trendFrom" value="' + (state.trendFrom || from) + '" max="' + today() + '" aria-label="From date"><span style="align-self:center;color:var(--ink-faint)">–</span><input type="date" class="inp" id="trendTo" value="' + (state.trendTo || to) + '" max="' + today() + '" aria-label="To date"></div>';
+    if (pid === "custom") bar += '<div class="filters" style="margin-top:var(--s-2)"><input type="date" class="inp" id="trendFrom" value="' + (state.trendFrom || from) + '" max="' + today() + '" aria-label="From date"><span style="align-self:center;color:var(--ink-faint)">–</span><input type="date" class="inp" id="trendTo" value="' + (state.trendTo || to) + '" max="' + today() + '" aria-label="To date"></div>';
     var periodCard = card("Period", fmtDate(from) + " – " + fmtDate(to), bar, { collapsible: false });
 
     var chartBody;
@@ -1754,7 +1752,7 @@
 
   // ---------- SETTINGS ----------
   function renderHelp() {
-    var hero = '<div class="hero"><div><div class="label">Ledger</div><div style="font-family:\'Fraunces\',serif;font-size:34px;font-weight:600;line-height:1">Help &amp; tips</div><div class="csub">How it works, FAQ &amp; reference</div></div></div>';
+    var hero = '<div class="hero"><div><div class="label">Ledger</div><div class="big">Help &amp; tips</div><div class="csub">How it works, FAQ &amp; reference</div></div></div>';
     var sidebar = card("Welcome", "What this is", '<div class="help-b">' + "<p>Ledger is a private money tracker. Everything you enter stays on this device — it's saved locally and never sent to a server or an account.</p><p>Add your accounts, log what comes in and goes out, keep tabs on loans, set reusable templates, and watch the trends.</p>" + '</div>');
     var body = "";
     body += card("Logging entries", "Income, expense, transfer", '<div class="help-b">' + "<p>Use the <strong>Track</strong> tab to add an entry, or tap the <strong>+</strong> button (bottom-right on mobile) to log from anywhere. Entries come in three kinds: income (money in), expense (money out), and a transfer that moves money between your own accounts.</p><p>You lead with the amount, then where it came from or went, and the account it touched. <strong>Where</strong> is just a label — a shop, a person, a source — and it remembers what you've typed before.</p>" + '</div>', { collapsible: true, key: "help-log" });
@@ -1770,7 +1768,7 @@
     app.innerHTML = layout(hero, sidebar, body);
   }
   function renderSettings() {
-    var hero = '<div class="hero"><div><div class="label">Ledger</div><div style="font-family:\'Fraunces\',serif;font-size:34px;font-weight:600;line-height:1">Settings</div><div class="csub">Preferences, data &amp; backup</div></div></div>';
+    var hero = '<div class="hero"><div><div class="label">Ledger</div><div class="big">Settings</div><div class="csub">Preferences, data &amp; backup</div></div></div>';
     var sidebar = card("Data", "Stored privately on this device",
       '<div class="snap-row"><span class="nm">Accounts</span><span class="bl num">' + state.accounts.length + '</span></div>' +
       '<div class="snap-row"><span class="nm">Transactions</span><span class="bl num">' + state.tx.length + '</span></div>' +
@@ -1784,12 +1782,12 @@
     var listed = CURRENCIES.some(function (c) { return c[0] === state.cur; });
     var curOpts = CURRENCIES.map(function (o) { return '<option value="' + o[0] + '"' + sel(state.cur, o[0]) + '>' + o[0] + " · " + o[1] + '</option>'; }).join("") + '<option value="__custom"' + (listed ? "" : " selected") + '>Custom…</option>';
     var currency = card("Currency", "Common ones below, or set any symbol",
-      '<select class="inp" id="curSel" style="margin-bottom:10px">' + curOpts + '</select>' +
+      '<select class="inp" id="curSel" style="margin-bottom:var(--s-2)">' + curOpts + '</select>' +
       '<div class="two" style="align-items:end"><div class="field" style="margin:0"><label>Custom symbol</label><input id="curCustom" type="text" maxlength="4" placeholder="e.g. CHF, zł, ₪" value="' + (listed ? "" : esc(state.cur)) + '"></div><button class="btn" id="curApply" style="margin-bottom:0">Apply</button></div>');
     var dataCard = card("Backup &amp; data", "Your only copy lives here unless you back it up",
       '<div class="data-btns"><button class="btn" id="dlJSON">' + icon("download-simple") + 'Download backup (.json)</button><button class="btn sec" id="upJSON">' + icon("upload-simple") + 'Restore from backup</button><button class="btn sec" id="exCSV">' + icon("download-simple") + 'Export CSV</button><button class="btn sec" id="imCSV">' + icon("upload-simple") + 'Import CSV</button></div>' +
-      '<div class="hint" style="margin-top:10px;margin-bottom:0">Backup is a full, lossless restore — use it to move between devices. CSV opens in a spreadsheet; import expects a file exported here.</div>');
-    var danger = card("Danger zone", "", '<button class="btn" id="clearAll" style="background:var(--expense);color:var(--on-fill)">' + icon('trash') + 'Clear all data</button><div class="hint" style="margin-top:10px;margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
+      '<div class="hint" style="margin-top:var(--s-2);margin-bottom:0">Backup is a full, lossless restore — use it to move between devices. CSV opens in a spreadsheet; import expects a file exported here.</div>');
+    var danger = card("Danger zone", "", '<button class="btn" id="clearAll" style="background:var(--expense);color:var(--on-fill)">' + icon('trash') + 'Clear all data</button><div class="hint" style="margin-top:var(--s-2);margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
 
     var viewCard = card("View", "Expand collapsed cards and clear searches, sorts, and filters", '<button class="btn sec" id="resetUI">Reset view</button>');
     app.innerHTML = layout(hero, sidebar, appearance + privacy + currency + viewCard + dataCard + danger);
