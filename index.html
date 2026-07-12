@@ -1579,6 +1579,7 @@
       stat("Total income", fmtBig(totInc), "pos") +
       stat("Total spending", fmtBig(totExp), "neg") +
       stat("Transfer fees", fmtBig(fees), "neg") +
+      (peopleSpend > 0.005 ? stat("Spent on people", fmtBig(peopleSpend), "neg") : "") +
       stat("Biggest expense", biggest ? fmtBig(biggest.amt) : "—", "neg") +
       (bigInc ? stat("Biggest income", fmtBig(bigInc.amt), "pos") : "") +
       stat("Transactions", "" + txCount, "") +
@@ -1670,7 +1671,24 @@
     if (allPlaces.length) {
       var placesBody = places.map(function (e) { var pct = placeMax ? Math.round(e[1] / placeMax * 100) : 0; return '<div class="bd-row"><div class="cat">' + esc(e[0]) + '</div><div class="bar"><span style="width:' + pct + '%"></span></div><div class="amt num neg">' + fmt(e[1]) + '</div></div>'; }).join("");
       if (allPlaces.length > 6) placesBody += '<div class="more"><button class="btn sec btn-sm" id="placesToggle">' + (state.placesAll ? "Show top 6" : "Show all " + allPlaces.length) + '</button></div>';
-      main += card("Top places", "Most spent this period", state.priv === "full" ? hiddenMsg : placesBody);
+      main += card("Top places", "Merchants \u2014 most spent this period", state.priv === "full" ? hiddenMsg : placesBody);
+    }
+
+    var tppl = allPeople().map(function (pp) { return { name: pp, flow: byPerson[pp] || 0, bal: personBalance(pp) }; })
+      .filter(function (x) { return Math.abs(x.flow) > 0.005 || Math.abs(x.bal) > 0.005; })
+      .sort(function (a, b) { return (Math.abs(b.flow) + Math.abs(b.bal)) - (Math.abs(a.flow) + Math.abs(a.bal)); });
+    if (tppl.length) {
+      var pmax = tppl.reduce(function (m, x) { return Math.max(m, Math.abs(x.flow), Math.abs(x.bal)); }, 0) || 1;
+      var pplBody = state.priv === "full" ? hiddenMsg : tppl.map(function (x) {
+        var zb = Math.abs(x.bal) < 0.005;
+        var st = zb ? "settled up" : (x.bal > 0 ? "owes you " + fmtBig(x.bal) : "you owe " + fmtBig(-x.bal));
+        var w = Math.round(Math.abs(x.flow) / pmax * 100);
+        var ft = Math.abs(x.flow) < 0.005 ? "\u2014" : (x.flow > 0 ? "\u2212" : "+") + fmtBig(Math.abs(x.flow));
+        var fc = Math.abs(x.flow) < 0.005 ? "" : (x.flow > 0 ? "neg" : "pos");
+        var bc = x.flow > 0 ? "var(--expense)" : x.flow < 0 ? "var(--income)" : "var(--line-strong)";
+        return '<div class="bd-row"><div class="cat">' + esc(x.name) + '<span class="ps">' + st + '</span></div><div class="bar"><span style="width:' + w + '%;background:' + bc + '"></span></div><div class="amt num ' + fc + '">' + ft + '</div></div>';
+      }).join("");
+      main += card("People", "What they cost you this period \u00b7 what\u2019s still owed", pplBody);
     }
 
     app.innerHTML = layout(heroBlock("Net worth", fmtBig(nw), nw >= 0 ? "pos" : "neg", '<div class="csub">as of ' + fmtDate(today()) + '</div>', monthPills()), sidebar, main);
