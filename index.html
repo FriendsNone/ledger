@@ -191,8 +191,15 @@
   .act .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
   .act .amt { font-family: 'JetBrains Mono', monospace; font-weight: var(--fw-semi); flex: none; }
 
+  /* .stack — a vertical group with ONE uniform gap. The parent owns the rhythm;
+     children must not add their own margins. Fixes gaps that ran 12/14/8/8px. */
+  .vstack { display: flex; flex-direction: column; gap: var(--s-2); margin-bottom: var(--s-3); }
+  .vstack > * { margin-bottom: 0; }
+  .vstack > .seg, .vstack > .filters, .vstack > .filt-more, .vstack > .filt-active { margin: 0; }
+  .filt-more > .filters { margin-bottom: 0; }
+
   /* filter panel (Track) — restored: the toggle merge had destroyed these */
-  .filt-more { margin: 0 0 var(--s-3); display: flex; flex-direction: column; gap: var(--s-2); }
+  .filt-more { margin: 0; display: flex; flex-direction: column; gap: var(--s-2); }
   .filt-more .inp, .filt-more input { height: var(--ctl-sm); font-size: var(--fs-sm); padding: 0 9px; border-radius: var(--r-sm); }
   .filt-more .seg button { height: calc(var(--ctl-sm) - var(--s-2)); font-size: var(--fs-sm); }
   .filters input, .filters select, .filters .inp { height: var(--ctl-sm); }
@@ -237,7 +244,7 @@
   .stmt-edge .stmt-bal { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
   .stmt .stmt-row:first-child { border-bottom: 2px solid var(--line-strong); }
   .stmt .stmt-row:last-child { border-top: 2px solid var(--line-strong); border-bottom: 0; }
-  .filt-active { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -2px 0 12px; font-size: var(--fs-sm); color: var(--ink-soft); }
+  .filt-active { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; margin: 0; font-size: var(--fs-sm); color: var(--ink-soft); }
   .priv-full .balance.pos, .priv-full .balance.neg, .priv-full .v.pos, .priv-full .v.neg, .priv-full .v.neu { color: var(--ink); }
   .priv-full .badge.gain, .priv-full .badge.loss { background: var(--paper-2); color: var(--ink-soft); }
   .priv-partial .balance.pos, .priv-partial .balance.neg, .priv-partial .pill .v.pos, .priv-partial .pill .v.neg, .priv-partial .stat .v.pos, .priv-partial .stat .v.neg { color: var(--ink); }
@@ -283,7 +290,7 @@
   @media (max-width: 780px) { .totop { bottom: calc(140px + env(safe-area-inset-bottom, 0px)); right: 16px; } }
   .person { border-bottom: 1px solid var(--line); padding: 4px 0; }
   .person:last-child { border-bottom: 0; }
-  .phead { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); border-radius: var(--r-sm); transition: background var(--t-fast); padding-right: var(--s-2); }
+  .phead { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); border-radius: var(--r-sm); transition: background var(--t-fast); padding-right: 2px; }
   .phead > .act, .phead > .btn { flex: none; margin-left: auto; }
   .phead:hover { background: var(--paper-2); }
   .phead:has(.ptoggle:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -296,7 +303,7 @@
   .pstate { display: block; font-size: var(--fs-sm); color: var(--ink-soft); margin-top: 1px; font-weight: var(--fw-regular); }
   .pbal { font-weight: var(--fw-bold); font-size: var(--fs-lg); white-space: nowrap; flex: none; }
 
-  .plist { border-top: 1px dashed var(--line-strong); margin-left: 32px; padding: 8px 2px 12px; }
+  .plist { border-top: 1px dashed var(--line-strong); margin-left: 32px; padding: var(--s-2) 2px var(--s-3); }
   .prow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 6px 0; }
   .pbody { min-width: 0; }
   .pt { font-size: var(--fs-md); color: var(--ink); }
@@ -318,7 +325,7 @@
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
-  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .filters { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; margin-bottom: var(--s-3); }
   .filters > input { flex: 1 1 140px; }
   .filters > select { flex: 0 1 auto; width: auto; }
   .filters select, .filters input { font-family: inherit; font-size: var(--fs-md); color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 7px 9px; cursor: pointer; }
@@ -932,14 +939,14 @@
     var tkPeriod = state.trackPeriod || "all", filtActive = !!state.trackAcct || tkPeriod !== "all", fopen = state.trackFiltersOpen;
     var acctSel = '<select class="inp" id="fAcct" aria-label="Filter by account"><option value=""' + sel(state.trackAcct, "") + '>All accounts</option>' + state.accounts.map(function (a) { return '<option value="' + a.id + '"' + sel(state.trackAcct, a.id) + '>' + esc(a.name) + '</option>'; }).join("") + '</select>';
     var pchips = '<div class="seg scroll" role="group" aria-label="Date range">' + [["all", "All"], ["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["12m", "12M"], ["custom", "Custom"]].map(function (o) { return '<button type="button" data-tkp="' + o[0] + '" class="' + (tkPeriod === o[0] ? "on" : "") + '" aria-pressed="' + (tkPeriod === o[0] ? "true" : "false") + '">' + o[1] + '</button>'; }).join("") + '</div>';
-    var customPick = tkPeriod === "custom" ? '<div class="filters" style="margin:0"><input type="date" class="inp" id="fFrom" value="' + (state.trackFrom || rng.from) + '" max="' + today() + '" aria-label="From date"><span style="align-self:center;color:var(--ink-faint)">–</span><input type="date" class="inp" id="fTo" value="' + (state.trackTo || rng.to) + '" max="' + today() + '" aria-label="To date"></div>' : "";
+    var customPick = tkPeriod === "custom" ? '<div class="filters"><input type="date" class="inp" id="fFrom" value="' + (state.trackFrom || rng.from) + '" max="' + today() + '" aria-label="From date"><span style="align-self:center;color:var(--ink-faint)">–</span><input type="date" class="inp" id="fTo" value="' + (state.trackTo || rng.to) + '" max="' + today() + '" aria-label="To date"></div>' : "";
     var view = state.trackView || "list", stmtMode = view === "statement";
     var vtoggle = '<div class="seg" role="group" aria-label="View mode"><button type="button" data-view="list" class="' + (stmtMode ? "" : "on") + '">List</button><button type="button" data-view="statement" class="' + (stmtMode ? "on" : "") + '">Statement</button></div>';
     var line1 = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select class="inp" id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select><button class="icon-btn filt-toggle' + (filtActive ? " active" : "") + (fopen ? " open" : "") + '" id="filtMore" aria-label="More filters" aria-expanded="' + (fopen ? "true" : "false") + '" title="Account and date filters"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-funnel"></use></svg></button></div>';
     var perLbl = { "1m": "Last month", "3m": "Last 3 months", "6m": "Last 6 months", "12m": "Last 12 months", custom: fmtDate(rng.from) + " – " + fmtDate(rng.to) };
     var abits = []; if (state.trackAcct) abits.push(esc(acctName(state.trackAcct))); if (tkPeriod !== "all") abits.push(perLbl[tkPeriod] || tkPeriod);
     var filtSummary = (!stmtMode && filtActive && !fopen) ? '<div class="filt-active"><span>Filtered · ' + abits.join(" · ") + '</span><button class="act" id="filtClear" type="button">' + icon('x') + 'Clear</button></div>' : "";
-    var listExtra = stmtMode ? (vtoggle + '<div class="filt-more" style="margin-top:2px">' + acctSel + pchips + customPick + '</div>') : (vtoggle + line1 + (fopen ? '<div class="filt-more">' + acctSel + pchips + customPick + '</div>' : filtSummary));
+    var listExtra = '<div class="vstack">' + (stmtMode ? (vtoggle + '<div class="filt-more">' + acctSel + pchips + customPick + '</div>') : (vtoggle + line1 + (fopen ? '<div class="filt-more">' + acctSel + pchips + customPick + '</div>' : filtSummary))) + '</div>';
 
     var chips = shortcutChips();
     var quickCard = chips ? card("Quick log", "Saved shortcuts — one tap to log", chips) : "";
