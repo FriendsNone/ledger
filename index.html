@@ -410,6 +410,7 @@
   .badge.overdue { background: var(--expense-soft); color: var(--expense); }
   .badge.due { background: var(--amber-soft); color: var(--amber); }
   .badge.next { background: var(--paper-2); color: var(--ink-soft); }
+  .badge.person { background: var(--paper-2); color: var(--ink-soft); border: 1px solid var(--line-strong); }
   .day-date.pn { text-transform: none; font-size: var(--fs-sm); letter-spacing: .01em; color: var(--ink-soft); }
 
   .legend { display: flex; gap: 16px; font-size: var(--fs-sm); color: var(--ink-soft); margin-bottom: 10px; flex-wrap: wrap; }
@@ -725,7 +726,7 @@
   function tstamp(d, t) { return new Date((d || "1970-01-01") + "T" + (t || "00:00") + ":00").getTime() || 0; }
   function entries() {
     var out = [];
-    state.tx.forEach(function (t) { out.push({ src: "tx", id: t.id, kind: t.type, date: t.date, time: t.time || "", created: t.created != null ? t.created : tstamp(t.date, t.time), amount: t.amount, where: t.where || "", note: t.desc || "", account: t.account, toAccount: t.toAccount, fee: t.fee || 0 }); });
+    state.tx.forEach(function (t) { out.push({ src: "tx", id: t.id, kind: t.type, date: t.date, time: t.time || "", created: t.created != null ? t.created : tstamp(t.date, t.time), amount: t.amount, where: t.where || "", note: t.desc || "", account: t.account, toAccount: t.toAccount, fee: t.fee || 0 , tag: t.tag || null}); });
     state.loans.forEach(function (l) {
       out.push({ src: "loan", id: l.id, kind: l.kind === "lent" ? "lend" : "borrow", date: l.date, time: l.time || "", created: l.created != null ? l.created : tstamp(l.date, l.time), amount: l.amount, fee: l.fee || 0, person: l.person, account: l.account, note: l.note || "" });
       if (l.settled) out.push({ src: "settle", id: l.id, kind: "settle", loanKind: l.kind, date: l.settledDate || l.date, time: l.settledTime || "", created: l.settledCreated != null ? l.settledCreated : tstamp(l.settledDate || l.date, l.settledTime) + 1, amount: l.settledAmount != null ? l.settledAmount : l.amount, person: l.person, account: l.settledAccount || l.account, note: l.note || "" });
@@ -1038,6 +1039,18 @@
     wireQuick();
     var qa = document.getElementById("qamt"); if (qa) { try { qa.focus(); } catch (e) {} }
   }
+  /* A row whose amount isn't entirely yours must SAY so — otherwise a P283 meal
+     that was P204 yours looks like a plain P283 expense, and Trends seems to disagree. */
+  function tagBadge(t) {
+    if (!t) return "";
+    var p = esc(t.person), m = t.meaning, txt;
+    if (m === "owes_me") txt = p + " owes " + raw(t.slice);
+    else if (m === "paying_me") txt = p + " repaid " + raw(t.slice);
+    else if (m === "their_money") txt = p + "\u2019s money";
+    else if (m === "paying_back") txt = "paid " + p + " back";
+    else txt = p;
+    return '<span class="badge person">' + txt + '</span>';
+  }
   function entryRow(e, ro) {
     var rt = fmtTime(e.time);
     if (e.kind === "transfer") {
@@ -1046,7 +1059,7 @@
     }
     if (e.kind === "income" || e.kind === "expense") {
       var sign = e.kind === "income" ? "+" : "−", cls = e.kind === "income" ? "pos" : "neg";
-      var sub2 = '<span>' + metaLine([esc(acctName(e.account)), rt, (e.where && e.note ? esc(e.note) : "")]) + '</span>';
+      var sub2 = '<span>' + metaLine([esc(acctName(e.account)), rt, (e.where && e.note ? esc(e.note) : "")]) + '</span>' + tagBadge(e.tag);
       return lrow({ lead: dotEl(acctColor(e.account)), t: esc(e.where || e.note || "—"), sub: sub2, val: sign + raw(e.amount), valCls: cls, acts: ro ? "" : '<button class="mini" data-edit-tx="' + e.id + '" aria-label="Edit" title="Edit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-pencil-simple"></use></svg></button><button class="del" data-id="' + e.id + '" aria-label="Delete" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>' });
     }
     var label, sg, cl;
