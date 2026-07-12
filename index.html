@@ -1485,7 +1485,7 @@
   }
   function weekdaySpend(from, to) {
     var w = [0, 0, 0, 0, 0, 0, 0];
-    state.tx.forEach(function (t) { if (t.type !== "expense" || t.date < from || t.date > to) return; w[(new Date(t.date + "T00:00:00").getDay() + 6) % 7] += t.amount; });
+    state.tx.forEach(function (t) { if (t.type !== "expense" || t.date < from || t.date > to) return; var oe = ownExpense(t); if (oe <= 0.005) return; w[(new Date(t.date + "T00:00:00").getDay() + 6) % 7] += oe; });
     return w;
   }
   function deltaTag(cur, prev) {
@@ -1517,10 +1517,24 @@
 
     var byWhere = {}, fees = 0, biggest = null, bigInc = null, freq = {}, expCount = 0, txCount = 0, dayTot = {};
     state.tx.forEach(function (t) {
-      if (!inR(t.date)) return; txCount++;
-      if (t.type === "expense") { var w = (t.where || "").trim() || "(unlabeled)"; byWhere[w] = (byWhere[w] || 0) + t.amount; if (!biggest || t.amount > biggest.amount) biggest = t; var wl = (t.where || "").trim(); if (wl) freq[wl] = (freq[wl] || 0) + 1; expCount++; dayTot[t.date] = (dayTot[t.date] || 0) + t.amount; }
-      else if (t.type === "income") { if (!bigInc || t.amount > bigInc.amount) bigInc = t; }
-      else if (t.type === "transfer") fees += (t.fee || 0);
+      if (!inR(t.date)) return;
+      if (t.type === "transfer") { fees += (t.fee || 0); txCount++; return; }
+      /* count only YOUR share — someone else's money is not your spending or income */
+      var oe = ownExpense(t), oi = ownIncome(t);
+      if (t.type === "expense") {
+        txCount++;
+        if (oe > 0.005) {
+          var w = (t.where || "").trim() || "(unlabeled)";
+          byWhere[w] = (byWhere[w] || 0) + oe;
+          if (!biggest || oe > biggest.amt) biggest = { amt: oe, where: w };
+          var wl = (t.where || "").trim(); if (wl) freq[wl] = (freq[wl] || 0) + 1;
+          expCount++;
+          dayTot[t.date] = (dayTot[t.date] || 0) + oe;
+        }
+      } else if (t.type === "income") {
+        txCount++;
+        if (oi > 0.005 && (!bigInc || oi > bigInc.amt)) bigInc = { amt: oi, where: (t.where || "").trim() };
+      }
     });
     var allPlaces = Object.keys(byWhere).map(function (k) { return [k, byWhere[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
     var places = state.placesAll ? allPlaces : allPlaces.slice(0, 6), placeMax = allPlaces.length ? allPlaces[0][1] : 0;
@@ -1548,8 +1562,8 @@
       stat("Total income", fmtBig(totInc), "pos") +
       stat("Total spending", fmtBig(totExp), "neg") +
       stat("Transfer fees", fmtBig(fees), "neg") +
-      stat("Biggest expense", biggest ? fmtBig(biggest.amount) : "—", "neg") +
-      (bigInc ? stat("Biggest income", fmtBig(bigInc.amount), "pos") : "") +
+      stat("Biggest expense", biggest ? fmtBig(biggest.amt) : "—", "neg") +
+      (bigInc ? stat("Biggest income", fmtBig(bigInc.amt), "pos") : "") +
       stat("Transactions", "" + txCount, "") +
       (busiest ? stat("Busiest day", fmtDate(busiest) + " · " + fmtBig(dayTot[busiest]), "neg") : "") +
       (topFreq ? stat("Most frequent", esc(topFreq) + " · " + freq[topFreq] + "×", "") : "") + '</div>';
