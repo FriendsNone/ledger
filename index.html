@@ -165,10 +165,18 @@
   .mini:hover { background: var(--hover); color: var(--ink); }
   .del:hover { background: var(--danger-soft); color: var(--danger); }
   .mini:focus-visible, .del:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-  /* .chip-btn — a compact TEXT action inside a row (not an icon button) */
-  .chip-btn { font-family: inherit; font-size: var(--fs-xs); font-weight: var(--fw-bold); padding: 4px 10px; border-radius: var(--r-pill); border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink-soft); cursor: pointer; white-space: nowrap; transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast); }
-  .chip-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--card); }
-  .chip-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  /* .act — a TEXT action inside a row or toolbar (the "Log" / "Settle" button).
+     Full-contrast --ink text: stays readable in dark mode, unlike a muted variant.
+     .act.primary  filled (accent)
+     .act.pill     pill-shaped, for compound chips with a name + amount */
+  .act { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); border-radius: var(--r-sm); padding: 6px 11px; font-family: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semi); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; transition: border-color var(--t-fast), background var(--t-fast), color var(--t-fast); }
+  .act:hover { border-color: var(--ink-soft); background: var(--card); }
+  .act:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .act.primary:hover { opacity: .92; background: var(--accent); }
+  .act.pill { border-radius: var(--r-pill); padding: 7px 13px; font-size: var(--fs-md); gap: 7px; max-width: 100%; }
+  .act .ic { width: 14px; height: 14px; }
+  .act .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+  .act .amt { font-family: 'JetBrains Mono', monospace; font-weight: var(--fw-semi); flex: none; }
 
   /* ===== SEGMENTED CONTROL — the single toggle primitive =====
      .seg            equal-width columns (2 by default, .three for 3)
@@ -200,8 +208,6 @@
   .stmt .stmt-row:first-child { border-bottom: 2px solid var(--line-strong); }
   .stmt .stmt-row:last-child { border-top: 2px solid var(--line-strong); border-bottom: 0; }
   .filt-active { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -2px 0 12px; font-size: var(--fs-sm); color: var(--ink-soft); }
-  .filt-clear { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink-soft); border-radius: var(--r-pill); padding: 3px 9px; font-size: var(--fs-sm); font-weight: var(--fw-semi); cursor: pointer; }
-  .filt-clear .ic { width: 12px; height: 12px; }
   .priv-full .balance.pos, .priv-full .balance.neg, .priv-full .v.pos, .priv-full .v.neg, .priv-full .v.neu { color: var(--ink); }
   .priv-full .badge.gain, .priv-full .badge.loss { background: var(--paper-2); color: var(--ink-soft); }
   .priv-partial .balance.pos, .priv-partial .balance.neg, .priv-partial .pill .v.pos, .priv-partial .pill .v.neg, .priv-partial .stat .v.pos, .priv-partial .stat .v.neg { color: var(--ink); }
@@ -277,10 +283,6 @@
   .row-gap { display: flex; gap: 10px; flex-wrap: wrap; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); border-radius: var(--r-pill); padding: 7px 13px; font-family: inherit; font-size: var(--fs-md); font-weight: var(--fw-semi); cursor: pointer; display: inline-flex; gap: 7px; align-items: center; transition: var(--t-fast); max-width: 100%; }
-  .chip:hover { border-color: var(--ink-soft); }
-  .chip .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
-  .chip .amt { font-family: 'JetBrains Mono', monospace; font-weight: var(--fw-semi); flex: none; }
 
   .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
   .filters > input { flex: 1 1 140px; }
@@ -307,8 +309,6 @@
   .body .s { font-size: var(--fs-sm); color: var(--ink-faint); margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px; overflow-wrap: anywhere; }
   .end { flex: none; margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
   .end .v { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -.02em; font-size: var(--fs-lg); font-weight: var(--fw-semi); white-space: nowrap; }
-  .act { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); border-radius: var(--r-sm); padding: 6px 11px; font-family: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semi); cursor: pointer; transition: var(--t-fast); white-space: nowrap; }
-  .act:hover { border-color: var(--ink-soft); }
   .act.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .more { text-align: center; margin-top: 10px; }
 
@@ -392,6 +392,7 @@
   .toast.show { opacity: 1; translate: -50% 0; pointer-events: auto; }
   .toast-undo { background: var(--accent-ink); color: var(--accent); border: 0; font: inherit; font-weight: var(--fw-bold); padding: 4px 14px; border-radius: var(--r-pill); cursor: pointer; }
   .toast-undo:hover { opacity: .85; }
+  /* toast-scoped: these sit ON the accent fill, so they invert deliberately */
   .toast-x { background: transparent; border: 0; color: var(--accent-ink); opacity: .6; cursor: pointer; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-sm); flex: none; }
   .toast-x:hover { opacity: 1; }
 
@@ -713,7 +714,7 @@
     return '<div class="chips">' + sc.map(function (r) {
       var amtCls = r.type === "income" ? "pos" : r.type === "expense" ? "neg" : "neu", sign = r.type === "income" ? "+" : r.type === "expense" ? "−" : "⇄ ";
       var name = r.desc || r.where || (r.type === "transfer" ? "Transfer" : r.type);
-      return '<button class="chip" data-log="' + r.id + '"><span class="nm">' + esc(name) + '</span><span class="amt ' + amtCls + '">' + sign + raw(r.amount) + '</span></button>';
+      return '<button class="act pill" data-log="' + r.id + '"><span class="nm">' + esc(name) + '</span><span class="amt ' + amtCls + '">' + sign + raw(r.amount) + '</span></button>';
     }).join("") + '</div>';
   }
 
@@ -903,7 +904,7 @@
     var line1 = '<div class="filters"><input id="fQ" type="text" placeholder="Search…" value="' + esc(state.fQ) + '"><select class="inp" id="fType"><option value="all"' + sel(state.fType, "all") + '>All</option><option value="income"' + sel(state.fType, "income") + '>Income</option><option value="expense"' + sel(state.fType, "expense") + '>Expenses</option><option value="transfer"' + sel(state.fType, "transfer") + '>Transfers</option><option value="lending"' + sel(state.fType, "lending") + '>Lending</option></select><button class="icon-btn filt-toggle' + (filtActive ? " active" : "") + (fopen ? " open" : "") + '" id="filtMore" aria-label="More filters" aria-expanded="' + (fopen ? "true" : "false") + '" title="Account and date filters"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-funnel"></use></svg></button></div>';
     var perLbl = { "1m": "Last month", "3m": "Last 3 months", "6m": "Last 6 months", "12m": "Last 12 months", custom: fmtDate(rng.from) + " – " + fmtDate(rng.to) };
     var abits = []; if (state.trackAcct) abits.push(esc(acctName(state.trackAcct))); if (tkPeriod !== "all") abits.push(perLbl[tkPeriod] || tkPeriod);
-    var filtSummary = (!stmtMode && filtActive && !fopen) ? '<div class="filt-active"><span>Filtered · ' + abits.join(" · ") + '</span><button class="filt-clear" id="filtClear" type="button">' + icon('x') + 'Clear</button></div>' : "";
+    var filtSummary = (!stmtMode && filtActive && !fopen) ? '<div class="filt-active"><span>Filtered · ' + abits.join(" · ") + '</span><button class="act" id="filtClear" type="button">' + icon('x') + 'Clear</button></div>' : "";
     var listExtra = stmtMode ? (vtoggle + '<div class="filt-more" style="margin-top:2px">' + acctSel + pchips + customPick + '</div>') : (vtoggle + line1 + (fopen ? '<div class="filt-more">' + acctSel + pchips + customPick + '</div>' : filtSummary));
 
     var chips = shortcutChips();
@@ -1264,7 +1265,7 @@
       var amt = Math.abs(e.delta) < 0.005 ? "—" : ((e.delta > 0 ? "+" : "−") + fmtBig(Math.abs(e.delta)));
       var acts = "";
       var outstanding = openMap[e.kind + ":" + e.id] || 0;
-      if (outstanding > 0.005) acts += '<button class="chip-btn" data-psettle1="' + esc(p) + '" data-amt="' + outstanding + '" data-sign="' + (e.delta > 0 ? 1 : -1) + '" aria-label="Settle this item" title="Settle just this">Settle' + (Math.abs(outstanding - Math.abs(e.delta)) > 0.005 ? " " + fmtBig(outstanding) : "") + '</button>';
+      if (outstanding > 0.005) acts += '<button class="act" data-psettle1="' + esc(p) + '" data-amt="' + outstanding + '" data-sign="' + (e.delta > 0 ? 1 : -1) + '" aria-label="Settle this item" title="Settle just this">Settle' + (Math.abs(outstanding - Math.abs(e.delta)) > 0.005 ? " " + fmtBig(outstanding) : "") + '</button>';
       if (e.kind === "iou" && !e.done) acts += '<button class="del" data-ioudel="' + e.id + '" aria-label="Delete IOU" title="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
       else if (e.kind === "loan") acts += '<button class="del" data-loandel="' + e.id + '" aria-label="Delete old loan" title="Delete this old loan"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-trash"></use></svg></button>';
       return '<div class="prow"><div class="pbody"><div class="pt">' + esc(e.label) + '</div><div class="ps">' + dtLabel(e.date, e.time) + ' · ' + e.sub + '</div></div><div class="pend"><span class="num ' + (e.delta > 0 ? "pos" : e.delta < 0 ? "neg" : "") + '">' + amt + '</span>' + acts + '</div></div>';
