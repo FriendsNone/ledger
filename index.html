@@ -1885,7 +1885,6 @@
     bind("curApply", "click", function () { var c = document.getElementById("curCustom").value.trim(); if (c) { state.cur = c; saveSet(); render(); toast("Currency set to " + c); } });
     bind("dlJSON", "click", backupJSON);
     bind("shareJSON", "click", shareBackup);
-    bind("linkF", "click", linkFile);
     bind("saveF", "click", saveToLinked);
     bind("openF", "click", openLinked);
     bind("unlinkF", "click", unlinkFile);
@@ -1913,10 +1912,13 @@
      deleting/moving it can never harm your data — the handle just goes stale. */
   var fileHandle = null;
   function fsSupported() { return typeof window.showSaveFilePicker === "function" && typeof window.showOpenFilePicker === "function"; }
+  /* Chrome's Web Share API only permits certain file MIME types, and application/json
+     is NOT among them — text/plain is. Keep the .json name, share it as text. */
+  var SHARE_MIME = "text/plain";
+  function shareFile(text) { return new File([text], fileName(), { type: SHARE_MIME }); }
   function shareSupported() {
     if (!navigator.canShare || !navigator.share) return false;
-    try { return navigator.canShare({ files: [new File(["{}"], "t.json", { type: "application/json" })] }); }
-    catch (e) { return false; }
+    try { return navigator.canShare({ files: [shareFile("{}")] }); } catch (e) { return false; }
   }
   var HKEY = "ledger:filehandle";
   async function saveHandle(h) { try { await store.set(HKEY, h); } catch (e) { } }
@@ -1933,16 +1935,24 @@
 
   async function linkFile() {
     if (!fsSupported()) { backupJSON(); return; }
+    if (!state.accounts.length && !state.tx.length) {
+      confirmModal("Save an empty ledger?", "There is nothing on this device yet, so this would write an empty backup. If you meant to load an existing backup, use \u201cOpen a backup file\u201d instead.", "Save anyway", function () { doLinkFile(); }, true);
+      return;
+    }
+    doLinkFile();
+  }
+  async function doLinkFile() {
     try {
       var h = await window.showSaveFilePicker({
         suggestedName: fileName(),
         types: [{ description: "Ledger backup", accept: { "application/json": [".json"] } }]
       });
       fileHandle = h; await saveHandle(h);
+      state.fileName = h.name; saveSet();
       await writeLinked();
-      state.fileName = h.name; saveSet(); render();
-      toast("Linked to " + h.name);
-    } catch (e) { if (e && e.name !== "AbortError") toast("Couldn't link that file"); }
+      render();
+      toast("Saved to " + h.name);
+    } catch (e) { if (e && e.name !== "AbortError") toast("Couldn't save to that file"); }
   }
   async function writeLinked() {
     if (!fileHandle) return false;
@@ -1963,7 +1973,7 @@
     }
   }
   async function saveToLinked() {
-    if (!fileHandle) return linkFile();
+    if (!fileHandle) return linkFile();  /* first save: ask where */
     var okw = await writeLinked();
     if (okw) { toast("Saved to " + (state.fileName || "file")); render(); }
   }
@@ -1983,9 +1993,8 @@
     render(); toast("Unlinked — your data is untouched");
   }
   async function shareBackup() {
-    var text = backupText();
     try {
-      var file = new File([text], fileName(), { type: "application/json" });
+      var file = shareFile(backupText());
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: "Ledger backup" });
         markBackedUp(); return;
@@ -1993,15 +2002,18 @@
     } catch (e) { if (e && e.name === "AbortError") return; }
     backupJSON();
   }
+  /* Two verbs only. "Link" was a trap: it WRITES, but on a fresh device the instinct is
+     that it READS — so you'd overwrite your backup with an empty ledger. Gone. */
   function linkRow() {
     var out = "";
     if (shareSupported()) out += '<button class="btn sec" id="shareJSON">' + icon("upload-simple") + 'Share backup\u2026</button>';
     if (fsSupported()) {
-      out += state.fileName
-        ? '<div class="linked"><div><div class="l">Linked file</div><div class="fname num">' + esc(state.fileName) + '</div></div><button class="act" id="unlinkF">Unlink</button></div>'
-          + '<div class="data-btns"><button class="btn" id="saveF">' + icon("download-simple") + 'Save to file</button><button class="btn sec" id="openF">' + icon("upload-simple") + 'Open a file\u2026</button></div>'
-        : '<div class="data-btns"><button class="btn sec" id="linkF">' + icon("download-simple") + 'Link a backup file\u2026</button><button class="btn sec" id="openF">' + icon("upload-simple") + 'Open a file\u2026</button></div>';
-      out += '<div class="hint">Saving writes straight back to the same file \u2014 no downloads folder. Your data always lives on this device; the file is only a copy, and deleting it is harmless.</div>';
+      if (state.fileName) out += '<div class="linked"><div><div class="l">Saving to</div><div class="fname">' + esc(state.fileName) + '</div></div><button class="act" id="unlinkF">Forget</button></div>';
+      out += '<div class="data-btns">'
+        + '<button class="btn sec" id="openF">' + icon("upload-simple") + 'Open a backup file\u2026</button>'
+        + '<button class="btn sec" id="saveF">' + icon("download-simple") + (state.fileName ? "Save to file" : "Save to a file\u2026") + '</button>'
+        + '</div>';
+      out += '<div class="hint"><strong>Open</strong> loads a backup into this device. <strong>Save</strong> writes this device\u2019s data out to a file \u2014 after the first time it reuses the same file, so there is no downloads folder to dig through. Your ledger always lives on this device; the file is only a copy, and deleting it is harmless.</div>';
     }
     return out ? '<div class="vstack">' + out + '</div>' : "";
   }
