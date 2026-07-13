@@ -1907,13 +1907,17 @@
   function resolveTheme() { if (state.theme === "system") { return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"; } return state.theme; }
   function applyTheme() { document.documentElement.setAttribute("data-theme", resolveTheme()); }
   function download(name, text, mime) { var blob = new Blob([text], { type: mime }), a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-  function markBackedUp() { state.lastBackup = Date.now(); saveSet(); render(); }
+  function markBackedUp() { state.lastBackup = Date.now(); state.backupCount = totalRecords(); state.nagDismissed = false; saveSet(); renderBackupNag(); }
   /* ---------- FILE LINK (File System Access API) ----------
      The ledger ALWAYS lives in local storage. A linked file is only a snapshot:
      deleting/moving it can never harm your data — the handle just goes stale. */
   var fileHandle = null;
   function fsSupported() { return typeof window.showSaveFilePicker === "function" && typeof window.showOpenFilePicker === "function"; }
-  function shareSupported() { return !!(navigator.canShare && navigator.share); }
+  function shareSupported() {
+    if (!navigator.canShare || !navigator.share) return false;
+    try { return navigator.canShare({ files: [new File(["{}"], "t.json", { type: "application/json" })] }); }
+    catch (e) { return false; }
+  }
   var HKEY = "ledger:filehandle";
   async function saveHandle(h) { try { await store.set(HKEY, h); } catch (e) { } }
   async function loadHandle() { try { var h = await store.get(HKEY); return h || null; } catch (e) { return null; } }
@@ -1968,9 +1972,9 @@
     try {
       var picked = await window.showOpenFilePicker({ multiple: false, types: [{ description: "Ledger backup", accept: { "application/json": [".json"] } }] });
       var h = picked[0], f = await h.getFile(), text = await f.text();
-      confirmModal("Load this backup?", "This replaces everything currently on this device with the contents of " + esc(h.name) + ".", "Load", function () {
-        if (restoreJSON(text)) { fileHandle = h; saveHandle(h); state.fileName = h.name; saveSet(); render(); toast("Loaded " + h.name); }
-      }, true);
+      /* restoreJSON shows its own confirm — wrapping it in a second one broke the flow */
+      fileHandle = h; await saveHandle(h); state.fileName = h.name; saveSet();
+      restoreJSON(text);
     } catch (e) { if (e && e.name !== "AbortError") toast("Couldn't open that file"); }
   }
   async function unlinkFile() {
