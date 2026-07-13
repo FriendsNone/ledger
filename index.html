@@ -313,6 +313,19 @@
   .ps { font-size: var(--fs-xs); color: var(--ink-faint); margin-top: 1px; }
   .pend { display: flex; align-items: center; gap: 6px; flex: none; font-size: var(--fs-md); }
   .bd-row .cat .ps { display: block; font-size: var(--fs-xs); color: var(--ink-faint); margin-top: 1px; }
+  #syncBtn.warn { color: var(--expense); border-color: var(--expense); }
+  #syncBtn.spin .ic { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .cf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); margin: var(--s-3) 0; }
+  @media (max-width: 480px) { .cf-grid { grid-template-columns: 1fr; } }
+  .cf-side { background: var(--paper-2); border-radius: var(--r-md); padding: var(--s-3); }
+  .cf-h { font-weight: var(--fw-bold); font-size: var(--fs-md); }
+  .cf-sub { font-size: var(--fs-xs); color: var(--ink-faint); margin-bottom: 6px; }
+  .cf-n { font-size: var(--fs-sm); color: var(--ink); font-weight: var(--fw-semi); }
+  .cf-only { font-size: var(--fs-xs); color: var(--accent); font-weight: var(--fw-semi); margin-top: 4px; }
+  .cf-only.cf-none { color: var(--ink-faint); font-weight: var(--fw-regular); }
+  .cf-list { margin: 5px 0 0; padding-left: 15px; }
+  .cf-list li { font-size: var(--fs-xs); color: var(--ink-soft); margin: 2px 0; }
   .ac-menu { position: fixed; z-index: 2000; background: var(--paper); border: 1px solid var(--line-strong); border-radius: var(--r-md); box-shadow: var(--shadow-lg); max-height: 220px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 4px; -webkit-overflow-scrolling: touch; }
   .ac-menu[hidden] { display: none; }
   .ac-opt { padding: 9px 12px; border-radius: var(--r-sm); cursor: pointer; font-size: var(--fs-lg); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -466,7 +479,8 @@
       <div><h1>Ledger</h1><p>A quiet place to watch your money</p></div>
     </div>
     <div class="tools">
-      <button class="icon-btn" id="privBtn" aria-label="Hide amounts" title="Hide amounts"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-eye"></use></svg></button>
+      <button class="icon-btn" id="syncBtn" aria-label="Sync" title="Sync" hidden><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-cloud-check"></use></svg></button>
+<button class="icon-btn" id="privBtn" aria-label="Hide amounts" title="Hide amounts"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-eye"></use></svg></button>
       <button class="icon-btn" id="helpBtn" aria-label="Help" title="Help"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-question"></use></svg></button>
       <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-gear"></use></svg></button>
     </div>
@@ -495,7 +509,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 
-<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false"><symbol id="ph-pencil-simple" viewBox="0 0 256 256"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"/></symbol><symbol id="ph-trash" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"/></symbol><symbol id="ph-arrow-up-right" viewBox="0 0 256 256"><path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z"/></symbol><symbol id="ph-gear" viewBox="0 0 256 256"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></symbol><symbol id="ph-caret-down" viewBox="0 0 256 256"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></symbol><symbol id="ph-funnel" viewBox="0 0 256 256"><path d="M200,136a8,8,0,0,1-8,8H64a8,8,0,0,1,0-16H192A8,8,0,0,1,200,136Zm32-56H24a8,8,0,0,0,0,16H232a8,8,0,0,0,0-16Zm-80,96H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16Z"/></symbol><symbol id="ph-plus" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></symbol><symbol id="ph-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol><symbol id="ph-sun" viewBox="0 0 256 256"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></symbol><symbol id="ph-moon" viewBox="0 0 256 256"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></symbol><symbol id="ph-monitor" viewBox="0 0 256 256"><path d="M208,40H48A24,24,0,0,0,24,64V176a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V64A24,24,0,0,0,208,40Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V64a8,8,0,0,1,8-8H208a8,8,0,0,1,8,8Zm-48,48a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,224Z"/></symbol><symbol id="ph-download-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></symbol><symbol id="ph-upload-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/></symbol><symbol id="ph-warning" viewBox="0 0 256 256"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></symbol><symbol id="ph-eye" viewBox="0 0 256 256"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></symbol><symbol id="ph-eye-slash" viewBox="0 0 256 256"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></symbol><symbol id="ph-question" viewBox="0 0 256 256"><path d="M140,180a12,12,0,1,1-12-12A12,12,0,0,1,140,180ZM128,72c-22.06,0-40,16.15-40,36v4a8,8,0,0,0,16,0v-4c0-11,10.77-20,24-20s24,9,24,20-10.77,20-24,20a8,8,0,0,0-8,8v8a8,8,0,0,0,16,0v-.72c18.24-3.35,32-17.9,32-35.28C168,88.15,150.06,72,128,72Zm104,56A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false"><symbol id="ph-pencil-simple" viewBox="0 0 256 256"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"/></symbol><symbol id="ph-trash" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"/></symbol><symbol id="ph-arrow-up-right" viewBox="0 0 256 256"><path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z"/></symbol><symbol id="ph-gear" viewBox="0 0 256 256"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></symbol><symbol id="ph-caret-down" viewBox="0 0 256 256"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></symbol><symbol id="ph-cloud-check" viewBox="0 0 256 256"><path d="M160,40A88.09,88.09,0,0,0,81.29,88.67,64,64,0,1,0,72,216h88a88,88,0,0,0,0-176Zm0,160H72a48,48,0,0,1,0-96c1.1,0,2.2,0,3.29.11A88,88,0,0,0,72,128a8,8,0,0,0,16,0,72,72,0,1,1,72,72Zm37.66-93.66a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L144,148.69l42.34-42.35A8,8,0,0,1,197.66,106.34Z"/></symbol><symbol id="ph-cloud-arrow-up" viewBox="0 0 256 256"><path d="M178.34,165.66,160,147.31V208a8,8,0,0,1-16,0V147.31l-18.34,18.35a8,8,0,0,1-11.32-11.32l32-32a8,8,0,0,1,11.32,0l32,32a8,8,0,0,1-11.32,11.32ZM160,40A88.08,88.08,0,0,0,81.29,88.68,64,64,0,1,0,72,216h40a8,8,0,0,0,0-16H72a48,48,0,0,1,0-96c1.1,0,2.2,0,3.29.12A88,88,0,0,0,72,128a8,8,0,0,0,16,0,72,72,0,1,1,100.8,66,8,8,0,0,0,3.2,15.34,7.9,7.9,0,0,0,3.2-.68A88,88,0,0,0,160,40Z"/></symbol><symbol id="ph-cloud-warning" viewBox="0 0 256 256"><path d="M160,40A88.09,88.09,0,0,0,81.29,88.67,64,64,0,1,0,72,216h88a88,88,0,0,0,0-176Zm0,160H72a48,48,0,0,1,0-96c1.1,0,2.2,0,3.29.11A88,88,0,0,0,72,128a8,8,0,0,0,16,0,72,72,0,1,1,72,72Zm-8-72V88a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,172,164Z"/></symbol><symbol id="ph-sync" viewBox="0 0 256 256"><path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27a96,96,0,0,1,135,.79L208,76.69V48a8,8,0,0,1,16,0ZM186.41,183.29a80,80,0,0,1-112.47-.66L59.31,168H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V179.31l14.63,14.63A95.43,95.43,0,0,0,130,222.06h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></symbol><symbol id="ph-funnel" viewBox="0 0 256 256"><path d="M200,136a8,8,0,0,1-8,8H64a8,8,0,0,1,0-16H192A8,8,0,0,1,200,136Zm32-56H24a8,8,0,0,0,0,16H232a8,8,0,0,0,0-16Zm-80,96H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16Z"/></symbol><symbol id="ph-plus" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></symbol><symbol id="ph-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol><symbol id="ph-sun" viewBox="0 0 256 256"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></symbol><symbol id="ph-moon" viewBox="0 0 256 256"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></symbol><symbol id="ph-monitor" viewBox="0 0 256 256"><path d="M208,40H48A24,24,0,0,0,24,64V176a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V64A24,24,0,0,0,208,40Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V64a8,8,0,0,1,8-8H208a8,8,0,0,1,8,8Zm-48,48a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,224Z"/></symbol><symbol id="ph-download-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></symbol><symbol id="ph-upload-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/></symbol><symbol id="ph-warning" viewBox="0 0 256 256"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></symbol><symbol id="ph-eye" viewBox="0 0 256 256"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></symbol><symbol id="ph-eye-slash" viewBox="0 0 256 256"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></symbol><symbol id="ph-question" viewBox="0 0 256 256"><path d="M140,180a12,12,0,1,1-12-12A12,12,0,0,1,140,180ZM128,72c-22.06,0-40,16.15-40,36v4a8,8,0,0,0,16,0v-4c0-11,10.77-20,24-20s24,9,24,20-10.77,20-24,20a8,8,0,0,0-8,8v8a8,8,0,0,0,16,0v-.72c18.24-3.35,32-17.9,32-35.28C168,88.15,150.06,72,128,72Zm104,56A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/></symbol></svg>
 <div id="modal"></div>
 <input type="file" id="fileJSON" accept="application/json,.json" style="display:none">
 <input type="file" id="fileCSV" accept=".csv,text/csv" style="display:none">
@@ -618,7 +632,15 @@
 
   // ---- the state machine ----
   function syncOn() { return !!(state.sync && state.sync.enabled && state.sync.repo && state.sync.token && state.sync.pass); }
-  function markDirty() { if (state.sync && state.sync.enabled) { state.sync.dirty = true; saveSet(); } }
+  var syncTimer = null;
+  function markDirty() {
+    if (!state.sync || !state.sync.enabled) return;
+    state.sync.dirty = true; saveSet();
+    if (typeof renderSyncBtn === "function") renderSyncBtn();
+    if (!state.sync.auto) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(function () { doSync(true); }, 4000);   /* debounced: one push, not twenty */
+  }
 
   async function syncPull(force) {
     var got = await backend().pull();
@@ -910,6 +932,7 @@
     Object.keys(fl).forEach(function (id) { var el = document.getElementById(id); if (el && !el.getAttribute("aria-label")) el.setAttribute("aria-label", fl[id]); });
   }
   function render() {
+    renderSyncBtn();
     rebuildMap();
     Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.classList.toggle("on", b.getAttribute("data-tab") === state.tab); });
     var actTab = document.querySelector("#tabs button.on"), navEl = document.getElementById("tabsTrack");
@@ -1965,6 +1988,174 @@
     body += card("About", "Ledger", '<div class="help-b">' + "<p>A small, private, offline-friendly money tracker. It runs entirely in your browser — no accounts, no tracking, nothing leaves your device.</p><p><strong>Recently added:</strong> a Trends time-period selector with net-worth and per-account history charts, spending projections, privacy mode, and variable-amount templates.</p>" + '</div>', { collapsible: true, key: "help-about" });
     app.innerHTML = layout(hero, sidebar, body);
   }
+  // ---------- SYNC: status, diff, conflict, settings ----------
+  var syncBusy = false, syncState = "idle";   // idle | busy | ok | dirty | conflict | error
+  var syncMsg = "";
+  var SYNC_ICON = { idle: "cloud-check", busy: "sync", ok: "cloud-check", dirty: "cloud-arrow-up", conflict: "cloud-warning", error: "cloud-warning" };
+
+  function renderSyncBtn() {
+    var b = document.getElementById("syncBtn"); if (!b) return;
+    if (!syncOn()) { b.hidden = true; return; }
+    b.hidden = false;
+    var st = syncBusy ? "busy" : (syncState === "conflict" ? "conflict" : syncState === "error" ? "error" : (state.sync.dirty ? "dirty" : "ok"));
+    b.querySelector("use").setAttribute("href", "#ph-" + SYNC_ICON[st]);
+    b.classList.toggle("spin", st === "busy");
+    b.classList.toggle("warn", st === "conflict" || st === "error");
+    var label = { busy: "Syncing\u2026", ok: "Synced" + (state.sync.at ? " \u00b7 " + relTime(state.sync.at) : ""), dirty: "Unsynced changes \u2014 tap to sync", conflict: "Sync conflict \u2014 tap to resolve", error: syncMsg || "Sync error" }[st];
+    b.setAttribute("aria-label", label); b.setAttribute("title", label);
+  }
+  function relTime(ms) {
+    var d = Math.round((Date.now() - ms) / 1000);
+    if (d < 60) return "just now";
+    if (d < 3600) return Math.round(d / 60) + "m ago";
+    if (d < 86400) return Math.round(d / 3600) + "h ago";
+    return Math.round(d / 86400) + "d ago";
+  }
+  function syncErrText(e) {
+    return { BAD_TOKEN: "That token was rejected. Check it hasn\u2019t expired.", NO_REPO: "Repo not found \u2014 check the owner/name.",
+      NO_WRITE: "That token can\u2019t write to the repo.", BAD_PASSPHRASE: "Wrong passphrase for the data on the remote.",
+      BAD_FORMAT: "The remote file isn\u2019t a Ledger sync file.", NEWER_FORMAT: "The remote was written by a newer version of Ledger.",
+      BAD_DATA: "The remote data couldn\u2019t be read." }[e.message] || ("Sync failed (" + e.message + ")");
+  }
+
+  async function doSync(silent) {
+    if (!syncOn() || syncBusy) return;
+    syncBusy = true; syncState = "busy"; renderSyncBtn();
+    try {
+      var r = await syncAuto();
+      if (r.action === "conflict") { syncState = "conflict"; if (!silent) openConflict(); else toast("Sync conflict \u2014 tap the cloud to resolve"); }
+      else { syncState = "ok"; syncMsg = ""; if (!silent && r.action !== "current") toast(r.action === "pulled" ? "Pulled from " + (r.from || "the other device") : "Pushed"); }
+    } catch (e) { syncState = "error"; syncMsg = syncErrText(e); if (!silent) toast(syncMsg); }
+    syncBusy = false; renderSyncBtn();
+    if (state.tab === "settings") render();
+  }
+
+  /* Conflict: never guess. Show WHAT differs, then let the user choose. */
+  function backupCounts(o) {
+    return { tx: (o.transactions || []).length, accounts: (o.accounts || []).length, loans: (o.loans || []).length,
+             recurring: (o.recurring || []).length, goals: (o.goals || []).length, ious: (o.ious || []).length };
+  }
+  function diffBackups(mine, theirs) {
+    var out = { onlyMine: 0, onlyTheirs: 0, changed: 0, lists: { onlyMine: [], onlyTheirs: [] } };
+    ["transactions", "loans", "ious", "goals", "recurring", "accounts"].forEach(function (k) {
+      var a = {}, b = {};
+      (mine[k] || []).forEach(function (x) { a[x.id] = JSON.stringify(x); });
+      (theirs[k] || []).forEach(function (x) { b[x.id] = JSON.stringify(x); });
+      Object.keys(a).forEach(function (id) {
+        if (!(id in b)) { out.onlyMine++; if (k === "transactions" && out.lists.onlyMine.length < 4) out.lists.onlyMine.push(txLabel(mine[k], id)); }
+        else if (a[id] !== b[id]) out.changed++;
+      });
+      Object.keys(b).forEach(function (id) {
+        if (!(id in a)) { out.onlyTheirs++; if (k === "transactions" && out.lists.onlyTheirs.length < 4) out.lists.onlyTheirs.push(txLabel(theirs[k], id)); }
+      });
+    });
+    return out;
+  }
+  function txLabel(list, id) {
+    var t = list.filter(function (x) { return x.id === id; })[0];
+    if (!t) return "";
+    return (t.where || t.type || "entry") + " \u00b7 " + fmtBig(t.amount || 0) + " \u00b7 " + fmtDate(t.date || "");
+  }
+
+  async function openConflict() {
+    var body = '<p class="help-p">Both this device and the remote changed since they last agreed. <strong>Nothing has been overwritten.</strong> Pick which one wins \u2014 or back both up first.</p><div class="empty">Comparing\u2026</div>';
+    openModal("Sync conflict", body, "", null, { hideOk: true });
+    var mine, theirs, remoteMeta;
+    try {
+      var got = await backend().pull();
+      var opened = await openBlob(got.blob, state.sync.pass);
+      mine = JSON.parse(backupText()); theirs = JSON.parse(opened.text);
+      remoteMeta = opened;
+    } catch (e) { document.querySelector("#modal .modal-b").innerHTML = '<div class="empty">' + esc(syncErrText(e)) + '</div>'; return; }
+    var d = diffBackups(mine, theirs), mc = backupCounts(mine), tc = backupCounts(theirs);
+    var side = function (title, sub, c, only, list) {
+      return '<div class="cf-side"><div class="cf-h">' + title + '</div><div class="cf-sub">' + sub + '</div>'
+        + '<div class="cf-n num">' + c.tx + ' entries \u00b7 ' + c.accounts + ' accounts</div>'
+        + (only ? '<div class="cf-only">' + only + ' not on the other side</div>' : '<div class="cf-only cf-none">nothing unique</div>')
+        + (list.length ? '<ul class="cf-list">' + list.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + '</ul>' : "")
+        + '</div>';
+    };
+    var html = '<p class="help-p">Both sides changed since they last agreed. <strong>Nothing has been overwritten yet.</strong></p>'
+      + '<div class="cf-grid">'
+      + side("This device", "your local data", mc, d.onlyMine, d.lists.onlyMine)
+      + side("The remote", "from " + esc(remoteMeta.device || "another device") + (remoteMeta.at ? " \u00b7 " + relTime(Date.parse(remoteMeta.at)) : ""), tc, d.onlyTheirs, d.lists.onlyTheirs)
+      + '</div>'
+      + (d.changed ? '<div class="hint">' + d.changed + ' record' + (d.changed === 1 ? " differs" : "s differ") + ' on both sides.</div>' : "")
+      + '<div class="hint">Whichever you keep <strong>replaces</strong> the other. If you need both, download a backup first and merge by hand.</div>'
+      + '<div class="vstack" style="margin-top:var(--s-3)">'
+      + '<button class="btn sec" id="cfBackup">' + icon("download-simple") + 'Download a backup of this device first</button>'
+      + '<div class="data-btns"><button class="btn" id="cfMine">Keep this device</button><button class="btn sec" id="cfTheirs">Take the remote</button></div>'
+      + '</div>';
+    document.querySelector("#modal .modal-b").innerHTML = html;
+    bind("cfBackup", "click", backupJSON);
+    bind("cfMine", "click", function () {
+      closeModal();
+      confirmModal("Keep this device?", "The remote copy will be replaced by this device\u2019s data.", "Keep this device", async function () {
+        syncBusy = true; renderSyncBtn();
+        try { await syncPush(true); syncState = "ok"; toast("Pushed \u2014 remote replaced"); }
+        catch (e) { syncState = "error"; toast(syncErrText(e)); }
+        syncBusy = false; renderSyncBtn(); render();
+      }, true);
+    });
+    bind("cfTheirs", "click", function () {
+      closeModal();
+      confirmModal("Take the remote?", "This device\u2019s data will be replaced by the remote copy.", "Take the remote", async function () {
+        syncBusy = true; renderSyncBtn();
+        try { await syncPull(true); syncState = "ok"; toast("Pulled \u2014 this device replaced"); }
+        catch (e) { syncState = "error"; toast(syncErrText(e)); }
+        syncBusy = false; renderSyncBtn(); render();
+      }, true);
+    });
+  }
+
+  function syncSetup() {
+    var body = '<div class="field"><label>Repository</label><input id="syRepo" type="text" placeholder="you/ledger-data" value="' + esc(state.sync.repo) + '"></div>'
+      + '<div class="hint">A <strong>private</strong> GitHub repo. It only holds one encrypted file \u2014 no code.</div>'
+      + '<div class="field"><label>Access token</label><input id="syTok" type="password" placeholder="github_pat_\u2026" value="' + esc(state.sync.token) + '"></div>'
+      + '<div class="hint">A fine-grained token with <strong>Contents: read &amp; write</strong> on that repo only.</div>'
+      + '<div class="field"><label>Passphrase</label><input id="syPass" type="password" placeholder="a phrase only you know" value="' + esc(state.sync.pass) + '"></div>'
+      + '<div class="hint">Your data is encrypted with this <strong>before</strong> it leaves the device \u2014 GitHub only ever sees ciphertext. <strong>If you lose it, the remote copy is unreadable.</strong> Use the same phrase on every device.</div>';
+    openModal("Set up sync", body, "Connect", function () {
+      var repo = document.getElementById("syRepo").value.trim();
+      var tok = document.getElementById("syTok").value.trim();
+      var pass = document.getElementById("syPass").value;
+      if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { flagInvalid("syRepo"); toast("Use the form owner/repo"); return false; }
+      if (!tok) { flagInvalid("syTok"); return false; }
+      if (pass.length < 8) { flagInvalid("syPass"); toast("Use at least 8 characters"); return false; }
+      state.sync.repo = repo; state.sync.token = tok; state.sync.pass = pass;
+      state.sync.enabled = true; state.sync.base = null;
+      /* nothing local yet → nothing to lose → pull cleanly instead of conflicting */
+      state.sync.dirty = !!(state.accounts.length || state.tx.length);
+      saveSet();
+      (async function () {
+        syncBusy = true; renderSyncBtn();
+        try { await backend().check(); await doSync(false); toast("Sync connected"); }
+        catch (e) { state.sync.enabled = false; saveSet(); syncState = "error"; toast(syncErrText(e)); }
+        syncBusy = false; renderSyncBtn(); render();
+      })();
+    });
+  }
+  function syncDisconnect() {
+    confirmModal("Turn off sync?", "This device stops syncing. Your ledger stays exactly as it is, and the remote copy is left untouched.", "Turn off", function () {
+      state.sync.enabled = false; state.sync.token = ""; state.sync.pass = ""; state.sync.base = null; state.sync.dirty = false; saveSet();
+      syncState = "idle"; renderSyncBtn(); render(); toast("Sync off");
+    }, true);
+  }
+  function syncCard() {
+    if (!state.sync.enabled) {
+      return card("Sync", "Off \u2014 your data never leaves this device",
+        '<div class="help-b"><p>Keep two devices in step through a <strong>private GitHub repo</strong>. Your ledger is encrypted on this device first \u2014 GitHub only ever stores an unreadable blob.</p><p>It never merges or guesses: if both devices changed, it stops and asks you.</p></div>'
+        + '<button class="btn" id="syOn">' + icon("cloud-arrow-up") + 'Set up sync\u2026</button>', { collapsible: true, key: "set-sync" });
+    }
+    var st = syncBusy ? "Syncing\u2026" : syncState === "conflict" ? "Conflict \u2014 needs your decision"
+      : syncState === "error" ? syncMsg : state.sync.dirty ? "Unsynced changes on this device"
+      : state.sync.at ? "Synced \u00b7 " + relTime(state.sync.at) : "Connected";
+    var cls = syncState === "conflict" || syncState === "error" ? "neg" : state.sync.dirty ? "" : "pos";
+    return card("Sync", esc(state.sync.repo), '<div class="statcol"><div class="stat"><div class="l">Status</div><div class="v ' + cls + '">' + esc(st) + '</div></div></div>'
+      + '<div class="seg" style="margin-top:var(--s-3)"><button data-sauto="1" class="' + (state.sync.auto ? "on" : "") + '">Automatic</button><button data-sauto="0" class="' + (state.sync.auto ? "" : "on") + '">Manual only</button></div>'
+      + '<div class="hint">Automatic pulls when the remote is ahead and pushes when you\u2019re ahead \u2014 and only ever when nothing can be lost.</div>'
+      + '<div class="data-btns"><button class="btn" id="sySync">' + icon("sync") + (syncState === "conflict" ? "Resolve conflict" : "Sync now") + '</button><button class="btn sec" id="syOff">Turn off</button></div>', { collapsible: true, key: "set-sync" });
+  }
   function renderSettings() {
     var hero = '<div class="hero"><div><div class="label">Ledger</div><div class="big">Settings</div><div class="csub">Preferences, data &amp; backup</div></div></div>';
     var sidebar = card("Data", "Stored privately on this device",
@@ -1988,7 +2179,7 @@
     var danger = card("Danger zone", "", '<button class="btn" id="clearAll" style="background:var(--expense);color:var(--on-fill)">' + icon('trash') + 'Clear all data</button><div class="hint" style="margin-top:var(--s-2);margin-bottom:0">Permanently deletes everything on this device. Download a backup first.</div>');
 
     var viewCard = card("View", "Expand collapsed cards and clear searches, sorts, and filters", '<button class="btn sec" id="resetUI">Reset view</button>');
-    app.innerHTML = layout(hero, sidebar, appearance + privacy + currency + viewCard + dataCard + danger);
+    app.innerHTML = layout(hero, sidebar, appearance + privacy + currency + viewCard + syncCard() + dataCard + danger);
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) { b.onclick = function () { state.theme = b.getAttribute("data-theme-set"); applyTheme(); saveSet(); render(); }; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-priv-set]"), function (b) { b.onclick = function () { var v = b.getAttribute("data-priv-set"); state.priv = v; if (v !== "off") state.privLast = v; saveSet(); setPrivBtn(); render(); }; });
@@ -1997,6 +2188,10 @@
     bind("curCustom", "input", function (el) { var sel = document.getElementById("curSel"); if (sel && el.value.trim()) sel.value = "__custom"; });
     var cc = document.getElementById("curCustom"); if (cc) cc.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); var v = cc.value.trim(); if (v) { state.cur = v; saveSet(); render(); toast("Currency set to " + v); } } };
     bind("curApply", "click", function () { var c = document.getElementById("curCustom").value.trim(); if (c) { state.cur = c; saveSet(); render(); toast("Currency set to " + c); } });
+    bind("syOn", "click", syncSetup);
+    bind("syOff", "click", syncDisconnect);
+    bind("sySync", "click", function () { if (syncState === "conflict") openConflict(); else doSync(false); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-sauto]"), function (b) { b.onclick = function () { state.sync.auto = b.getAttribute("data-sauto") === "1"; saveSet(); render(); }; });
     bind("dlJSON", "click", backupJSON);
     bind("upJSON", "click", function () { document.getElementById("fileJSON").click(); });
     bind("exCSV", "click", exportCSV);
@@ -2077,9 +2272,11 @@
     modalConfirm = onConfirm; opts = opts || {};
     modalReturnFocus = document.activeElement;
     var m = document.getElementById("modal");
+    var okBtn = opts.hideOk ? "" : null;
     m.innerHTML = '<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true"><div class="modal-h"><h3>' + title + '</h3><button class="modal-x" id="mClose" aria-label="Close" title="Close"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-x"></use></svg></button></div><div class="modal-b">' + body + '</div><div class="modal-f"><button class="btn sec" id="mCancel">' + (opts.cancelLabel || "Cancel") + '</button><button class="btn' + (opts.danger ? " danger" : "") + '" id="mOk">' + okLabel + '</button></div></div></div>';
     m.style.display = "block";
     document.getElementById("mCancel").onclick = closeModal;
+    if (opts.hideOk) { var ok0 = document.getElementById("mOk"); if (ok0) ok0.style.display = "none"; }
     document.getElementById("mClose").onclick = closeModal;
     m.querySelector(".modal-bg").onclick = function (e) { if (e.target === this) closeModal(); };
     labelControls(); initAutocomplete(); wireTag("e");
@@ -2096,6 +2293,7 @@
   function setPrivBtn() { var b = document.getElementById("privBtn"); if (!b) return; var on = state.priv !== "off"; b.classList.toggle("on", on); var u = b.querySelector("use"); if (u) u.setAttribute("href", on ? "#ph-eye-slash" : "#ph-eye"); b.setAttribute("title", on ? "Show amounts" : "Hide amounts"); b.setAttribute("aria-label", on ? "Show amounts" : "Hide amounts"); }
   document.getElementById("privBtn").onclick = function () { if (state.priv === "off") state.priv = state.privLast || "partial"; else { state.privLast = state.priv; state.priv = "off"; } saveSet(); setPrivBtn(); render(); };
   document.getElementById("fabAdd").onclick = function () { openQuickAdd(); };
+  document.getElementById("syncBtn").onclick = function () { if (syncState === "conflict") openConflict(); else doSync(false); };
   var toTopBtn = document.getElementById("toTop");
   if (toTopBtn) {
     toTopBtn.onclick = scrollTop;
@@ -2111,7 +2309,8 @@
   if (window.matchMedia) { try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { if (state.theme === "system") applyTheme(); }); } catch (e) {} }
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModal(); });
 
-  load().then(function () { render(); setPrivBtn(); if (store.mode === "memory only") { try { toast("No storage here — data won't be saved on this page"); } catch (e) {} } });
+  load().then(function () { render(); setPrivBtn(); renderSyncBtn();
+    if (syncOn() && state.sync.auto) setTimeout(function () { doSync(true); }, 300);   /* safe path only */ if (store.mode === "memory only") { try { toast("No storage here — data won't be saved on this page"); } catch (e) {} } });
 })();
 </script>
 <script>if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }</script>
