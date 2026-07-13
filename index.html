@@ -53,8 +53,9 @@
     --fs-md: 14px;    /* body default */
     --fs-lg: 16px;    /* emphasis, row values */
     --fs-xl: 20px;    /* section figures */
-    --fs-display-sm: 26px;
-    --fs-display: 42px;
+    --fs-display-sm: 26px;   /* card figures */
+    --fs-display-md: 32px;   /* page titles in the hero (Help, Settings) */
+    --fs-display: 42px;      /* the hero net-worth figure */
     /* weights — ONLY 400/600/700 are embedded; never use 500 or 800 */
     --fw-regular: 400; --fw-semi: 600; --fw-bold: 700;
     /* ---- RADIUS ---- */
@@ -421,8 +422,9 @@
   .stat .v { font-size: var(--fs-xl); font-weight: var(--fw-semi); margin-top: 3px; }
   .stat .v.sm { font-size: var(--fs-md); }
 
-  .empty .big { font-family: 'Fraunces', serif; font-size: var(--fs-display-sm); font-weight: var(--fw-semi); line-height: 1; color: var(--ink); margin-bottom: 6px; }
   .empty { text-align: center; color: var(--ink-faint); padding: 26px 10px; font-size: var(--fs-md); }
+  /* .big — a display heading (Fraunces). Scoped overrides may resize it. */
+  .big { font-family: 'Fraunces', serif; font-size: var(--fs-display-md); font-weight: var(--fw-semi); line-height: 1.05; color: var(--ink); }
   .empty .big { font-family: 'Fraunces', serif; font-size: var(--fs-xl); color: var(--ink-soft); margin-bottom: 4px; }
   .nudge { text-align: center; padding: 18px 10px; }
   .loading { text-align: center; color: var(--ink-faint); padding: 50px; font-size: var(--fs-md); }
