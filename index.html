@@ -164,6 +164,9 @@
      .btn.btn-sm       compact, auto-width
      .icon-btn         square, bordered, icon-only (header tools)
      .mini / .del      borderless icon action inside a row (.del = destructive) */
+  /* a class that sets `display` beats the UA rule for [hidden] — this is the fix.
+     (.icon-btn set display:inline-flex, so the hidden sync button still rendered.) */
+  [hidden] { display: none !important; }
   .btn { width: 100%; height: var(--ctl-md); border: 0; border-radius: var(--r-md); padding: 0 var(--s-3); cursor: pointer; font-family: inherit; font-size: var(--fs-lg); font-weight: var(--fw-bold); color: var(--accent-ink); background: var(--accent); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: opacity var(--t-fast), transform var(--t-fast), background var(--t-fast), color var(--t-fast); }
   .btn:hover { opacity: .92; }
   .btn:active { transform: scale(.985); }
@@ -686,6 +689,9 @@
     if (!remoteMoved && !state.sync.dirty) return { action: "current" };
     if (!remoteMoved && state.sync.dirty) return syncPush();
     if (remoteMoved && !state.sync.dirty) return syncPull();
+    /* Before calling it a conflict, make sure we can even OPEN the stored copy.
+       A wrong passphrase looked identical to a conflict, which was misleading. */
+    await openBlob(got.blob, state.sync.pass);
     return { action: "conflict" };
   }
   function saveAll() { saveAcct(); saveTx(); saveLoan(); saveRec(); saveGoals(); saveIous(); }
@@ -2024,9 +2030,9 @@
   }
   function syncErrText(e) {
     return { BAD_TOKEN: "That token was rejected. Check it hasn\u2019t expired.", NO_REPO: "Repo not found \u2014 check the owner/name.",
-      NO_WRITE: "That token can\u2019t write to the repo.", BAD_PASSPHRASE: "Wrong passphrase for the data on the remote.",
-      BAD_FORMAT: "The remote file isn\u2019t a Ledger sync file.", NEWER_FORMAT: "The remote was written by a newer version of Ledger.",
-      BAD_DATA: "The remote data couldn\u2019t be read." }[e.message] || ("Sync failed (" + e.message + ")");
+      NO_WRITE: "That token can\u2019t write to the repo.", BAD_PASSPHRASE: "Wrong passphrase \u2014 the stored copy won\u2019t open with it.",
+      BAD_FORMAT: "That file isn\u2019t a Ledger sync file.", NEWER_FORMAT: "The stored copy was written by a newer version of Ledger.",
+      BAD_DATA: "The stored copy couldn\u2019t be read." }[e.message] || ("Sync failed (" + e.message + ")");
   }
 
   async function doSync(silent) {
@@ -2099,7 +2105,7 @@
   }
 
   async function openConflict() {
-    var body = '<p class="help-p">Both this device and the remote changed since they last agreed. <strong>Nothing has been overwritten.</strong> Pick which one wins \u2014 or back both up first.</p><div class="empty">Comparing\u2026</div>';
+    var body = '<p class="help-p">This device and the cloud copy have <strong>both</strong> changed. <strong>Nothing has been overwritten.</strong> Comparing them\u2026</p><div class="empty">Comparing\u2026</div>';
     openModal("Sync conflict", body, "", null, { hideOk: true });
     var mine, theirs, remoteMeta;
     try {
@@ -2241,8 +2247,50 @@
     var dev = document.getElementById("syDev");
     if (dev && !dev.value) dev.value = deviceName();
   }
+  /* If the passphrase is lost, the stored copy is mathematically unopenable \u2014 that is the
+     point of encrypting it. What we CAN do is start over: take a device that still holds the
+     ledger, pick a new passphrase, and overwrite the stored copy with it. */
+  function syncReset() {
+    var empty = !state.accounts.length && !state.tx.length;
+    var body = '<p class="help-p">A lost passphrase can\u2019t be recovered \u2014 the stored copy is encrypted and nobody, including the server, can open it. <strong>But you can start over.</strong></p>'
+      + (empty
+        ? '<div class="sync-err">This device has no ledger on it, so there is nothing to start over <em>from</em>. Do this on a device that still has your data.</div>'
+        : '<p class="help-p">This device\u2019s ledger (<strong>' + state.tx.length + ' entries</strong>) will be re-encrypted with a new passphrase and will <strong>replace</strong> the stored copy.</p>')
+      + '<div class="field"><label>New passphrase</label><input id="rsPass" type="text" placeholder="four-words-like-this"' + (empty ? " disabled" : "") + '></div>'
+      + '<div class="pw-row"><button type="button" class="act" id="rsGen"' + (empty ? " disabled" : "") + '>' + icon("sync") + 'Generate one</button><span class="pw-rule" id="rsRule"></span></div>'
+      + '<div class="hint">Every other device must then be set up again with this new passphrase. Until they are, they will say the passphrase is wrong \u2014 their own data stays safe on them.</div>'
+      + '<div id="rsErr" class="sync-err" hidden></div>';
+    openModal("Start over with a new passphrase", body, "Replace the stored copy", function () {
+      if (empty) return false;
+      var pass = document.getElementById("rsPass").value;
+      var err = document.getElementById("rsErr");
+      if (pass.length < 12) { err.textContent = "Passphrase needs at least 12 characters."; err.hidden = false; flagInvalid("rsPass"); return false; }
+      var okBtn = document.getElementById("mOk"); okBtn.disabled = true; okBtn.textContent = "Replacing\u2026";
+      (async function () {
+        var prev = state.sync.pass;
+        try {
+          state.sync.pass = pass;
+          await syncPush(true);                     /* force: overwrite whatever is there */
+          saveSet(); closeModal();
+          syncState = "ok"; renderSyncBtn(); render();
+          toast("Stored copy replaced \u2014 use the new passphrase on your other devices");
+        } catch (e) {
+          state.sync.pass = prev; saveSet();
+          var e2 = document.getElementById("rsErr");
+          if (e2) { e2.textContent = syncErrText(e); e2.hidden = false; }
+          var ob = document.getElementById("mOk"); if (ob) { ob.disabled = false; ob.textContent = "Replace the stored copy"; }
+        }
+      })();
+      return false;
+    }, { danger: true });
+    var pw = document.getElementById("rsPass"), rule = document.getElementById("rsRule");
+    function upd() { var n = (pw.value || "").length; rule.textContent = n >= 12 ? "\u2713 strong enough" : (12 - n) + " more needed"; rule.className = "pw-rule " + (n >= 12 ? "good" : ""); }
+    if (pw) { pw.addEventListener("input", upd); upd(); }
+    var g = document.getElementById("rsGen");
+    if (g) g.onclick = function () { pw.value = makePassphrase(); upd(); pw.focus(); };
+  }
   function syncDisconnect() {
-    confirmModal("Turn off sync?", "This device stops syncing. Your ledger stays exactly as it is, and the remote copy is left untouched.", "Turn off", function () {
+    confirmModal("Turn off sync?", "This device stops syncing. Your ledger stays exactly as it is, and the cloud copy is left untouched.", "Turn off", function () {
       state.sync.enabled = false; state.sync.token = ""; state.sync.pass = ""; state.sync.base = null; state.sync.dirty = false; saveSet();
       syncState = "idle"; renderSyncBtn(); render(); toast("Sync off");
     }, true);
@@ -2251,7 +2299,7 @@
     if (!state.sync.enabled) {
       return card("Sync", "Off \u2014 your data never leaves this device",
         '<div class="help-b"><p>Keep two devices in step through a <strong>private GitHub repo</strong>. Your ledger is encrypted on this device first \u2014 GitHub only ever stores an unreadable blob.</p><p>It never merges or guesses: if both devices changed, it stops and asks you.</p></div>'
-        + '<button class="btn" id="syOn">' + icon("cloud-arrow-up") + 'Set up sync\u2026</button>', { collapsible: true, key: "set-sync" });
+        + '<div class="vstack"><button class="btn" id="syOn">' + icon("cloud-arrow-up") + 'Set up sync\u2026</button></div>', { collapsible: true, key: "set-sync" });
     }
     var st = syncBusy ? "Syncing\u2026" : syncState === "conflict" ? "Conflict \u2014 needs your decision"
       : syncState === "error" ? syncMsg : state.sync.dirty ? "Unsynced changes on this device"
@@ -2259,8 +2307,9 @@
     var cls = syncState === "conflict" || syncState === "error" ? "neg" : state.sync.dirty ? "" : "pos";
     return card("Sync", esc(state.sync.repo), '<div class="statcol"><div class="stat"><div class="l">Status</div><div class="v ' + cls + '">' + esc(st) + '</div></div><div class="stat"><div class="l">This device is called</div><div class="v">' + esc(state.sync.device || "unnamed") + ' <button class="act" id="syRename">Rename</button></div></div></div>'
       + '<div class="seg" style="margin-top:var(--s-3)"><button data-sauto="1" class="' + (state.sync.auto ? "on" : "") + '">Automatic</button><button data-sauto="0" class="' + (state.sync.auto ? "" : "on") + '">Manual only</button></div>'
-      + '<div class="hint">Automatic pulls when the remote is ahead and pushes when you\u2019re ahead \u2014 and only ever when nothing can be lost.</div>'
-      + '<div class="data-btns"><button class="btn" id="sySync">' + icon("sync") + (syncState === "conflict" ? "Resolve conflict" : "Sync now") + '</button><button class="btn sec" id="syOff">Turn off</button></div>', { collapsible: true, key: "set-sync" });
+      + '<div class="hint">Automatic keeps this device and the cloud copy in step by itself \u2014 and only when nothing can be lost.</div>'
+      + '<div class="data-btns"><button class="btn" id="sySync">' + icon("sync") + (syncState === "conflict" ? "Resolve conflict" : "Sync now") + '</button><button class="btn sec" id="syOff">Turn off</button></div>'
+      + (syncMsg && syncState === "error" ? '<div class="hint">Lost the passphrase, or want to start fresh? <button class="act" id="syReset">Start over\u2026</button></div>' : '<div class="more"><button class="act" id="syReset">Change passphrase / start over\u2026</button></div>'), { collapsible: true, key: "set-sync" });
   }
   function renderSettings() {
     var hero = '<div class="hero"><div><div class="label">Ledger</div><div class="big">Settings</div><div class="csub">Preferences, data &amp; backup</div></div></div>';
@@ -2297,6 +2346,7 @@
     bind("syOn", "click", syncSetup);
     bind("syOff", "click", syncDisconnect);
     bind("sySync", "click", function () { if (syncState === "conflict") openConflict(); else doSync(false); });
+    bind("syReset", "click", syncReset);
     bind("syRename", "click", function () {
       openModal("Name this device", '<div class="field"><label>Device name</label><input id="dvName" type="text" maxlength="20" value="' + esc(state.sync.device || "") + '"></div><div class="hint">Shown on your other devices so you know where a change came from.</div>', "Save", function () {
         var v = document.getElementById("dvName").value.trim();
