@@ -526,7 +526,7 @@
     accounts: [], tx: [], loans: [], recurring: [], goals: [], ious: [],
     cur: "$", theme: "system",
     tab: "overview", prevTab: "overview", formType: "expense", recType: "expense",
-    fType: "all", fQ: "", trackShow: 30, trackAcct: "", trackPeriod: "all", trackFrom: "", trackTo: "", trackFiltersOpen: false, trackView: "list", peopleOpen: {}, iouDir: "i_owe", formDraft: null, iouDraft: null, sync: { enabled: false, backend: "github", repo: "", token: "", pass: "", path: "ledger.enc", base: null, dirty: false, at: 0, auto: true, device: "" }, lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
+    fType: "all", fQ: "", trackShow: 30, trackAcct: "", trackPeriod: "all", trackFrom: "", trackTo: "", trackFiltersOpen: false, trackView: "list", peopleOpen: {}, iouDir: "i_owe", formDraft: null, iouDraft: null, sync: { enabled: false, backend: "github", host: "https://api.github.com", repo: "", token: "", pass: "", path: "ledger.enc", base: null, dirty: false, at: 0, auto: true, device: "" }, lendQ: "", trendPeriod: "12m", trendFrom: "", trendTo: "", placesAll: false,
     lastBackup: 0, backupCount: null, collapsed: {}, nagDismissed: false, priv: "off", privLast: "partial"
   };
   var amap = {}, lastTab = null;
@@ -595,12 +595,17 @@
   }
 
   // ---- backend interface: pull() -> {blob, version} | null ; push(blob, base) -> {version} | throws CONFLICT
+  /* GitHub's Contents API. Gitea and Forgejo implement the SAME endpoints and the same
+     sha guard, so pointing host at their /api/v1 works with no new code.
+     GitLab / SourceHut differ enough to need their own adapter. */
+  function apiBase() { return (state.sync.host || "https://api.github.com").replace(/\/+$/, ""); }
   function ghHeaders() { return { "Authorization": "Bearer " + state.sync.token, "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" }; }
-  function ghURL() { return "https://api.github.com/repos/" + state.sync.repo + "/contents/" + (state.sync.path || "ledger.enc"); }
+  function ghRepoURL() { return apiBase() + "/repos/" + state.sync.repo; }
+  function ghURL() { return ghRepoURL() + "/contents/" + (state.sync.path || "ledger.enc"); }
   var GitHubBackend = {
-    label: "GitHub",
+    label: "GitHub-compatible",
     async check() {
-      var r = await fetch("https://api.github.com/repos/" + state.sync.repo, { headers: ghHeaders() });
+      var r = await fetch(ghRepoURL(), { headers: ghHeaders() });
       if (r.status === 401) throw new Error("BAD_TOKEN");
       if (r.status === 404) throw new Error("NO_REPO");
       if (!r.ok) throw new Error("HTTP_" + r.status);
@@ -995,7 +1000,7 @@
     var chips = shortcutChips();
     var firstCard;
     if (!state.accounts.length) {
-      firstCard = card("Get started", "Add an account, or restore a backup", '<div style="display:flex;flex-direction:column;gap:var(--s-2)"><button class="btn" id="goAcct2"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>Add your first account</button><button class="btn sec" id="impBackup">Import a backup</button></div>');
+      firstCard = card("Get started", "Add an account, restore a backup, or sync", '<div style="display:flex;flex-direction:column;gap:var(--s-2)"><button class="btn" id="goAcct2"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>Add your first account</button><button class="btn sec" id="impBackup">Import a backup</button>' + (state.sync && state.sync.enabled ? "" : '<button class="btn sec" id="goSync">' + icon("cloud-arrow-up") + 'Set up sync\u2026</button>') + '</div>');
     } else {
       var newBtn = '<button class="btn" id="goTrack"' + (chips ? ' style="margin-top:var(--s-3)"' : '') + '><svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-plus"></use></svg>New entry</button>';
       firstCard = card("Quick log", chips ? "Tap a shortcut, or add something new" : "Record an entry, or save a template for one-tap logging", (chips || "") + newBtn);
@@ -1031,6 +1036,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-log]"), function (b) { b.onclick = function () { logTemplate(b.getAttribute("data-log")); }; });
     bind("goTrack", "click", function () { state.tab = "track"; render(); });
     bind("goAcct2", "click", function () { state.tab = "accounts"; render(); });
+    bind("goSync", "click", syncSetup);
     bind("impBackup", "click", function () { document.getElementById("fileJSON").click(); });
   }
 
@@ -2109,20 +2115,26 @@
   }
 
   function syncSetup() {
-    var body = '<div class="field"><label>Repository</label><input id="syRepo" type="text" placeholder="you/ledger-data" value="' + esc(state.sync.repo) + '"></div>'
-      + '<div class="hint">A <strong>private</strong> GitHub repo. It only holds one encrypted file \u2014 no code.</div>'
+    var custom = !!(state.sync.host && state.sync.host !== "https://api.github.com");
+    var body = '<div class="field"><label>Server</label><select class="inp" id="sySrv"><option value="gh"' + (custom ? "" : " selected") + '>GitHub</option><option value="custom"' + (custom ? " selected" : "") + '>Gitea / Forgejo (self-hosted)</option></select></div>'
+      + '<div class="field" id="syHostWrap" style="display:' + (custom ? "block" : "none") + '"><label>API address</label><input id="syHost" type="text" placeholder="https://git.example.com/api/v1" value="' + esc(custom ? state.sync.host : "") + '"></div>'
+      + '<div class="field"><label>Repository</label><input id="syRepo" type="text" placeholder="you/ledger-data" value="' + esc(state.sync.repo) + '"></div>'
+      + '<div class="hint">A <strong>private</strong> repo holding one encrypted file \u2014 no code. Use the same repo on <strong>every</strong> device; two, three, however many.</div>'
       + '<div class="field"><label>Access token</label><input id="syTok" type="password" placeholder="github_pat_\u2026" value="' + esc(state.sync.token) + '"></div>'
       + '<div class="hint">A fine-grained token with <strong>Contents: read &amp; write</strong> on that repo only.</div>'
       + '<div class="field"><label>Passphrase</label><input id="syPass" type="password" placeholder="a phrase only you know" value="' + esc(state.sync.pass) + '"></div>'
       + '<div class="hint">Your data is encrypted with this <strong>before</strong> it leaves the device \u2014 GitHub only ever sees ciphertext. <strong>If you lose it, the remote copy is unreadable.</strong> Use the same phrase on every device.</div>';
     openModal("Set up sync", body, "Connect", function () {
+      var srv = document.getElementById("sySrv").value;
+      var host = srv === "custom" ? document.getElementById("syHost").value.trim().replace(/\/+$/, "") : "https://api.github.com";
+      if (srv === "custom" && !/^https?:\/\//.test(host)) { flagInvalid("syHost"); toast("Enter the full API address"); return false; }
       var repo = document.getElementById("syRepo").value.trim();
       var tok = document.getElementById("syTok").value.trim();
       var pass = document.getElementById("syPass").value;
       if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { flagInvalid("syRepo"); toast("Use the form owner/repo"); return false; }
       if (!tok) { flagInvalid("syTok"); return false; }
       if (pass.length < 8) { flagInvalid("syPass"); toast("Use at least 8 characters"); return false; }
-      state.sync.repo = repo; state.sync.token = tok; state.sync.pass = pass;
+      state.sync.host = host; state.sync.repo = repo; state.sync.token = tok; state.sync.pass = pass;
       state.sync.enabled = true; state.sync.base = null;
       /* nothing local yet → nothing to lose → pull cleanly instead of conflicting */
       state.sync.dirty = !!(state.accounts.length || state.tx.length);
@@ -2134,7 +2146,9 @@
         syncBusy = false; renderSyncBtn(); render();
       })();
     });
+    wireSyncSetup();
   }
+  function wireSyncSetup() { var srv = document.getElementById("sySrv"); if (srv) srv.onchange = function () { document.getElementById("syHostWrap").style.display = srv.value === "custom" ? "block" : "none"; }; }
   function syncDisconnect() {
     confirmModal("Turn off sync?", "This device stops syncing. Your ledger stays exactly as it is, and the remote copy is left untouched.", "Turn off", function () {
       state.sync.enabled = false; state.sync.token = ""; state.sync.pass = ""; state.sync.base = null; state.sync.dirty = false; saveSet();
