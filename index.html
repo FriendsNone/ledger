@@ -748,7 +748,7 @@
   }
   function metaLine(parts) { return parts.filter(Boolean).join(" · "); }
   function icon(name) { return '<svg class="ic" aria-hidden="true" focusable="false"><use href="#ph-' + name + '"></use></svg>'; }
-  function flagInvalid(el) { if (!el) return; el.classList.add("invalid"); try { el.focus(); } catch (e) {} el.addEventListener("input", function h() { el.classList.remove("invalid"); el.removeEventListener("input", h); }); }
+  function flagInvalid(el) { if (typeof el === "string") el = document.getElementById(el); if (!el || !el.classList) return; el.classList.add("invalid"); try { el.focus(); } catch (e) {} el.addEventListener("input", function h() { el.classList.remove("invalid"); el.removeEventListener("input", h); }); }
   function readAmt(id, allowZero) { var el = document.getElementById(id); if (!el) return null; var v = parseFloat(el.value); if (!isFinite(v) || v < 0 || v > 1e12 || (!allowZero && v <= 0)) { flagInvalid(el); return null; } return Math.round(v * 100) / 100; }
   function readFee(id) { var el = document.getElementById(id); if (!el) return 0; var raw = (el.value || "").trim(); if (raw === "") return 0; var v = parseFloat(raw); if (!isFinite(v) || v < 0 || v > 1e12) { flagInvalid(el); return null; } return Math.round(v * 100) / 100; }
   var acMenu = null, AC = { input: null, items: [], active: -1 };
