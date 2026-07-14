@@ -326,6 +326,11 @@
   .cf-only.cf-none { color: var(--ink-faint); font-weight: var(--fw-regular); }
   .cf-list { margin: 5px 0 0; padding-left: 15px; }
   .cf-list li { font-size: var(--fs-xs); color: var(--ink-soft); margin: 2px 0; }
+  .pw-row { display: flex; align-items: center; gap: var(--s-2); margin: -6px 0 var(--s-3); }
+  .pw-rule { font-size: var(--fs-xs); color: var(--ink-faint); }
+  .pw-rule.good { color: var(--income); font-weight: var(--fw-semi); }
+  .sync-err { background: var(--expense-soft); color: var(--expense); border-radius: var(--r-sm); padding: var(--s-2) var(--s-3); font-size: var(--fs-sm); font-weight: var(--fw-semi); margin-top: var(--s-2); }
+  .sync-err[hidden] { display: none; }
   .ac-menu { position: fixed; z-index: 2000; background: var(--paper); border: 1px solid var(--line-strong); border-radius: var(--r-md); box-shadow: var(--shadow-lg); max-height: 220px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 4px; -webkit-overflow-scrolling: touch; }
   .ac-menu[hidden] { display: none; }
   .ac-opt { padding: 9px 12px; border-radius: var(--r-sm); cursor: pointer; font-size: var(--fs-lg); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2001,7 +2006,7 @@
 
   function renderSyncBtn() {
     var b = document.getElementById("syncBtn"); if (!b) return;
-    if (!syncOn()) { b.hidden = true; return; }
+    if (!state.sync || !state.sync.enabled || !syncOn()) { b.hidden = true; b.classList.remove("spin", "warn"); return; }
     b.hidden = false;
     var st = syncBusy ? "busy" : (syncState === "conflict" ? "conflict" : syncState === "error" ? "error" : (state.sync.dirty ? "dirty" : "ok"));
     b.querySelector("use").setAttribute("href", "#ph-" + SYNC_ICON[st]);
@@ -2033,7 +2038,7 @@
       else { syncState = "ok"; syncMsg = ""; if (!silent && r.action !== "current") toast(r.action === "pulled" ? "Pulled from " + (r.from || "the other device") : "Pushed"); }
     } catch (e) { syncState = "error"; syncMsg = syncErrText(e); if (!silent) toast(syncMsg); }
     syncBusy = false; renderSyncBtn();
-    if (state.tab === "settings") render();
+    render();   /* a pull changes the data — the current tab must show it, not just Settings */
   }
 
   /* Conflict: never guess. Show WHAT differs, then let the user choose. */
@@ -2063,6 +2068,36 @@
     return (t.where || t.type || "entry") + " \u00b7 " + fmtBig(t.amount || 0) + " \u00b7 " + fmtDate(t.date || "");
   }
 
+  /* A merge that is honest about what it can and can't do:
+     - a record on only ONE side  -> keep it (this is the common case: you added on both)
+     - a record on BOTH, identical -> keep it
+     - a record on BOTH, different -> we cannot know which edit is newer (we only store
+       `created`), so the user picks which side wins for those, and we say how many there are. */
+  function mergeBackups(mine, theirs, prefer) {
+    var out = { app: "ledger", version: 9, exportedAt: new Date().toISOString(), currency: mine.currency || theirs.currency };
+    var stats = { added: 0, kept: 0, clashed: 0 };
+    ["accounts", "transactions", "loans", "recurring", "goals", "ious"].forEach(function (k) {
+      var byId = {}, order = [];
+      function put(x, side) {
+        if (!x || !x.id) return;
+        if (!(x.id in byId)) { byId[x.id] = { v: x, side: side }; order.push(x.id); return; }
+        var cur = byId[x.id];
+        if (JSON.stringify(cur.v) === JSON.stringify(x)) return;      /* identical */
+        stats.clashed++;
+        if (prefer === "theirs" && side === "theirs") byId[x.id] = { v: x, side: side };
+        if (prefer === "mine" && side === "mine") byId[x.id] = { v: x, side: side };
+      }
+      (mine[k] || []).forEach(function (x) { put(x, "mine"); });
+      var before = order.length;
+      (theirs[k] || []).forEach(function (x) { put(x, "theirs"); });
+      stats.added += order.length - before;
+      stats.kept += order.length;
+      out[k === "transactions" ? "transactions" : k] = order.map(function (id) { return byId[id].v; });
+    });
+    out.transactions = out.transactions || [];
+    return { data: out, stats: stats };
+  }
+
   async function openConflict() {
     var body = '<p class="help-p">Both this device and the remote changed since they last agreed. <strong>Nothing has been overwritten.</strong> Pick which one wins \u2014 or back both up first.</p><div class="empty">Comparing\u2026</div>';
     openModal("Sync conflict", body, "", null, { hideOk: true });
@@ -2081,74 +2116,131 @@
         + (list.length ? '<ul class="cf-list">' + list.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + '</ul>' : "")
         + '</div>';
     };
-    var html = '<p class="help-p">Both sides changed since they last agreed. <strong>Nothing has been overwritten yet.</strong></p>'
+    var html = '<p class="help-p">This device and the cloud copy have <strong>both</strong> changed. <strong>Nothing has been overwritten.</strong></p>'
       + '<div class="cf-grid">'
-      + side("This device", "your local data", mc, d.onlyMine, d.lists.onlyMine)
-      + side("The remote", "from " + esc(remoteMeta.device || "another device") + (remoteMeta.at ? " \u00b7 " + relTime(Date.parse(remoteMeta.at)) : ""), tc, d.onlyTheirs, d.lists.onlyTheirs)
+      + side("This device", esc(state.sync.device || "here"), mc, d.onlyMine, d.lists.onlyMine)
+      + side("The cloud copy", "last saved by " + esc(remoteMeta.device || "another device") + (remoteMeta.at ? " \u00b7 " + relTime(Date.parse(remoteMeta.at)) : ""), tc, d.onlyTheirs, d.lists.onlyTheirs)
       + '</div>'
-      + (d.changed ? '<div class="hint">' + d.changed + ' record' + (d.changed === 1 ? " differs" : "s differ") + ' on both sides.</div>' : "")
-      + '<div class="hint">Whichever you keep <strong>replaces</strong> the other. If you need both, download a backup first and merge by hand.</div>'
+      + (d.changed ? '<div class="hint">' + d.changed + ' record' + (d.changed === 1 ? "" : "s") + ' exist' + (d.changed === 1 ? "s" : "") + ' on both sides but differ \u2014 merging can\u2019t tell which edit is newer, so it keeps this device\u2019s version of those.</div>' : "")
       + '<div class="vstack" style="margin-top:var(--s-3)">'
+      + '<button class="btn" id="cfMerge">' + icon("sync") + 'Merge \u2014 keep everything from both</button>'
       + '<button class="btn sec" id="cfBackup">' + icon("download-simple") + 'Download a backup of this device first</button>'
-      + '<div class="data-btns"><button class="btn" id="cfMine">Keep this device</button><button class="btn sec" id="cfTheirs">Take the remote</button></div>'
+      + '<div class="data-btns"><button class="btn sec" id="cfMine">Keep only this device</button><button class="btn sec" id="cfTheirs">Keep only the cloud copy</button></div>'
       + '</div>';
     document.querySelector("#modal .modal-b").innerHTML = html;
     bind("cfBackup", "click", backupJSON);
+    bind("cfMerge", "click", function () {
+      var m = mergeBackups(mine, theirs, "mine");
+      closeModal();
+      confirmModal("Merge both?", "Everything from both sides is kept: " + m.stats.added + " record" + (m.stats.added === 1 ? "" : "s") + " added from the cloud copy." + (m.stats.clashed ? " " + m.stats.clashed + " record" + (m.stats.clashed === 1 ? "" : "s") + " differ on both sides \u2014 this device\u2019s version wins for those." : ""), "Merge", async function () {
+        syncBusy = true; renderSyncBtn();
+        try {
+          applyBackup(m.data);
+          await syncPush(true);           /* push the merged result over the top */
+          syncState = "ok"; toast("Merged \u2014 both devices now match");
+        } catch (e) { syncState = "error"; toast(syncErrText(e)); }
+        syncBusy = false; renderSyncBtn(); render();
+      });
+    });
     bind("cfMine", "click", function () {
       closeModal();
-      confirmModal("Keep this device?", "The remote copy will be replaced by this device\u2019s data.", "Keep this device", async function () {
+      confirmModal("Keep only this device?", "The cloud copy will be replaced by this device\u2019s data. Anything only in the cloud is lost.", "Keep this device", async function () {
         syncBusy = true; renderSyncBtn();
-        try { await syncPush(true); syncState = "ok"; toast("Pushed \u2014 remote replaced"); }
+        try { await syncPush(true); syncState = "ok"; toast("Cloud copy replaced"); }
         catch (e) { syncState = "error"; toast(syncErrText(e)); }
         syncBusy = false; renderSyncBtn(); render();
       }, true);
     });
     bind("cfTheirs", "click", function () {
       closeModal();
-      confirmModal("Take the remote?", "This device\u2019s data will be replaced by the remote copy.", "Take the remote", async function () {
+      confirmModal("Keep only the cloud copy?", "This device\u2019s data will be replaced by the cloud copy. Anything only here is lost.", "Keep the cloud copy", async function () {
         syncBusy = true; renderSyncBtn();
-        try { await syncPull(true); syncState = "ok"; toast("Pulled \u2014 this device replaced"); }
+        try { await syncPull(true); syncState = "ok"; toast("This device now matches the cloud"); }
         catch (e) { syncState = "error"; toast(syncErrText(e)); }
         syncBusy = false; renderSyncBtn(); render();
       }, true);
     });
   }
 
+  var PW_WORDS = ["amber","anchor","basil","breeze","cactus","candle","cedar","cobalt","copper","coral","cotton","crimson","daisy","dune","ember","fable","falcon","fern","garnet","ginger","harbor","hazel","indigo","ivory","jasper","juniper","kite","lantern","linen","lotus","maple","marble","meadow","nectar","nutmeg","olive","onyx","orchid","pebble","pepper","quartz","quill","raven","ribbon","saffron","sage","silver","spruce","thistle","timber","topaz","tulip","velvet","walnut","willow","zephyr"];
+  function makePassphrase() {
+    var a = new Uint32Array(4); crypto.getRandomValues(a);
+    return Array.prototype.map.call(a, function (n) { return PW_WORDS[n % PW_WORDS.length]; }).join("-");
+  }
   function syncSetup() {
     var custom = !!(state.sync.host && state.sync.host !== "https://api.github.com");
-    var body = '<div class="field"><label>Server</label><select class="inp" id="sySrv"><option value="gh"' + (custom ? "" : " selected") + '>GitHub</option><option value="custom"' + (custom ? " selected" : "") + '>Gitea / Forgejo (self-hosted)</option></select></div>'
+    var body = '<div class="field"><label>Where to keep the copy</label><select class="inp" id="sySrv"><option value="gh"' + (custom ? "" : " selected") + '>GitHub</option><option value="custom"' + (custom ? " selected" : "") + '>Gitea / Forgejo (self-hosted)</option></select></div>'
       + '<div class="field" id="syHostWrap" style="display:' + (custom ? "block" : "none") + '"><label>API address</label><input id="syHost" type="text" placeholder="https://git.example.com/api/v1" value="' + esc(custom ? state.sync.host : "") + '"></div>'
       + '<div class="field"><label>Repository</label><input id="syRepo" type="text" placeholder="you/ledger-data" value="' + esc(state.sync.repo) + '"></div>'
-      + '<div class="hint">A <strong>private</strong> repo holding one encrypted file \u2014 no code. Use the same repo on <strong>every</strong> device; two, three, however many.</div>'
+      + '<div class="hint">A <strong>private</strong> repo holding one encrypted file \u2014 no code. Use the same repo on <strong>every</strong> device.</div>'
       + '<div class="field"><label>Access token</label><input id="syTok" type="password" placeholder="github_pat_\u2026" value="' + esc(state.sync.token) + '"></div>'
-      + '<div class="hint">A fine-grained token with <strong>Contents: read &amp; write</strong> on that repo only.</div>'
-      + '<div class="field"><label>Passphrase</label><input id="syPass" type="password" placeholder="a phrase only you know" value="' + esc(state.sync.pass) + '"></div>'
-      + '<div class="hint">Your data is encrypted with this <strong>before</strong> it leaves the device \u2014 GitHub only ever sees ciphertext. <strong>If you lose it, the remote copy is unreadable.</strong> Use the same phrase on every device.</div>';
+      + '<div class="hint">A fine-grained token with <strong>Contents: read &amp; write</strong> on that one repo.</div>'
+      + '<div class="field"><label>Passphrase</label><input id="syPass" type="text" placeholder="four-words-like-this" value="' + esc(state.sync.pass) + '"></div>'
+      + '<div class="pw-row"><button type="button" class="act" id="syGen">' + icon("sync") + 'Generate one</button><span class="pw-rule" id="syRule"></span></div>'
+      + '<div class="hint">Your ledger is locked with this <strong>before</strong> it leaves the device \u2014 the server only ever stores an unreadable blob. <strong>At least 12 characters.</strong> Use the same passphrase on every device. <strong>If you lose it, the stored copy can never be opened again</strong> (your data on this device is unaffected).</div>'
+      + '<div class="field"><label>Name this device</label><input id="syDev" type="text" maxlength="20" placeholder="phone" value="' + esc(state.sync.device || "") + '"></div>'
+      + '<div class="hint">Shown on the other devices, so you know where a change came from.</div>'
+      + '<div id="syErr" class="sync-err" hidden></div>';
     openModal("Set up sync", body, "Connect", function () {
       var srv = document.getElementById("sySrv").value;
       var host = srv === "custom" ? document.getElementById("syHost").value.trim().replace(/\/+$/, "") : "https://api.github.com";
-      if (srv === "custom" && !/^https?:\/\//.test(host)) { flagInvalid("syHost"); toast("Enter the full API address"); return false; }
       var repo = document.getElementById("syRepo").value.trim();
       var tok = document.getElementById("syTok").value.trim();
       var pass = document.getElementById("syPass").value;
-      if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { flagInvalid("syRepo"); toast("Use the form owner/repo"); return false; }
-      if (!tok) { flagInvalid("syTok"); return false; }
-      if (pass.length < 8) { flagInvalid("syPass"); toast("Use at least 8 characters"); return false; }
+      var dev = document.getElementById("syDev").value.trim();
+      var err = document.getElementById("syErr");
+      function fail(msg, id) { err.textContent = msg; err.hidden = false; if (id) flagInvalid(id); }
+      err.hidden = true;
+      if (srv === "custom" && !/^https?:\/\//.test(host)) { fail("Enter the full API address, e.g. https://git.example.com/api/v1", "syHost"); return false; }
+      if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { fail("Repository should look like owner/name.", "syRepo"); return false; }
+      if (!tok) { fail("Paste an access token.", "syTok"); return false; }
+      if (pass.length < 12) { fail("Passphrase needs at least 12 characters. Tap Generate for a good one.", "syPass"); return false; }
+
+      /* check the credentials against the server BEFORE closing, so a typo doesn't
+         mean turning sync off and re-entering everything */
+      var okBtn = document.getElementById("mOk");
+      okBtn.disabled = true; okBtn.textContent = "Checking\u2026";
+      var prev = { host: state.sync.host, repo: state.sync.repo, token: state.sync.token, pass: state.sync.pass, enabled: state.sync.enabled };
       state.sync.host = host; state.sync.repo = repo; state.sync.token = tok; state.sync.pass = pass;
-      state.sync.enabled = true; state.sync.base = null;
-      /* nothing local yet → nothing to lose → pull cleanly instead of conflicting */
-      state.sync.dirty = !!(state.accounts.length || state.tx.length);
-      saveSet();
+      if (dev) state.sync.device = dev;
       (async function () {
-        syncBusy = true; renderSyncBtn();
-        try { await backend().check(); await doSync(false); toast("Sync connected"); }
-        catch (e) { state.sync.enabled = false; saveSet(); syncState = "error"; toast(syncErrText(e)); }
-        syncBusy = false; renderSyncBtn(); render();
+        try {
+          await backend().check();                       /* repo + token reachable and writable? */
+          var got = await backend().pull();
+          if (got) await openBlob(got.blob, pass);       /* passphrase actually opens it? */
+          state.sync.enabled = true; state.sync.base = null;
+          state.sync.dirty = !!(state.accounts.length || state.tx.length);
+          saveSet(); closeModal();
+          syncState = "idle"; await doSync(false);
+          toast("Sync connected");
+        } catch (e) {
+          state.sync.host = prev.host; state.sync.repo = prev.repo; state.sync.token = prev.token; state.sync.pass = prev.pass; state.sync.enabled = prev.enabled;
+          saveSet();
+          var e2 = document.getElementById("syErr");
+          if (e2) { e2.textContent = syncErrText(e); e2.hidden = false; }
+          if (e.message === "BAD_PASSPHRASE") flagInvalid("syPass");
+          if (e.message === "BAD_TOKEN" || e.message === "NO_WRITE") flagInvalid("syTok");
+          if (e.message === "NO_REPO") flagInvalid("syRepo");
+          var ob = document.getElementById("mOk");
+          if (ob) { ob.disabled = false; ob.textContent = "Connect"; }
+          renderSyncBtn();
+        }
       })();
+      return false;                                      /* keep the modal open until it succeeds */
     });
     wireSyncSetup();
   }
-  function wireSyncSetup() { var srv = document.getElementById("sySrv"); if (srv) srv.onchange = function () { document.getElementById("syHostWrap").style.display = srv.value === "custom" ? "block" : "none"; }; }
+  function wireSyncSetup() {
+    var srv = document.getElementById("sySrv");
+    if (srv) srv.onchange = function () { document.getElementById("syHostWrap").style.display = srv.value === "custom" ? "block" : "none"; };
+    var pw = document.getElementById("syPass"), rule = document.getElementById("syRule");
+    function upd() { var n = (pw.value || "").length; rule.textContent = n >= 12 ? "\u2713 strong enough" : (12 - n) + " more character" + (12 - n === 1 ? "" : "s") + " needed"; rule.className = "pw-rule " + (n >= 12 ? "good" : ""); }
+    if (pw) { pw.addEventListener("input", upd); upd(); }
+    var gen = document.getElementById("syGen");
+    if (gen) gen.onclick = function () { pw.value = makePassphrase(); upd(); pw.focus(); };
+    var dev = document.getElementById("syDev");
+    if (dev && !dev.value) dev.value = deviceName();
+  }
   function syncDisconnect() {
     confirmModal("Turn off sync?", "This device stops syncing. Your ledger stays exactly as it is, and the remote copy is left untouched.", "Turn off", function () {
       state.sync.enabled = false; state.sync.token = ""; state.sync.pass = ""; state.sync.base = null; state.sync.dirty = false; saveSet();
@@ -2165,7 +2257,7 @@
       : syncState === "error" ? syncMsg : state.sync.dirty ? "Unsynced changes on this device"
       : state.sync.at ? "Synced \u00b7 " + relTime(state.sync.at) : "Connected";
     var cls = syncState === "conflict" || syncState === "error" ? "neg" : state.sync.dirty ? "" : "pos";
-    return card("Sync", esc(state.sync.repo), '<div class="statcol"><div class="stat"><div class="l">Status</div><div class="v ' + cls + '">' + esc(st) + '</div></div></div>'
+    return card("Sync", esc(state.sync.repo), '<div class="statcol"><div class="stat"><div class="l">Status</div><div class="v ' + cls + '">' + esc(st) + '</div></div><div class="stat"><div class="l">This device is called</div><div class="v">' + esc(state.sync.device || "unnamed") + ' <button class="act" id="syRename">Rename</button></div></div></div>'
       + '<div class="seg" style="margin-top:var(--s-3)"><button data-sauto="1" class="' + (state.sync.auto ? "on" : "") + '">Automatic</button><button data-sauto="0" class="' + (state.sync.auto ? "" : "on") + '">Manual only</button></div>'
       + '<div class="hint">Automatic pulls when the remote is ahead and pushes when you\u2019re ahead \u2014 and only ever when nothing can be lost.</div>'
       + '<div class="data-btns"><button class="btn" id="sySync">' + icon("sync") + (syncState === "conflict" ? "Resolve conflict" : "Sync now") + '</button><button class="btn sec" id="syOff">Turn off</button></div>', { collapsible: true, key: "set-sync" });
@@ -2205,6 +2297,13 @@
     bind("syOn", "click", syncSetup);
     bind("syOff", "click", syncDisconnect);
     bind("sySync", "click", function () { if (syncState === "conflict") openConflict(); else doSync(false); });
+    bind("syRename", "click", function () {
+      openModal("Name this device", '<div class="field"><label>Device name</label><input id="dvName" type="text" maxlength="20" value="' + esc(state.sync.device || "") + '"></div><div class="hint">Shown on your other devices so you know where a change came from.</div>', "Save", function () {
+        var v = document.getElementById("dvName").value.trim();
+        if (!v) { flagInvalid("dvName"); return false; }
+        state.sync.device = v; saveSet(); render(); toast("Renamed to " + v);
+      });
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-sauto]"), function (b) { b.onclick = function () { state.sync.auto = b.getAttribute("data-sauto") === "1"; saveSet(); render(); }; });
     bind("dlJSON", "click", backupJSON);
     bind("upJSON", "click", function () { document.getElementById("fileJSON").click(); });
@@ -2215,6 +2314,8 @@
   function clearAllData() {
     confirmModal("Clear all data?", "This permanently deletes every account, transaction, loan and template on this device. Download a backup first — this can't be undone.", "Delete everything", function () {
       state.tx = []; state.loans = []; state.recurring = []; state.accounts = []; state.goals = []; state.ious = [];
+      state.sync.enabled = false; state.sync.token = ""; state.sync.pass = ""; state.sync.base = null; state.sync.dirty = false; syncState = "idle";
+      saveSet();   /* persist it — otherwise a reload turns sync back on and pushes the emptiness */
       state.backupCount = 0;
       (async function () { try { await store.del(K.tx); await store.del(K.loan); await store.del(K.rec); await store.del(K.acct); await store.del(K.goals); await store.del(K.ious); } catch (e) {} })();
       render(); toast("All data cleared");
