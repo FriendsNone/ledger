@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Staged from node_modules by scripts/prepare-www.mjs — never edit by hand
+www/capacitor.js
+
+# Claude Code: launch.json is shared dev config and IS committed; local overrides are not
+.claude/settings.local.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

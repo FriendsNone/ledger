@@ -1,0 +1,41 @@
+/* Ledger — native shell styles.
+   Loaded after the app's inline <style>, so these win at equal specificity.
+
+   Safe-area source: Capacitor 8's SystemBars sets --safe-area-inset-* on <html>.
+   Those are correct on every WebView, including the ones where env() reports 0
+   because Capacitor pads the WebView's parent view instead of passing insets
+   through. env() is the fallback for the plain web/PWA build, where the custom
+   properties are never set. */
+
+:root {
+  --sa-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --sa-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --sa-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+}
+
+/* The app already insets the bottom (tab bar, FAB, back-to-top, body padding);
+   only the top and the sides need adding, now that viewport-fit=cover lets the
+   page extend under the status bar and any display cutout. Longhand padding
+   keeps the app's padding-bottom rules untouched. */
+body {
+  padding-top: calc(26px + var(--sa-top));
+  padding-right: calc(18px + var(--sa-right));
+  padding-left: calc(18px + var(--sa-left));
+}
+
+@media (max-width: 480px) {
+  body {
+    padding-top: calc(18px + var(--sa-top));
+    padding-right: calc(12px + var(--sa-right));
+    padding-left: calc(12px + var(--sa-left));
+  }
+}
+
+/* The tab bar goes edge-to-edge once it is fixed to the bottom, so it carries
+   its own side insets rather than inheriting the body's. */
+@media (max-width: 780px) {
+  nav.tabs {
+    padding-left: var(--sa-left);
+    padding-right: var(--sa-right);
+  }
+}
