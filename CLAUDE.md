@@ -177,6 +177,16 @@ Install once before scaffolding (Phase 0). **Node** covers the web/Svelte/Capaci
   local feature branches before merging.
 
 ## Migration status (keep this current)
+
+> **Nothing has shipped yet, and that is deliberate. First ship is after P4.** P1 and P2 are
+> technically shippable; we are choosing not to. Until then the **legacy single-file PWA
+> stays hosted and is what real users are on**, and the native build's whole audience is the
+> dev devices. This is what makes the accepted carve-outs tolerable — GitHub sync's push
+> does not land, and the native build **cannot export data at all** (backup download and CSV
+> export both produce no file). Both must be closed **by P4**, because first ship is when
+> they stop being tolerable. Until then, **do not keep a real ledger in the native build.**
+> See `MIGRATION_PLAN.md` → *Locked decisions* → **When we first ship**.
+
 - [x] **P0** Alignment & docs
 - [x] **P1** Ship literal copy in Capacitor — `www/` copy + native shell + debug APK.
       Verified on device: screen-by-screen parity vs the oracle, offline launch (airplane

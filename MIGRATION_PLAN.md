@@ -43,6 +43,25 @@ Companion docs: `CLAUDE.md` (working guide) and `DESIGN.md` (visual system).
   state); no custom domain required. Android → **sideload APK** + optional **Play Store**;
   iOS → **TestFlight / Ad Hoc** (requires the $99/yr Apple Developer Program + an
   Xcode/cloud-Mac build; no free-form sideloading).
+- **When we first ship: after Phase 4 — not before.** P1 and P2 are *technically*
+  shippable, and that is deliberate rather than accidental; we are choosing not to. By the
+  end of P4 the migration is actually finished (P3 rebuilds the screens, P4 lands the
+  native capabilities) and the app is stable enough to use daily, which is the bar for
+  handing it to anyone.
+  - **Until then the legacy single-file PWA stays hosted, and it is what real users are
+    on.** The native build's entire audience is the dev devices in the matrix below.
+  - **This is what makes the accepted carve-outs survivable**, and they are only survivable
+    because of it: GitHub sync's push does not land (P1), and the native build has **no way
+    to export data at all** — backup download and CSV export both produce no file (P1, P2).
+    Shipping either of those to a real user would be indefensible. Both must be closed
+    **by P4**, since first ship is the moment they stop being survivable.
+  - **Corollary for the `sw.js` kill switch:** "keep it until every install has been through
+    it" is a tractable condition precisely because nothing shipped — the install population
+    is the dev devices, not the public. It can go once the last of them (currently the
+    Huawei, held on P1 on purpose) has been updated. This says nothing about the *web*
+    build's service worker, which is a different origin and scope and stays.
+  - Practical consequence, worth repeating where it hurts: **do not keep a real ledger in
+    the native build** before P4 fixes export.
 - **Storage:** stays client-side/local; E2E crypto parameters unchanged.
 - **Platform support: the real floor is the WebView, not the OS.** `minSdkVersion` only
   gates *installation*; Android System WebView updates through the Play Store
@@ -158,8 +177,9 @@ Companion docs: `CLAUDE.md` (working guide) and `DESIGN.md` (visual system).
   regression: it reproduces identically on the currently hosted single-file version, so
   the feature appears never to have been finished. Deliberately **not fixed** — it is
   scheduled for deletion in Phase 4a (replaced by Drive), so any fix is throwaway work on
-  code with a known end date, and nothing ships to users during these phases (the hosted
-  version remains the one real users are on).
+  code with a known end date, and nothing ships to users before P4 — the hosted legacy
+  version remains the one real users are on (see *Locked decisions* → **When we first
+  ship**).
   - The failure is **not visible by inspection**: `syncPush`, `GitHubBackend.push` and the
     `markDirty()` trigger via `commit()` all read correctly. Diagnosing it needs a live
     round-trip against a real repo and token.
@@ -177,15 +197,17 @@ Companion docs: `CLAUDE.md` (working guide) and `DESIGN.md` (visual system).
   `<a download>`; Capacitor's Android bridge sets **no** `DownloadListener` (the class
   appears nowhere in `@capacitor/android`), and Android will not route a blob URL to the
   DownloadManager. *Export CSV* shares the helper and **was confirmed to fail the same
-  way**. Restore and import still work — they use `<input type=file>`, which the WebView
-  does handle, and restoring the fixture on-device is how P1 parity was checked.
+  way**. Restore still works — it uses `<input type=file>`, which the WebView does handle,
+  and restoring the fixture on-device is how P1 parity was checked. (CSV *import* also
+  worked at P1; P2 dropped it. Restore is now the only way in — and, with download dead,
+  data only travels one way until P4.)
   - This is a **genuine regression against the web build**, where the download works. It
     is accepted deliberately and deferred to Phase 4's native share/save (bucket B's
     "backup download → native Share/Filesystem"), not treated as parity.
   - ⚠️ Combined with sync being broken, **native currently has no way to get data off the
-    device at all.** That is survivable only because nothing ships to users during these
-    phases. Do not let P4 slip past this without fixing it, and do not treat the native
-    build as a place to keep a real ledger until it is fixed.
+    device at all.** That is survivable only because nothing ships before P4 (see *Locked
+    decisions* → **When we first ship**). Do not let P4 slip past this without fixing it,
+    and do not treat the native build as a place to keep a real ledger until it is.
 
 ### Phase 2 — Drop / cleanup ✅
 - **Dropped: the `window.storage` Claude-artifact adapter.** The `store` chain is now
