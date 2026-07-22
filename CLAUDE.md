@@ -37,6 +37,34 @@ keeping a web/PWA build. This file orients any new session working in this repo.
   notifications, secure storage) with web fallbacks.
 - `src/lib/components/` — reusable UI. `src/views/` — the tab screens.
 - `reference/index.html` — original app (parity oracle; do not delete).
+- `reference/ledger-testdata.json` — **the test fixture. Use it.** Synthetic, safe to
+  commit: backup schema v9, ₱/PHP, 3 accounts, 45 transactions, 1 template, 1 goal, 1 IOU.
+  Load it through Settings → *Restore from backup* before checking any screen — an empty
+  ledger renders empty states and hides nearly every parity bug. **Extend this file** when
+  a case is missing rather than inventing throwaway data; known gaps today are **transfers,
+  transfer fees and loans** (all zero), so the People loan flows and the neutral
+  transfer colour rule are not yet covered.
+- `www/` — **what ships today** (Phase 1–2): the literal copy of the app plus the native
+  shell. `www/index.html` is editable source — Phase 2's cleanups land here — and differs
+  from `reference/index.html` by exactly three lines: `viewport-fit=cover`, a `native.css`
+  link, and the two shell `<script>` tags. `www/native.css` (safe areas) and
+  `www/native.js` (system bars, back button) are the shell; `www/capacitor.js` is staged
+  from `node_modules` by `npm run prepare:www` and is gitignored. Phase 3 replaces all of
+  it when `webDir` flips to `dist/`.
+- **Token invariant:** the status-bar colour has a native half —
+  `android/app/src/main/res/values{,-night}/colors.xml` defines `ledgerPaper`, which must
+  stay in step with the `--paper` / dark `--paper` tokens. Below Android API 35 the system
+  paints the bars from these resources; `www/native.js` then overrides at runtime so the
+  bar follows the *app's* theme rather than the device's.
+
+## Platform support
+The binding constraint is the **WebView (Chromium ≥ 105)**, not the Android version —
+WebView updates via the Play Store independently of the OS. `:has()` and the independent
+`translate:` property set that bar, and `translate:` is load-bearing (it centres and
+animates `.toast`). Declared/tested floor: **Android 9 (API 28)**, verified on a Huawei
+running Chrome 138. `minSdkVersion` stays **24** — Android 7–8 are "probably fine,
+untested", not supported. See `MIGRATION_PLAN.md` → *Locked decisions* for the runtime
+capability probe Phase 2 should add.
 
 ## Data model
 Accounts · Transactions (income / expense / transfer + fee) · Loans (lent/borrowed,
@@ -87,10 +115,14 @@ Install once before scaffolding (Phase 0). **Node** covers the web/Svelte/Capaci
 
 ## Commands
 - Dev server: `npm run dev`
-- Tests: `npm run test` (Vitest)
+- Tests: **not wired yet** — Vitest arrives with the domain modules in Phase 3. There is no
+  `test` script in `package.json` today; `npm run check` (svelte-check + tsc) is the only
+  static gate.
 - Build web: `npm run build` → `dist/`
-- Sync native: `npx cap sync`
-- Android: `npx cap open android`, or `./gradlew assembleDebug` inside `android/`
+- Sync native: `npm run cap:sync` — stages `www/capacitor.js`, then `cap sync`. Plain
+  `npx cap sync` skips the staging step and leaves the shell without its bridge.
+- Android: `npm run android` (sync + open Studio), or `./gradlew assembleDebug` inside
+  `android/` → `android/app/build/outputs/apk/debug/app-debug.apk`
 - iOS (later, needs macOS/Xcode): `npx cap open ios`
 - App ID: `io.friendsnone.ledger` (permanent; no domain purchase needed).
 - Capacitor `webDir`: **`www`** in Phase 1 (literal copy), flips to **`dist`** from Phase 3.
@@ -112,7 +144,17 @@ Install once before scaffolding (Phase 0). **Node** covers the web/Svelte/Capaci
 
 ## Migration status (keep this current)
 - [x] **P0** Alignment & docs
-- [ ] **P1** Ship literal copy in Capacitor (debug APK, parity verified)
+- [x] **P1** Ship literal copy in Capacitor — `www/` copy + native shell + debug APK.
+      Verified on device: screen-by-screen parity vs the oracle, offline launch (airplane
+      mode), data surviving recents-swipe / force-stop / reboot, the whole back-button
+      chain, restore-from-backup, autocomplete with the soft keyboard up, native date/time
+      pickers, privacy blur, theme switching, and system bars + safe areas across four
+      devices spanning API 28–37 (matrix in `MIGRATION_PLAN.md` → *Verification*).
+      Two accepted carve-outs, both deferred on purpose:
+      🔴 **GitHub sync broken** — pre-existing, push does not land; leave it off, dies in P4a.
+      🔴 **Backup download & CSV export produce no file on native** — a real regression vs
+      the web build; needs P4's native share/save. Until then the native build has **no**
+      way to export data, so don't keep a real ledger in it.
 - [ ] **P2** Drop: `window.storage` shim, native-build SW, **CSV import**; soften backup nag
 - [ ] **P3** Extract typed/tested domain modules; rebuild screens in Svelte (parity-checked)
 - [ ] **P4** Native: **Google Drive sync first** → retire GitHub sync; then biometric lock,
