@@ -53,13 +53,23 @@ keeping a web/PWA build. This file orients any new session working in this repo.
   today, so they land in this month's totals — whether that was intended when the fixture
   was generated is unknown, but it is kept on purpose as future-dated-entry coverage.
   Template-logged rows carry `tpl`; settlement rows carry `sid` with an empty `account`.
-- `www/` — **what ships today** (Phase 1–2): the literal copy of the app plus the native
-  shell. `www/index.html` is editable source — Phase 2's cleanups land here — and differs
-  from `reference/index.html` by exactly three lines: `viewport-fit=cover`, a `native.css`
-  link, and the two shell `<script>` tags. `www/native.css` (safe areas) and
-  `www/native.js` (system bars, back button) are the shell; `www/capacitor.js` is staged
-  from `node_modules` by `npm run prepare:www` and is gitignored. Phase 3 replaces all of
-  it when `webDir` flips to `dist/`.
+- `www/` — **what ships today** (Phase 1–2): the app plus the native shell.
+  `www/index.html` is editable source and has now diverged from `reference/index.html` —
+  the oracle stays frozen, so **diff before assuming parity**. The differences are the
+  Phase 1 shell hooks (`viewport-fit=cover`, the `native.css` link, the two shell
+  `<script>` tags) plus the Phase 2 cleanups: no `window.storage` adapter, no service-worker
+  registration, no CSV import, and a softer backup nag. `www/native.css` (safe areas) and
+  `www/native.js` (WebView capability probe, system bars, back button) are the shell;
+  `www/capacitor.js` is staged from `node_modules` by `npm run prepare:www` and is
+  gitignored. **`www/sw.js` is a self-destructing kill switch, not a service worker** —
+  it exists only to clear the cache the *old* worker left on devices that installed an
+  earlier APK, since those still serve a stale `index.html` cache-first. Keep it until
+  every install has been through it; the real web-build SW lives at `reference/sw.js`.
+  Phase 3 replaces all of it when `webDir` flips to `dist/` — 🛑 **but `sw.js` must keep
+  being served from the app root through that flip.** `public/` does not contain it today,
+  so a naive flip drops it, and a P1-era device then gets a **404** for `sw.js`, which makes
+  its old worker stay registered and serve the stale cache *permanently*. The Huawei is
+  being held on a P1 build precisely to test that path.
 - **Token invariant:** the status-bar colour has a native half —
   `android/app/src/main/res/values{,-night}/colors.xml` defines `ledgerPaper`, which must
   stay in step with the `--paper` / dark `--paper` tokens. Below Android API 35 the system
@@ -72,8 +82,23 @@ WebView updates via the Play Store independently of the OS. `:has()` and the ind
 `translate:` property set that bar, and `translate:` is load-bearing (it centres and
 animates `.toast`). Declared/tested floor: **Android 9 (API 28)**, verified on a Huawei
 running Chrome 138. `minSdkVersion` stays **24** — Android 7–8 are "probably fine,
-untested", not supported. See `MIGRATION_PLAN.md` → *Locked decisions* for the runtime
-capability probe Phase 2 should add.
+untested", not supported. Phase 2 added the runtime capability probe for exactly these two
+properties at the top of `www/native.js`; under-spec WebViews get a plain banner rather
+than a subtly broken layout. See `MIGRATION_PLAN.md` → *Locked decisions* for the
+rationale.
+
+**Testing the reject path:** keep an **AOSP** Android 10 (API 29) AVD around — its
+`com.android.webview` is pinned at **74** and there is no Play Store, so it cannot update
+itself above the floor (a Google Play image would). It is the only way to see the failure
+branch, and it makes the breakage visible: flex `gap` is absent, so labels run together.
+It is **not a supported target** — its job is proving under-spec users get the banner. In
+P3, keep the probe in its own ES5 `<script>` outside the Vite bundle, or a `SyntaxError`
+in modern bundle output will white-screen the page before the banner can render.
+
+**The web build has no probe** — it lives only in `www/native.js`, so an old *browser* still
+gets the silent breakage, which quietly undercuts the "excluded users still have the web
+build" rationale. Add it to Vite's `index.html` in P3; never retrofit the frozen oracle.
+`:has()` needs Safari 15.4, and on iOS every browser is Safari's engine.
 
 ## Data model
 Accounts · Transactions (income / expense / transfer + fee) · Loans (lent/borrowed,
@@ -164,7 +189,20 @@ Install once before scaffolding (Phase 0). **Node** covers the web/Svelte/Capaci
       🔴 **Backup download & CSV export produce no file on native** — a real regression vs
       the web build; needs P4's native share/save. Until then the native build has **no**
       way to export data, so don't keep a real ledger in it.
-- [ ] **P2** Drop: `window.storage` shim, native-build SW, **CSV import**; soften backup nag
+- [x] **P2** Cleanup — dropped the `window.storage` shim, the native-build service worker
+      (`www/sw.js` is now a **kill switch** for stale caches on older installs; the web
+      build keeps `reference/sw.js`), and **CSV import** (CSV *export* stays). Softened the
+      backup nag: first at 25 records, repeat after 30 days or 50 changes, and "Not now" is
+      a real **persisted 14-day snooze** instead of a flag reset on every launch. Added the
+      **WebView capability probe** in `native.js` — `translate:` + `:has()`, with a plain
+      banner instead of a silently broken layout. Verified in the web parity harness
+      (7 of 8 screens byte-identical to the oracle, Settings differing only by the removed
+      Import CSV button and its reworded hint), on both emulators, and — decisively — on the
+      **realme, which was carrying a genuine P1-era install** rather than a staged one.
+      `adb install -r` *without uninstalling* left `caches []`, no registration, an
+      uncontrolled page and the P2 UI, with every record and setting preserved and
+      `nagSnooze` the only key added. **Offline launch was re-verified in airplane mode with
+      zero caches** — the APK, not the SW, is what makes native offline.
 - [ ] **P3** Extract typed/tested domain modules; rebuild screens in Svelte (parity-checked)
 - [ ] **P4** Native: **Google Drive sync first** → retire GitHub sync; then biometric lock,
       Keystore, notifications, share/save, haptics

@@ -58,10 +58,10 @@ Companion docs: `CLAUDE.md` (working guide) and `DESIGN.md` (visual system).
   - **`minSdkVersion` stays 24.** Changing it buys nothing today and it lets Android 7–8
     devices with a current WebView keep working. Treat 7–8 as "probably fine, untested",
     not as supported. Revisit only if a Phase 4 native API forces it.
-  - **Phase 2 should add a runtime capability probe**, not UA sniffing — exactly this:
-    `CSS.supports("translate", "-50% 0") && CSS.supports("selector(:has(*))")`. If it
-    fails, say so plainly (update Android System WebView, or use the web build) instead of
-    rendering a subtly broken layout. ~10 lines.
+  - **The runtime capability probe landed in Phase 2** — a feature probe, not UA sniffing:
+    `CSS.supports("translate", "-50% 0") && CSS.supports("selector(:has(*))")`, at the top
+    of `www/native.js`. On failure it says so plainly (update Android System WebView, or
+    use the web build) instead of rendering a subtly broken layout.
   - Anyone the native build excludes still has the **web/PWA build**, which is what makes a
     higher floor cheap.
 - **Assets & styling:** replace the base64-inline fonts + inline SVG icon sprite with
@@ -187,27 +187,119 @@ Companion docs: `CLAUDE.md` (working guide) and `DESIGN.md` (visual system).
     phases. Do not let P4 slip past this without fixing it, and do not treat the native
     build as a place to keep a real ledger until it is fixed.
 
-### Phase 2 — Drop / cleanup
-- **Drop:** the `window.storage` Claude-artifact adapter; the service worker in the
-  native build (bundle handles offline — keep the SW for the web build); **CSV import**
-  (not useful as backup; revisit only if a general "Import from…" feature is built).
-  Soften the backup-due nag.
+### Phase 2 — Drop / cleanup ✅
+- **Dropped: the `window.storage` Claude-artifact adapter.** The `store` chain is now
+  localStorage → IndexedDB → memory. Settings' *Saved in* row reads "this browser" on
+  native, which is inherited wording, not a P2 change — it goes when the storage layer
+  moves to Capacitor Preferences.
+- **Dropped: the service worker in the native build** — the registration is gone from
+  `www/index.html`, and the web build keeps its own (`reference/sw.js`, untouched).
   > The SW is not just redundant natively, it actively bites while iterating on Phase 1:
   > it caches `index.html` under `https://localhost`, and reinstalling an updated APK does
   > **not** invalidate that cache unless `sw.js` itself changed. Symptom: the new APK
-  > shows the old UI. Workaround until this phase lands — uninstall (or clear app data)
-  > between installs.
+  > shows the old UI.
+  - **Deleting the registration is not enough**, and this is the part worth remembering:
+    a device that installed an earlier APK still has the old worker registered, and it
+    serves the stale `index.html` **cache-first**, so the new page never runs and can
+    never unregister anything. The one file that *does* reach those devices is `sw.js`
+    itself — the stale page still calls `register("sw.js")`, and the browser fetches it
+    and installs it on any byte change.
+  - So **`www/sw.js` is now a self-destructing kill switch**: it deletes every cache,
+    unregisters itself, and reloads open windows, which then load from the APK. No fetch
+    handler — an unregistering worker must not answer from the cache it is deleting.
+    It is inert on a fresh install (nothing registers it). **Keep it until every install
+    has been through it.**
+  - Verified in the browser harness against a deliberately staged stale registration:
+    old worker controlling + `index.html` cached → register `sw.js` → caches `[]`,
+    registration gone, `navigator.serviceWorker.controller === null`, app re-renders.
+    Only its own scope was cleared (a `/reference/` registration survived untouched).
+- **Dropped: CSV import.** Button, `#fileCSV` input + handler, and
+  `importCSV`/`parseCSV`/`acctIdByName` are gone; the *Backup & data* hint no longer
+  offers it. A CSV round-trip was always lossy — it never carried goals, IOUs, templates,
+  tags or ids — so it was never a backup, and the backup file is. Revisit only under a
+  general "Import from…" feature.
+- **Softened the backup-due nag.** It used to appear at 5 records and again after 7 days
+  or 20 changes, and "Not now" set a flag that was **never persisted** — so it came back
+  on the next launch. A reminder that returns every time you open the app is one you stop
+  reading. Now: first nag at **25** records, repeat after **30** days or **50** changed
+  records, and "Not now" is a **persisted 14-day snooze** (`nagSnooze`, saved in settings
+  and cleared by any backup or restore). `nagDismissed` is gone.
 - **Keep:** CSV **export** — but it produces no file on native (confirmed on device; same
   `download()` helper as the JSON backup, see Phase 1). Fixing that is Phase 4's job.
-- **Add: a WebView capability probe.** ~10 lines, and the only thing standing between an
-  under-spec WebView and a silently broken layout:
-  `CSS.supports("translate", "-50% 0") && CSS.supports("selector(:has(*))")`. On failure,
-  say so plainly — update Android System WebView, or use the web build. Rationale and the
-  measured Chromium ≥ 105 floor are in *Locked decisions*.
+- **Added: the WebView capability probe** (`www/native.js`, ahead of the Capacitor
+  early-return so it runs even if the bridge is missing):
+  `CSS.supports("translate", "-50% 0") && CSS.supports("selector(:has(*))")`. On failure it
+  inserts a themed `role="alert"` banner as the first child of `<main>` — above
+  `#backupNag`, and outside `#app`, so `render()` never wipes it — saying the engine is out
+  of date, the data is safe, and to update Android System WebView or use a browser. A
+  feature probe, not UA sniffing, so it self-corrects when the WebView updates. Rationale
+  and the measured Chromium ≥ 105 floor are in *Locked decisions*.
 - **GitHub sync:** 🔴 **broken, not working** (push does not land — pre-existing; see
   Phase 1). Deliberately not fixed and *not* dropped here either, because Drive (Phase 4a)
   is the replacement and there is no point rewriting code with a known end date. Leave the
   feature switched off.
+- **P2 verification — web harness (full fixture).** `npm run check` clean; both shell files
+  and the app's inline script parse. Seven of the eight screens are **byte-identical** to
+  `reference/index.html` in text *and* structural signature; **Settings** differs by
+  exactly the two intended edits (the *Import CSV* button removed, the hint reworded) and
+  nothing else. Backup/CSV export still build their blobs and filenames; the snooze was
+  exercised end-to-end (dismiss → survives reload → returns once aged past 14 days →
+  cleared by taking a backup); the probe banner was forced on and renders themed, in the
+  right place, surviving a re-render.
+- **P2 verification — on-device, two emulators + the realme.** The upgrade path was tested for real:
+  build the **pre-P2 APK** (from `HEAD` with the P2 changes stashed), install it, seed the
+  fixture, confirm the stale state, then `adb install -r` the P2 APK **without
+  uninstalling** — the exact scenario the kill switch exists for.
+
+  | Device | API | WebView | Stale state before | After in-place update |
+  |---|---|---|---|---|
+  | Pixel_9_Pro (emu) | 15 (35) | 124 | SW at `https://localhost/sw.js`, controlling, cache `ledger-v101`, `index.html` cached, old UI | caches `[]`, no registration, uncontrolled, P2 UI |
+  | Pixel_10_Pro (emu) | 17 (37) | 149 | identical | identical |
+  | **realme RMX3370 (real)** | 13 (33) | 150 | **a genuine P1-era install**, not a staged one — installed 14:25, updated 15:34 that day, with the fixture and real accumulated settings | identical |
+
+  🟢 **The realme run is the one that actually settles it.** The emulator runs reconstructed
+  the stale state; the realme *was* in it — a P1 APK that had been installed, used, and
+  already updated once, carrying its own cache and a settings blob written by the old build.
+  After `adb install -r` with **no uninstall**: registration gone, `caches []`,
+  `cachedIndexHtml false`, uncontrolled, and the P2 UI on screen (Settings shows three
+  buttons, no *Import CSV*). Everything the user owns survived byte-for-byte — 157 tx,
+  6 accounts, 2 loans, 11 templates, 4 goals, 5 IOUs, `cur` `₱`, `theme` `system`,
+  `lastBackup 1784713440531`, `backupCount 176`, sync still off — with `nagSnooze` the only
+  key added. The nag correctly stayed hidden, since `total 176 === backupCount`.
+
+  Also on-device: **157 transactions and 6 accounts survived** the update; settings written
+  by the *old* build (no `nagSnooze` key) load without complaint and gain the field;
+  "Not now" **survives a full force-stop + relaunch**; back button still unwinds
+  Trends → Overview and exits from Overview; both probes return true so no banner, as
+  expected for these WebViews. Inspection was done over CDP against the debug WebView
+  (`adb forward` to `webview_devtools_remote_*`), not by reading screenshots.
+- 🟢 **Offline launch survives losing the service worker** — the one thing dropping it
+  could plausibly have broken. Verified with **airplane mode on**, `caches []` and zero
+  registrations: the app launches and renders the full ledger, because Capacitor serves
+  every asset from the APK. The SW was never what made the native build offline-capable.
+- ⚠️ **Pre-existing, found while testing P2, not caused by it:** localStorage writes are
+  flushed to disk asynchronously, so `am force-stop` **within about a second** of a write
+  loses it — the first snooze test failed this way before the value was re-read as `0`.
+  At a 2-second gap it persists reliably. This applies to *every* setting the app writes
+  (theme, currency, privacy, collapsed cards), not just the nag, and it is a normal
+  Chromium property rather than a Ledger bug. Real users will not hit it. It disappears
+  when storage moves to **Capacitor Preferences** (bucket B) — worth remembering as one
+  more reason to make that move.
+- 🟢 **The probe's *failure* path is confirmed on a genuinely under-spec WebView.** An
+  **AOSP Android 10 (API 29) AVD** carries `com.android.webview` **74.0.3729.185** and has
+  **no Play Store**, so the WebView is frozen at the system-image version and cannot drift
+  above the floor — which is exactly what makes an AOSP image the right choice here; a
+  Google Play image would auto-update itself out of the test. Both probes return `false`
+  and the banner renders, legible and correctly placed, with the app still usable behind it.
+  - The screenshot also **confirms the predicted breakage rather than just asserting it**:
+    flex `gap` (Chromium 84) is absent, so the hero renders
+    `INCOME · THIS MONTHEXPENSES · THIS MONTH` with the labels run together, and every
+    shortcut chip loses the space between name and amount (`Morning coffee-₱145.00`). This
+    is the "49 flex rows losing their spacing" from *Locked decisions*, observed.
+  - Cosmetic aside, below the floor so not actionable: the `₱` glyph renders as tofu on
+    WebView 74.
+  - Keep this AVD. It is the **permanent regression target for the reject path** — see the
+    Phase 3 note below, which is the real reason it matters.
 
 ### Phase 3 — Adapt to TypeScript + Svelte (piece by piece, tested)
 - **Extract domain logic first** into framework-agnostic, typed, **Vitest-covered**
@@ -224,6 +316,42 @@ Companion docs: `CLAUDE.md` (working guide) and `DESIGN.md` (visual system).
   its scoped styles (`.btn` in `<Button>`) — no utility framework (`DESIGN.md` §6–§7).
 - **Flip Capacitor `webDir` `www` → `dist`** once the Svelte app builds, and stand up the
   GitHub Pages deploy (Actions build of `dist/`, Vite `base: '/ledger/'`).
+- 🛑 **BLOCKING, do this before the `webDir` flip: `sw.js` must still be served from the
+  app root in `dist/`.** It is currently `www/sw.js`; `public/` holds only `favicon.svg` and
+  `icons.svg`, so a naive flip **drops it from the build**. That is not a cosmetic loss —
+  it is a one-way trap:
+  - A device still on a P1 build loads its **cached** `index.html`, which calls
+    `register("sw.js")`. If that request **404s**, the update check fails and the *existing*
+    old worker stays registered and keeps serving the stale cache **cache-first, forever**.
+    The device never sees the P3 app and cannot be rescued except by clearing app data or
+    reinstalling.
+  - So: copy `sw.js` into `public/` (or otherwise guarantee it lands at the root of `dist/`)
+    **before** flipping `webDir`, and re-verify on a device that is genuinely still on P1.
+  - The **Huawei SHT-AL09 is deliberately being held on a P1 build** for exactly this test —
+    it is the P1 → P3 upgrade path, a bigger jump than P1 → P2. Do not update it casually.
+  - Only once every install has been through the kill switch can `sw.js` be deleted. With
+    the Huawei parked on P1, that condition is explicitly **not yet met**.
+- ⚠️ **Give the web build the capability probe too — it does not have one.** The probe ships
+  only in `www/native.js`, which only the native `www/index.html` loads; `reference/index.html`
+  (the hosted web build) has zero occurrences of `CSS.supports`. So an under-spec *browser*
+  still gets the silently broken layout. That is not merely a missing nicety: the stated
+  reason a high native floor is acceptable is "anyone the native build excludes still has the
+  web/PWA build" — and the native banner sends those users to a build that is **equally
+  broken and says nothing**. Fix it when Vite's `index.html` becomes the web build; do **not**
+  retrofit `reference/index.html`, which is the frozen oracle.
+  - **iOS raises the stakes.** `:has()` needs **Safari 15.4** (March 2022), and on iOS every
+    browser uses Safari's engine — so an older iPad user cannot escape by switching browsers,
+    and iOS is a planned target. Reword the shared banner so it does not say "Android System
+    WebView" on the web.
+- ⚠️ **Keep the capability probe outside the bundle, and keep it ES5.** Today it survives a
+  broken engine because it is its own `<script>` in `www/native.js`, parsed independently of
+  the app. Once Vite emits the app, its default target is modern syntax that **Chromium 74
+  cannot parse** — and a `SyntaxError` in the bundle kills the page *before* any probe
+  inside it runs, turning a clear "your WebView is too old" banner into a **white screen**,
+  which is strictly worse than the silent breakage the probe was added to prevent. So the
+  probe must stay a small, separate, ES5-safe script that the bundle cannot take down with
+  it. Verify on the **AOSP Android 10 AVD** (WebView 74) after the flip: the banner must
+  still render. This is the specific reason that AVD is worth keeping around.
 
 ### Phase 4 — Native capabilities (piece by piece, tested)
 - **4a (top priority): Google Drive sync** — native Google Sign-In, `drive.appdata`
@@ -253,7 +381,7 @@ Companion docs: `CLAUDE.md` (working guide) and `DESIGN.md` (visual system).
 | **A · Ship now** (direct port) | all entities; all 8 screens; all cross-cutting UX (quick-add FAB, autocomplete, Undo, privacy blur, collapsible cards, themes, multi-currency, toasts); JSON backup/restore; CSV **export**; local storage; ~~GitHub E2E sync~~ *(ported but **broken** — push does not land; pre-existing, not fixed, see Phase 1)* |
 | **B · Adapt in place** (ships v1, swapped later) | storage (web → Capacitor Preferences/SQLite); backup download & file import (`<a download>` / `<input file>` → native Share/Filesystem/picker); sync `fetch` (→ native HTTP); service worker (web only) |
 | **C · Do later** (native) | Google Drive sync *(4a)*; biometric/PIN lock; Keystore token storage; bill notifications; native share/save + picker; haptics; date picker; widget |
-| **D · Dropped / changed** | `window.storage` shim (drop); native-build SW (drop, keep for web); **CSV import (drop)**; backup nag (soften); GitHub sync (retire after Drive) |
+| **D · Dropped / changed** | *done in P2:* `window.storage` shim (dropped); native-build SW (dropped — `www/sw.js` is now a kill switch; web build keeps `reference/sw.js`); **CSV import (dropped)**; backup nag (softened + persisted snooze). *Still pending:* GitHub sync (retire after Drive) |
 
 ## Critical files
 
@@ -283,6 +411,30 @@ Grow it when a case is missing rather than inventing throwaway data.
 | Huawei SHT-AL09 (tablet) | 9 (28) | Chrome 138 | 627 → `481–780` middle | ✅ wide hero, 7 tabs unscrolled, no overflow |
 | Emulator | 15 (35) | 124 | 411 → `≤480` | ✅ the `windowBackground`-only case |
 | Emulator | 17 (37) | 149 | 411 → `≤480` | ✅ true edge-to-edge, insets 52/24px |
+| Emulator (AOSP, **P2**) | 10 (29) | **74** | 360 → `≤480` | ⛔ **below floor on purpose** — probe fires, banner renders, flex `gap` visibly absent |
+
+**What each device is actually for.** The fleet is not "more devices is better" — each unit
+covers something the others cannot, and knowing which is what saves re-testing on hardware
+that has nothing new to say.
+
+| Device | Uniquely covers | Matters most in |
+|---|---|---|
+| realme RMX3370 (13/33, WV 150) | the **only OEM skin** (realme UI): background killing, custom share sheet, file picker, permission dialogs; plus API ≤34 bar painting | **P4** — notifications, native share/save, biometric prompts |
+| Huawei SHT-AL09 (9/28, Chrome 138) | the **support floor**, old OS + current WebView; the `481–780` middle layout; pre-2019 Huawei **GMS** | P1 ✅, **P4a** Drive sign-in |
+| Emulator (15/35, WV 124) | `windowBackground`-only bar case | P1 ✅, P2 ✅ |
+| Emulator (17/37, WV 149) | true edge-to-edge + injected insets | P1 ✅, P2 ✅ |
+| Emulator AOSP (10/29, **WV 74**) | **below the floor on purpose** — the probe's reject path; frozen WebView, no Play Store | P2 ✅, **P3** (probe must survive bundling) |
+
+Rules of thumb this implies:
+- A **WebView-only change** (all of P2) is fully covered by the emulators; the physical
+  devices add nothing and are not worth plugging in.
+- A **native-surface change** (all of P4) is barely covered by emulators at all — stock
+  images hide exactly the OEM behaviour that breaks things. Go to the realme first.
+- The **AOSP AVD must never be "fixed"** into passing. A failing screenshot there is the
+  expected result.
+- Highest-fidelity kill-switch test available: a device still carrying the **P1-era APK**,
+  updated in place with `adb install -r`. That is the real upgrade path rather than a staged
+  one; the tell is *Import CSV* being gone from Settings.
 
 ⚠️ **Untested: the `>780px` wide regime on a real screen** — where `nav.tabs` is *not*
 bottom-fixed. The Huawei is 627 CSS px in portrait and the app is portrait-locked, so no
@@ -310,8 +462,19 @@ Rules the full fixture makes checkable, verified in P1 and worth re-checking in 
   force-close → reopen persists; feature parity vs reference; back button navigates tabs.
   ~~GitHub sync push/pull works on-device~~ — **struck: sync is broken and stays broken**
   (see Phase 1). Do not treat this criterion as passable until Drive sync lands in 4a.
+- **P2:** ✅ all met. Parity harness — 7 of 8 screens byte-identical to the oracle, Settings
+  differing only by the dropped *Import CSV* button and its reworded hint. **Kill switch**
+  clears caches + unregisters when a P2 APK is installed **over** a pre-P2 one with no
+  uninstall (proved on a genuinely P1-era realme, not just staged emulators), with every
+  record and setting preserved. **Offline launch still works in airplane mode with zero
+  caches.** Capability probe passes on modern WebViews and **renders its banner on
+  WebView 74** (AOSP AVD). Backup restore, CSV export and the 14-day nag snooze all
+  exercised end-to-end.
 - **P3:** Vitest green on domain modules — money rounding, **crypto encrypt/decrypt
   round-trip**, sync **sha-guard/conflict**; each migrated screen visually matches the
-  reference.
+  reference. **Plus the P2 carry-overs:** `sw.js` must still be served from the root of
+  `dist/` after the `webDir` flip (verify on the Huawei, deliberately held on P1); the
+  capability probe must survive bundling as a separate ES5 script; and the web build needs
+  a probe of its own.
 - **P4:** on-device plugin checks — Drive sign-in + push/pull, biometric prompt, a fired
   notification, share-sheet backup, Keystore-persisted token.
