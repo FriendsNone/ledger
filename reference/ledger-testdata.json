@@ -1,0 +1,562 @@
+{
+  "app": "ledger",
+  "version": 9,
+  "exportedAt": "2026-07-14T04:46:01.530Z",
+  "currency": "₱",
+  "accounts": [
+    {
+      "id": "m_cash",
+      "name": "Cash",
+      "opening": 1500,
+      "color": "#c9822f"
+    },
+    {
+      "id": "m_bank",
+      "name": "Bank",
+      "opening": 24000,
+      "color": "#2f6f6a"
+    },
+    {
+      "id": "m_wallet",
+      "name": "E-Wallet",
+      "opening": 800,
+      "color": "#7a5ea8"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "mt1",
+      "type": "expense",
+      "amount": 68.12,
+      "where": "Pharmacy",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-05-03",
+      "time": "12:30",
+      "created": 1777766400000
+    },
+    {
+      "id": "mt2",
+      "type": "income",
+      "amount": 9000,
+      "where": "Work",
+      "account": "m_bank",
+      "desc": "",
+      "date": "2026-05-03",
+      "time": "09:00",
+      "created": 1777766400000
+    },
+    {
+      "id": "mt3",
+      "type": "expense",
+      "amount": 403.38,
+      "where": "Cinema",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-05-05",
+      "time": "12:30",
+      "created": 1777939200000
+    },
+    {
+      "id": "mt4",
+      "type": "expense",
+      "amount": 263.29,
+      "where": "Corner Store",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-05-06",
+      "time": "12:30",
+      "created": 1778025600000
+    },
+    {
+      "id": "mt5",
+      "type": "expense",
+      "amount": 421.98,
+      "where": "Corner Store",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-05-08",
+      "time": "12:30",
+      "created": 1778198400000
+    },
+    {
+      "id": "mt6",
+      "type": "expense",
+      "amount": 488.72,
+      "where": "Coffee House",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-05-09",
+      "time": "12:30",
+      "created": 1778284800000
+    },
+    {
+      "id": "mt7",
+      "type": "expense",
+      "amount": 311.47,
+      "where": "Barber",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-05-11",
+      "time": "12:30",
+      "created": 1778457600000
+    },
+    {
+      "id": "mt8",
+      "type": "expense",
+      "amount": 483.52,
+      "where": "Cinema",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-05-13",
+      "time": "12:30",
+      "created": 1778630400000
+    },
+    {
+      "id": "mt9",
+      "type": "expense",
+      "amount": 346.78,
+      "where": "Coffee House",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-05-15",
+      "time": "12:30",
+      "created": 1778803200000
+    },
+    {
+      "id": "mt10",
+      "type": "expense",
+      "amount": 441.71,
+      "where": "Bus fare",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-05-16",
+      "time": "12:30",
+      "created": 1778889600000
+    },
+    {
+      "id": "mt11",
+      "type": "expense",
+      "amount": 382.92,
+      "where": "Bakery",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-05-18",
+      "time": "12:30",
+      "created": 1779062400000
+    },
+    {
+      "id": "mt12",
+      "type": "expense",
+      "amount": 427.29,
+      "where": "Pharmacy",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-05-19",
+      "time": "12:30",
+      "created": 1779148800000
+    },
+    {
+      "id": "mt13",
+      "type": "income",
+      "amount": 9000,
+      "where": "Work",
+      "account": "m_bank",
+      "desc": "",
+      "date": "2026-05-19",
+      "time": "09:00",
+      "created": 1779148800000
+    },
+    {
+      "id": "mt14",
+      "type": "expense",
+      "amount": 116.31,
+      "where": "Bakery",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-05-21",
+      "time": "12:30",
+      "created": 1779321600000
+    },
+    {
+      "id": "mt15",
+      "type": "expense",
+      "amount": 51.88,
+      "where": "Pharmacy",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-05-23",
+      "time": "12:30",
+      "created": 1779494400000
+    },
+    {
+      "id": "mt16",
+      "type": "expense",
+      "amount": 203.6,
+      "where": "Coffee House",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-05-24",
+      "time": "12:30",
+      "created": 1779580800000
+    },
+    {
+      "id": "mt17",
+      "type": "expense",
+      "amount": 248.57,
+      "where": "Coffee House",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-05-25",
+      "time": "12:30",
+      "created": 1779667200000
+    },
+    {
+      "id": "mt18",
+      "type": "expense",
+      "amount": 291.79,
+      "where": "Pharmacy",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-05-27",
+      "time": "12:30",
+      "created": 1779840000000
+    },
+    {
+      "id": "mt19",
+      "type": "expense",
+      "amount": 463.78,
+      "where": "Pharmacy",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-05-29",
+      "time": "12:30",
+      "created": 1780012800000
+    },
+    {
+      "id": "mt20",
+      "type": "expense",
+      "amount": 291.19,
+      "where": "Bakery",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-05-31",
+      "time": "12:30",
+      "created": 1780185600000
+    },
+    {
+      "id": "mt21",
+      "type": "expense",
+      "amount": 122.28,
+      "where": "Bus fare",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-06-01",
+      "time": "12:30",
+      "created": 1780272000000
+    },
+    {
+      "id": "mt22",
+      "type": "expense",
+      "amount": 311.89,
+      "where": "Pharmacy",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-03",
+      "time": "12:30",
+      "created": 1780444800000
+    },
+    {
+      "id": "mt23",
+      "type": "expense",
+      "amount": 361.13,
+      "where": "Corner Store",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-05",
+      "time": "12:30",
+      "created": 1780617600000
+    },
+    {
+      "id": "mt24",
+      "type": "income",
+      "amount": 9000,
+      "where": "Work",
+      "account": "m_bank",
+      "desc": "",
+      "date": "2026-06-05",
+      "time": "09:00",
+      "created": 1780617600000
+    },
+    {
+      "id": "mt25",
+      "type": "expense",
+      "amount": 112.65,
+      "where": "Bus fare",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-06-06",
+      "time": "12:30",
+      "created": 1780704000000
+    },
+    {
+      "id": "mt26",
+      "type": "expense",
+      "amount": 388.38,
+      "where": "Cinema",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-07",
+      "time": "12:30",
+      "created": 1780790400000
+    },
+    {
+      "id": "mt27",
+      "type": "expense",
+      "amount": 314.76,
+      "where": "Cinema",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-08",
+      "time": "12:30",
+      "created": 1780876800000
+    },
+    {
+      "id": "mt28",
+      "type": "expense",
+      "amount": 266,
+      "where": "Bus fare",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-10",
+      "time": "12:30",
+      "created": 1781049600000
+    },
+    {
+      "id": "mt29",
+      "type": "expense",
+      "amount": 113.98,
+      "where": "Coffee House",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-11",
+      "time": "12:30",
+      "created": 1781136000000
+    },
+    {
+      "id": "mt30",
+      "type": "expense",
+      "amount": 152.89,
+      "where": "Market",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-06-12",
+      "time": "12:30",
+      "created": 1781222400000
+    },
+    {
+      "id": "mt31",
+      "type": "expense",
+      "amount": 498.02,
+      "where": "Cinema",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-14",
+      "time": "12:30",
+      "created": 1781395200000
+    },
+    {
+      "id": "mt32",
+      "type": "expense",
+      "amount": 190.35,
+      "where": "Bakery",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-15",
+      "time": "12:30",
+      "created": 1781481600000
+    },
+    {
+      "id": "mt33",
+      "type": "expense",
+      "amount": 129.08,
+      "where": "Cinema",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-16",
+      "time": "12:30",
+      "created": 1781568000000
+    },
+    {
+      "id": "mt34",
+      "type": "expense",
+      "amount": 235.24,
+      "where": "Cinema",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-06-17",
+      "time": "12:30",
+      "created": 1781654400000
+    },
+    {
+      "id": "mt35",
+      "type": "income",
+      "amount": 9000,
+      "where": "Work",
+      "account": "m_bank",
+      "desc": "",
+      "date": "2026-06-17",
+      "time": "09:00",
+      "created": 1781654400000
+    },
+    {
+      "id": "mt36",
+      "type": "expense",
+      "amount": 147.64,
+      "where": "Corner Store",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-06-18",
+      "time": "12:30",
+      "created": 1781740800000
+    },
+    {
+      "id": "mt37",
+      "type": "expense",
+      "amount": 327.77,
+      "where": "Corner Store",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-06-20",
+      "time": "12:30",
+      "created": 1781913600000
+    },
+    {
+      "id": "mt38",
+      "type": "expense",
+      "amount": 107.14,
+      "where": "Coffee House",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-21",
+      "time": "12:30",
+      "created": 1782000000000
+    },
+    {
+      "id": "mt39",
+      "type": "expense",
+      "amount": 143.41,
+      "where": "Corner Store",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-06-22",
+      "time": "12:30",
+      "created": 1782086400000
+    },
+    {
+      "id": "mt40",
+      "type": "expense",
+      "amount": 107.15,
+      "where": "Market",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-06-24",
+      "time": "12:30",
+      "created": 1782259200000
+    },
+    {
+      "id": "mt41",
+      "type": "expense",
+      "amount": 121.97,
+      "where": "Coffee House",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-26",
+      "time": "12:30",
+      "created": 1782432000000
+    },
+    {
+      "id": "mt42",
+      "type": "expense",
+      "amount": 275.27,
+      "where": "Cinema",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-06-28",
+      "time": "12:30",
+      "created": 1782604800000
+    },
+    {
+      "id": "mt43",
+      "type": "expense",
+      "amount": 345.29,
+      "where": "Pharmacy",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-06-29",
+      "time": "12:30",
+      "created": 1782691200000
+    },
+    {
+      "id": "mt44",
+      "type": "expense",
+      "amount": 190.16,
+      "where": "Coffee House",
+      "account": "m_cash",
+      "desc": "",
+      "date": "2026-07-01",
+      "time": "12:30",
+      "created": 1782864000000
+    },
+    {
+      "id": "mt_split",
+      "type": "expense",
+      "amount": 600,
+      "where": "Ramen Place",
+      "account": "m_wallet",
+      "desc": "",
+      "date": "2026-06-20",
+      "time": "19:00",
+      "created": 1784004361530,
+      "tag": {
+        "person": "Sam",
+        "slice": 200,
+        "meaning": "owes_me"
+      }
+    }
+  ],
+  "loans": [],
+  "recurring": [
+    {
+      "id": "mr1",
+      "type": "expense",
+      "amount": 499,
+      "desc": "Streaming",
+      "dueDay": 5,
+      "account": "m_bank",
+      "where": "Streaming"
+    }
+  ],
+  "goals": [
+    {
+      "id": "mg1",
+      "name": "Trip fund",
+      "target": 20000,
+      "account": "m_bank",
+      "due": "2026-12-31",
+      "created": 1784004361530
+    }
+  ],
+  "ious": [
+    {
+      "id": "mi1",
+      "person": "Alex",
+      "dir": "i_owe",
+      "amount": 150,
+      "note": "lunch — they fronted",
+      "date": "2026-06-25",
+      "time": "13:00",
+      "created": 1784004361530
+    }
+  ]
+}
