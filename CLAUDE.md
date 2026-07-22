@@ -38,12 +38,20 @@ keeping a web/PWA build. This file orients any new session working in this repo.
 - `src/lib/components/` — reusable UI. `src/views/` — the tab screens.
 - `reference/index.html` — original app (parity oracle; do not delete).
 - `reference/ledger-testdata.json` — **the test fixture. Use it.** Synthetic, safe to
-  commit: backup schema v9, ₱/PHP, 3 accounts, 45 transactions, 1 template, 1 goal, 1 IOU.
+  commit, and it exercises **every** feature: schema v9, ₱/PHP, 6 accounts (incl. a
+  negative-opening credit card), 157 transactions (116 expense / 18 income / 23 transfer,
+  6 of them with a fee), 11 templates (5 recurring · 6 shortcuts, 2 variable-amount, all
+  three types), 4 goals (one account-less), 5 IOUs both directions, and **both** debt
+  systems — the tag-based *People* flow (13 tagged transactions across `owes_me`,
+  `their_money`, `paying_me`, `paying_back`, plus `sid` settlement records) and the
+  **legacy loan** system (one unsettled `lent`, one settled `borrowed`), which render
+  together on People as `· old loan`.
   Load it through Settings → *Restore from backup* before checking any screen — an empty
   ledger renders empty states and hides nearly every parity bug. **Extend this file** when
-  a case is missing rather than inventing throwaway data; known gaps today are **transfers,
-  transfer fees and loans** (all zero), so the People loan flows and the neutral
-  transfer colour rule are not yet covered.
+  a case is missing rather than inventing throwaway data.
+  Two deliberate properties worth not "fixing": 9 transactions are dated **after** today,
+  covering future-dated entries; and template-logged rows carry `tpl`, settlement rows
+  carry `sid` with an empty `account`.
 - `www/` — **what ships today** (Phase 1–2): the literal copy of the app plus the native
   shell. `www/index.html` is editable source — Phase 2's cleanups land here — and differs
   from `reference/index.html` by exactly three lines: `viewport-fit=cover`, a `native.css`

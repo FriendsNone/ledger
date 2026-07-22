@@ -268,9 +268,11 @@ Companion docs: `CLAUDE.md` (working guide) and `DESIGN.md` (visual system).
 ## Verification (per phase)
 
 **Always load the fixture first.** `reference/ledger-testdata.json` (synthetic, schema v9,
-₱/PHP) restores through Settings → *Restore from backup*. Every check below assumes it —
-an empty ledger renders empty states and hides nearly every parity bug. Grow the fixture
-when a case is missing; it currently has **no transfers, no transfer fees and no loans**.
+₱/PHP, 157 transactions) restores through Settings → *Restore from backup*. Every check
+below assumes it — an empty ledger renders empty states and hides nearly every parity bug.
+It now covers every feature, including the two previously-uncovered ones: **transfers with
+fees** and **both debt systems** (tag-based People *and* the legacy lent/borrowed loans).
+Grow it when a case is missing rather than inventing throwaway data.
 
 **Device matrix actually exercised in P1** — keep this current; the interesting axis is
 `API × WebView × layout regime`, not device count.
@@ -291,8 +293,18 @@ with a large tablet or by temporarily lifting the portrait lock.
 A cheap and effective web-side parity harness: serve the repo root, open
 `/reference/index.html` and `/www/index.html` in the same tab (one origin, so both read the
 same restored data), and diff each tab's `#app` `innerText` plus a structural signature of
-tag + class names. That caught nothing in P1 — all eight screens were byte-identical — but
-it is the fast regression check for the screen-by-screen P3 rebuild.
+tag + class names. Run twice in P1 — once on a thin fixture and again on the full 157-entry
+one — and all eight screens were byte-identical both times. It is the fast regression check
+for the screen-by-screen P3 rebuild.
+
+Rules the full fixture makes checkable, verified in P1 and worth re-checking in P3:
+- **Transfers are never green or red.** All render `.neu` (grey), paired as
+  `From → To` with a `⇄` glyph and the fee inline; none leak into `.pos`/`.neg`.
+- **Both debt systems coexist on People.** Tag-derived balances and legacy loans list
+  together, the latter marked `· old loan`; partial settlement nets correctly
+  (owed 1,300 − paid 500 = 800).
+- **Templates split recurring vs shortcuts** by the presence of `dueDay`, and overdue
+  recurring entries carry a day count.
 
 - **P1:** debug APK installs; app launches **offline** (airplane mode); create data →
   force-close → reopen persists; feature parity vs reference; back button navigates tabs.
