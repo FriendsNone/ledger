@@ -49,9 +49,10 @@ keeping a web/PWA build. This file orients any new session working in this repo.
   Load it through Settings → *Restore from backup* before checking any screen — an empty
   ledger renders empty states and hides nearly every parity bug. **Extend this file** when
   a case is missing rather than inventing throwaway data.
-  Two deliberate properties worth not "fixing": 9 transactions are dated **after** today,
-  covering future-dated entries; and template-logged rows carry `tpl`, settlement rows
-  carry `sid` with an empty `account`.
+  Two properties to **keep** rather than "tidy up": 9 transactions are dated **after**
+  today, so they land in this month's totals — whether that was intended when the fixture
+  was generated is unknown, but it is kept on purpose as future-dated-entry coverage.
+  Template-logged rows carry `tpl`; settlement rows carry `sid` with an empty `account`.
 - `www/` — **what ships today** (Phase 1–2): the literal copy of the app plus the native
   shell. `www/index.html` is editable source — Phase 2's cleanups land here — and differs
   from `reference/index.html` by exactly three lines: `viewport-fit=cover`, a `native.css`
