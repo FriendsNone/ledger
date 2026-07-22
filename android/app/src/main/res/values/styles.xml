@@ -13,6 +13,18 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- BridgeActivity switches to this theme at startup, so this is the one
+             that decides the colour behind the system bars. See colors.xml.
+
+             statusBarColor is what actually paints the bar on API 21..34, where
+             the system still draws it and the window is not edge-to-edge; left
+             unset it falls back to the platform's grey colorPrimaryDark, which is
+             the grey band this replaces. From API 35 the framework enforces
+             edge-to-edge and ignores these two, letting the page show through
+             instead - so both eras are covered. -->
+        <item name="android:windowBackground">@color/ledgerPaper</item>
+        <item name="android:statusBarColor">@color/ledgerPaper</item>
+        <item name="android:navigationBarColor">@color/ledgerPaper</item>
     </style>
 
 

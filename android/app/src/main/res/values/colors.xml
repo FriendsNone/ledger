@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Ledger's paper token, mirrored into Android resources.
+
+         Capacitor's SystemBars paints the decor view with android:windowBackground,
+         and that decor view is exactly what shows through in the status-bar strip
+         whenever the WebView is inset rather than drawn edge-to-edge. Leaving
+         windowBackground undefined is what produced the grey band. Keep this in
+         step with the paper colour token in www/index.html. -->
+    <color name="ledgerPaper">#f4f1ea</color>
+
+</resources>

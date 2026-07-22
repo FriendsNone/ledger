@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- The dark paper colour. AppTheme.NoActionBar is a DayNight theme, so this
+         is selected by the *device's* night mode. That matches the app's own
+         default theme setting ("system"); forcing Light or Dark inside the app
+         while the device sits in the other mode is the one case this cannot
+         follow, and needs a native night-mode call to fix properly (Phase 4). -->
+    <color name="ledgerPaper">#17150f</color>
+
+</resources>
