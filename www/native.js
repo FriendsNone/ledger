@@ -7,6 +7,38 @@
 (function () {
   "use strict";
 
+  /* --- WebView capability probe -------------------------------------------
+     The real floor for this app is the WebView (Chromium >= 105), not the
+     Android version — System WebView updates through the Play Store on its own
+     schedule, so the OS version predicts almost nothing. These two properties
+     are the ones that fail *silently*: without them the toast lands half off
+     screen and the flex rows lose their spacing, which reads as a broken app
+     rather than an old one. Say so instead, in plain language, and let the app
+     run anyway — the data is still safe and legible.
+
+     Deliberately a feature probe, not UA sniffing: it stays correct when the
+     user updates the WebView without changing anything else. */
+  var capable = typeof CSS !== "undefined" && CSS.supports &&
+    CSS.supports("translate", "-50% 0") && CSS.supports("selector(:has(*))");
+  if (!capable) {
+    /* Sits above #backupNag inside <main>, which render() never rewrites — only
+       #app is re-rendered — so it survives every redraw. Custom properties are
+       far below the floor being probed, so the theme still applies. */
+    var warn = function () {
+      var el = document.createElement("div");
+      el.setAttribute("role", "alert");
+      el.style.cssText = "margin:0 0 12px;padding:12px 14px;border:1px solid var(--expense,#a8442b);" +
+        "border-radius:10px;background:var(--card,#fbfaf6);color:var(--ink,#221f1a);font:14px/1.45 system-ui,sans-serif";
+      el.innerHTML = "<strong>This device’s browser engine is out of date.</strong><br>" +
+        "Ledger works and your data is safe, but parts of the layout will look wrong. " +
+        "Updating <em>Android System WebView</em> in the Play Store fixes it — or open Ledger in a browser instead.";
+      var main = document.querySelector("main") || document.body;
+      main.insertBefore(el, main.firstChild);
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", warn);
+    else warn();
+  }
+
   var cap = window.Capacitor;
   if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
 
